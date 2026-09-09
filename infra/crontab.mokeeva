@@ -1,0 +1,11 @@
+# Резервное копирование базы webui. Источник: infra/pg-backup.sh
+# Правится через: crontab -e   (или crontab infra/crontab.mokeeva)
+SHELL=/bin/bash
+PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
+
+# Ежедневная выгрузка в 03:17
+17 3 * * * /bin/bash /home/mokeeva/main/infra/pg-backup.sh >> /home/mokeeva/backups/cron.log 2>&1
+
+# Еженедельная проверка восстановления, по воскресеньям в 04:05.
+# Без неё выгрузка остаётся предположением о копии, а не копией.
+5 4 * * 0 /bin/bash /home/mokeeva/main/infra/pg-restore-check.sh >> /home/mokeeva/backups/restore-check.log 2>&1
