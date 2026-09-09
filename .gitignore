@@ -1,0 +1,23 @@
+# Обмен и промежуточные материалы — не версионируется (правило 10)
+exchange/
+
+# Бинарники и артефакты сборки
+*.exe
+*.dll
+dist/
+build/
+node_modules/
+
+# Логи
+*.log
+
+# Секреты
+.env
+.env.local
+
+# Мусор ОС и редакторов
+.DS_Store
+Thumbs.db
+desktop.ini
+.vscode/
+.idea/
