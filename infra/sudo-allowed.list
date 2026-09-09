@@ -1,0 +1,73 @@
+# Разрешённые беспарольные команды sudo
+#
+# ЭТОТ ФАЙЛ — ИСТОЧНИК ИСТИНЫ. Правится здесь, затем применяется:
+#     sudo bash infra/apply-sudo.sh
+#
+# Новая команда добавляется только по согласованию: агент предлагает строку и
+# объясняет, зачем она, вы разрешаете — и только тогда она появляется здесь.
+#
+# Формат: одна команда на строку с полным путём. Аргументы учитываются:
+# запись «systemctl restart webui» разрешает ровно эту команду и не разрешает
+# «systemctl restart ssh». Звёздочка — glob по остатку строки, ставить с оглядкой.
+#
+# Раздел задаёт, от чьего имени выполняется команда.
+# Пустые строки и строки с # игнорируются.
+#
+# ВАЖНО, ЧТО ЭТО НЕ ДАЁТ. Сужение защищает от случайной ошибки — опечатка в
+# команде больше не выполнится от root. Границей безопасности от намеренного
+# действия оно не является: любая возможность писать в /etc или ставить пакеты
+# от root эквивалентна root. Поэтому установка пакетов и правка systemd-юнитов
+# сюда сознательно не включены — их запускаете вы сами, с паролем.
+# Полный root с паролем у вас остаётся: mokeeva входит в группу sudo.
+
+
+# === root ===
+
+# --- Управление службами проекта. Перечислены поимённо: разрешено
+# --- перезапустить webui и nginx, но не, скажем, отключить ssh.
+/usr/bin/systemctl daemon-reload
+/usr/bin/systemctl restart webui
+/usr/bin/systemctl start webui
+/usr/bin/systemctl stop webui
+/usr/bin/systemctl reload nginx
+/usr/bin/systemctl restart nginx
+/usr/bin/systemctl restart postgresql
+
+# --- Опрос состояния: только чтение, ничего не меняет
+/usr/bin/systemctl status *
+/usr/bin/systemctl is-active *
+/usr/bin/systemctl is-enabled *
+/usr/bin/systemctl show *
+/usr/bin/systemctl list-units *
+/usr/bin/systemctl list-unit-files *
+/usr/bin/systemctl cat *
+
+# --- Проверка конфигурации nginx перед перезагрузкой
+/usr/sbin/nginx -t
+
+# --- Чтение журналов служб
+/usr/bin/journalctl
+
+# --- Обновление списка пакетов. Сама установка НЕ разрешена — см. примечание выше.
+# --- Аргументы намеренно не разрешены: вызывать строго «sudo apt-get update»,
+# --- без флагов. Звёздочку здесь ставить нельзя — у apt-get есть параметр
+# --- -o APT::Update::Pre-Invoke, через который выполняется произвольная
+# --- команда от root, то есть «apt-get update *» равносильно полному root.
+/usr/bin/apt-get update
+
+# --- Раскладка конфигов nginx из webui/deploy с проверкой и перезагрузкой.
+# --- Скрипт принадлежит root и недоступен на запись пользователю, иначе
+# --- разрешение на него означало бы разрешение на любой код от root.
+/usr/local/sbin/webui-deploy
+
+
+# === postgres ===
+
+# Работа с базой от имени postgres, а не root: даёт полный доступ к СУБД,
+# но не к системе.
+/usr/bin/psql
+/usr/bin/createdb
+/usr/bin/createuser
+/usr/bin/dropdb
+/usr/bin/pg_dump
+/usr/bin/pg_dumpall
