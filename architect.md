@@ -5,6 +5,10 @@
 
 ---
 
+## Репозиторий
+
+`git@github.com:Svetlana-claude/Main.git`, основная ветка `main`.
+
 ## Структура репозитория
 
 ```

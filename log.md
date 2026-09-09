@@ -24,3 +24,5 @@
 - Инициализирован git, добавлен `.gitignore`.
 - Сгенерирован ключ для GitHub, публичная часть выложена в `exchange/git.txt`.
 - `CLAUDE.md` приведён в соответствие с полученными ответами.
+- Подключён remote `origin` (`git@github.com:Svetlana-claude/Main.git`), доступ по SSH
+  проверен (аккаунт `Svetlana-claude`), первый push выполнен.
