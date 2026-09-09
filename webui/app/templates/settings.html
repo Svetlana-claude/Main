@@ -1,0 +1,170 @@
+{% extends "base.html" %}
+{% block title %}Настройки{% endblock %}
+{% block content %}
+
+{% if request.query_params.get('saved') %}
+  <div class="note note--ok">Файл сохранён</div>
+{% endif %}
+
+<div class="grid2">
+
+  <div class="panel">
+    <div class="panel__head">Общие настройки</div>
+    <div class="panel__body">
+      <form method="post" action="{{ url_for('settings_save') }}">
+        <div class="field">
+          <label class="field__label" for="refresh_seconds">Автообновление дашборда, секунд</label>
+          <input class="input input--narrow" id="refresh_seconds" name="refresh_seconds"
+                 type="number" min="2" max="600" value="{{ values.refresh_seconds }}">
+          <div class="field__hint">По умолчанию 10, как в задании</div>
+        </div>
+        <div class="field">
+          <label class="field__label" for="model">Модель</label>
+          <select class="select" id="model" name="model">
+            {% for m in ['opus', 'sonnet', 'haiku', 'fable'] %}
+              <option value="{{ m }}" {% if values.model == m %}selected{% endif %}>{{ m }}</option>
+            {% endfor %}
+          </select>
+          <div class="field__hint">Псевдоним передаётся Claude Code, он берёт актуальную версию</div>
+        </div>
+        <div class="field">
+          <label class="field__label" for="monthly_limit_usd">Месячный предел расхода, $</label>
+          <input class="input input--narrow" id="monthly_limit_usd" name="monthly_limit_usd"
+                 type="number" min="0" step="1" value="{{ values.monthly_limit_usd }}">
+          <div class="field__hint">0 — не предупреждать</div>
+        </div>
+        <div class="field">
+          <label class="field__label" for="theme">Тема оформления</label>
+          <select class="select" id="theme" name="theme">
+            <option value="light"  {% if values.theme == 'light'  %}selected{% endif %}>светлая</option>
+            <option value="dark"   {% if values.theme == 'dark'   %}selected{% endif %}>тёмная</option>
+            <option value="system" {% if values.theme == 'system' %}selected{% endif %}>как в системе</option>
+          </select>
+        </div>
+        <div class="field">
+          <label class="field__label" for="metrics_keep_hours">Хранить историю метрик, часов</label>
+          <input class="input input--narrow" id="metrics_keep_hours" name="metrics_keep_hours"
+                 type="number" min="1" max="720" value="{{ values.metrics_keep_hours }}">
+        </div>
+        <button class="btn btn--primary" type="submit">Сохранить</button>
+      </form>
+    </div>
+  </div>
+
+  <div class="panel">
+    <div class="panel__head">Права проектов</div>
+    <div class="panel__body panel__body--flush">
+      <table class="table">
+        <thead><tr><th>Проект</th><th>Каталог</th><th class="nowrap">Команды</th></tr></thead>
+        <tbody>
+        {% for p in projects %}
+          <tr>
+            <td>{{ p.name }}</td>
+            <td class="mono">{{ p.workdir }}</td>
+            <td>{% if p.allow_bash %}<span class="tag tag--warn">разрешены</span>
+                {% else %}<span class="tag tag--ok">запрещены</span>{% endif %}</td>
+          </tr>
+        {% else %}
+          <tr><td colspan="3" class="muted">Проектов нет</td></tr>
+        {% endfor %}
+        </tbody>
+      </table>
+      <div class="field__hint" style="padding:8px">
+        Правка файлов в каталоге проекта разрешена всегда. Запуск произвольных команд —
+        только по флагу, он переключается на странице проекта.
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<div class="panel">
+  <div class="panel__head">Файлы сопровождения</div>
+  <div class="panel__body panel__body--flush">
+    <div class="cmdbar">
+      {% for f in files %}
+        <a class="btn {% if selected == f.name %}btn--primary{% endif %}"
+           href="{{ url_for('settings_page') }}?file={{ f.name }}">{{ f.name }}</a>
+      {% endfor %}
+    </div>
+    <div class="tablewrap">
+      <table class="table">
+        <thead><tr><th>Файл</th><th class="num">Размер</th><th>Изменён</th></tr></thead>
+        <tbody>
+        {% for f in files %}
+          <tr>
+            <td><a href="{{ url_for('settings_page') }}?file={{ f.name }}">{{ f.name }}</a></td>
+            <td class="num">{% if f.exists %}{{ f.size }} Б{% else %}—{% endif %}</td>
+            <td>{% if f.mtime %}{{ f.mtime.strftime('%d.%m.%Y %H:%M') }}{% else %}<span class="tag tag--err">нет файла</span>{% endif %}</td>
+          </tr>
+        {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+{% if selected %}
+<div class="panel">
+  <div class="panel__head">
+    Правка {{ selected }}
+    <span class="spacer"></span>
+    <label class="check faint"><input type="checkbox" id="show-preview" checked> предпросмотр</label>
+  </div>
+  <div class="panel__body">
+    <div class="grid2">
+      <form method="post" action="{{ url_for('settings_file_save') }}">
+        <input type="hidden" name="name" value="{{ selected }}">
+        <textarea class="textarea" name="content" rows="26" spellcheck="false">{{ content }}</textarea>
+        <div style="margin-top:8px">
+          <button class="btn btn--primary" type="submit">Сохранить на диск</button>
+          <span class="field__hint" style="display:inline">Изменения сразу попадают в репозиторий</span>
+        </div>
+      </form>
+      <div id="preview-box">
+        <div class="md" style="border:1px solid var(--line);padding:10px;max-height:520px;overflow:auto;background:var(--panel)">
+          {{ preview|safe }}
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+{% endif %}
+
+<div class="panel">
+  <div class="panel__head">Активные сессии</div>
+  <div class="panel__body panel__body--flush">
+    <div class="tablewrap">
+      <table class="table table--zebra">
+        <thead><tr><th>Вход</th><th>Последняя активность</th><th>Адрес</th><th>Браузер</th><th></th></tr></thead>
+        <tbody>
+        {% for s in sessions %}
+          <tr {% if s.id|string == current_session|string %}class="is-selected"{% endif %}>
+            <td class="nowrap">{{ s.created_at.strftime('%d.%m.%Y %H:%M') }}</td>
+            <td class="nowrap">{{ s.last_seen.strftime('%d.%m.%Y %H:%M') }}</td>
+            <td class="mono">{{ s.ip }}</td>
+            <td class="faint" style="font-size:12px">{{ (s.user_agent or '')[:70] }}</td>
+            <td class="nowrap">
+              <form method="post" action="{{ url_for('settings_session_close', session_id=s.id) }}">
+                <button class="btn btn--plain btn--danger" type="submit">
+                  {% if s.id|string == current_session|string %}завершить эту{% else %}завершить{% endif %}
+                </button>
+              </form>
+            </td>
+          </tr>
+        {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+{% endblock %}
+{% block scripts %}
+<script>
+document.getElementById('show-preview')?.addEventListener('change', function () {
+    const box = document.getElementById('preview-box');
+    if (box) box.hidden = !this.checked;
+});
+</script>
+{% endblock %}

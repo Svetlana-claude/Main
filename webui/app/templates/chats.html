@@ -1,0 +1,81 @@
+{% extends "base.html" %}
+{% block title %}Чатики{% endblock %}
+{% block layout %}
+<main class="main main--flush">
+<div class="workspace">
+
+  <aside class="sidebar">
+    <div class="cmdbar">
+      <form method="post" action="{{ url_for('chat_new') }}">
+        <button class="btn btn--primary" type="submit">Новый чат</button>
+      </form>
+      <span class="spacer"></span>
+      <span class="faint">{{ items|length }}</span>
+    </div>
+    <div class="sidebar__list">
+      {% for item in items %}
+        <a class="sidebar__item {% if current and item.id == current.id %}sidebar__item--active{% endif %}"
+           href="{{ url_for('chats') }}?id={{ item.id }}">
+          {{ item.title }}
+          <small>{{ item.msg_count }} сообщ. · {{ item.updated_at.strftime('%d.%m %H:%M') }}</small>
+        </a>
+      {% else %}
+        <div class="empty">Чатов пока нет</div>
+      {% endfor %}
+    </div>
+  </aside>
+
+  <section class="chat">
+    {% if current %}
+      <div class="cmdbar">
+        <form method="post" action="{{ url_for('chat_rename', chat_id=current.id) }}" class="formrow" style="gap:4px">
+          <input class="input" name="title" value="{{ current.title }}" style="width:230px" aria-label="Название чата">
+          <button class="btn" type="submit">Переименовать</button>
+        </form>
+        <span class="spacer"></span>
+        <a class="btn" href="{{ url_for('export_conversation', conversation_id=current.id) }}">Экспорт в markdown</a>
+        <form method="post" action="{{ url_for('chat_delete', chat_id=current.id) }}"
+              onsubmit="return confirm('Удалить чат «{{ current.title }}» со всеми сообщениями?')">
+          <button class="btn btn--danger" type="submit">Удалить</button>
+        </form>
+      </div>
+
+      <div class="chat__scroll" id="scroll">
+        {% for m in messages %}
+          <div class="msg msg--{{ m.role }}">
+            <div class="msg__head">
+              <span class="msg__who">{% if m.role == 'user' %}Светлана{% elif m.role == 'assistant' %}Claude{% else %}Ошибка{% endif %}</span>
+              <span>{{ m.created_at.strftime('%d.%m.%Y %H:%M') }}</span>
+            </div>
+            <div class="msg__body">{{ m.content }}</div>
+            {% if m.role == 'assistant' %}
+              <div class="msg__meta">
+                {{ m.model or '—' }} · ${{ '%.4f'|format(m.cost_usd) }} ·
+                {{ m.input_tokens }}→{{ m.output_tokens }} токенов ·
+                {{ (m.duration_ms / 1000)|round(1) }} с
+              </div>
+            {% endif %}
+          </div>
+        {% else %}
+          <div class="empty">Напишите первое сообщение — название чата подставится само</div>
+        {% endfor %}
+      </div>
+
+      <form class="chat__form" id="send-form" data-url="{{ url_for('chat_send', chat_id=current.id) }}">
+        <textarea class="chat__input" id="text" name="text" rows="2"
+                  placeholder="Сообщение. Ctrl+Enter — отправить" required></textarea>
+        <button class="btn btn--primary" type="submit" id="send-btn">Отправить</button>
+      </form>
+    {% else %}
+      <div class="empty" style="margin:auto">Создайте чат, чтобы начать разговор</div>
+    {% endif %}
+  </section>
+
+</div>
+</main>
+{% endblock %}
+{% block scripts %}
+{% if current %}
+<script>initConversation({ who: "Светлана" });</script>
+{% endif %}
+{% endblock %}

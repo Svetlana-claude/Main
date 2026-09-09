@@ -1,0 +1,23 @@
+[Unit]
+Description=Веб-интерфейс рабочего места
+After=network.target postgresql.service
+Wants=postgresql.service
+
+[Service]
+Type=simple
+User=mokeeva
+Group=mokeeva
+WorkingDirectory=/home/mokeeva/main/webui
+Environment=PATH=/home/mokeeva/main/webui/.venv/bin:/home/mokeeva/.local/bin:/usr/local/bin:/usr/bin:/bin
+ExecStart=/home/mokeeva/main/webui/.venv/bin/uvicorn app.main:app \
+    --host 127.0.0.1 --port 8000 --root-path /Claude \
+    --proxy-headers --forwarded-allow-ips 127.0.0.1
+Restart=on-failure
+RestartSec=3
+# Приложение запускает claude, которому нужен домашний каталог с учётными данными
+Environment=HOME=/home/mokeeva
+StandardOutput=journal
+StandardError=journal
+
+[Install]
+WantedBy=multi-user.target

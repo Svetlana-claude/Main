@@ -1,0 +1,149 @@
+{% extends "base.html" %}
+{% block title %}Дашборд{% endblock %}
+{% block content %}
+
+{% if usage.month.over %}
+  <div class="note note--err">
+    Расход за месяц ${{ '%.2f'|format(usage.month.cost) }} достиг установленного предела
+    ${{ '%.0f'|format(usage.month.limit) }}. Предел правится в настройках.
+  </div>
+{% elif usage.month.near %}
+  <div class="note note--warn">
+    Израсходовано {{ usage.month.share }}% месячного предела
+    (${{ '%.2f'|format(usage.month.cost) }} из ${{ '%.0f'|format(usage.month.limit) }}).
+  </div>
+{% endif %}
+
+<div class="panel">
+  <div class="panel__head">
+    Ресурсы сервера
+    <span class="spacer"></span>
+    <span class="faint" id="stamp">обновлено —</span>
+    <span class="cmdbar__sep"></span>
+    <label class="check faint"><input type="checkbox" id="auto" checked> автообновление, {{ settings.refresh_seconds }} с</label>
+  </div>
+  <div class="panel__body">
+    <div class="tiles">
+
+      <div class="tile">
+        <div class="tile__label">Процессор</div>
+        <div class="tile__value"><span id="cpu-val">{{ metrics.cpu.percent }}</span>%</div>
+        <div class="meter"><div class="meter__fill" id="cpu-bar" style="width:{{ metrics.cpu.percent }}%"></div></div>
+        <div class="tile__sub">{{ metrics.cpu.cores }} ядра</div>
+      </div>
+
+      <div class="tile">
+        <div class="tile__label">Память</div>
+        <div class="tile__value"><span id="mem-val">{{ metrics.memory.percent }}</span>%</div>
+        <div class="meter"><div class="meter__fill" id="mem-bar" style="width:{{ metrics.memory.percent }}%"></div></div>
+        <div class="tile__sub" id="mem-sub">{{ metrics.memory.used_h }} из {{ metrics.memory.total_h }}</div>
+      </div>
+
+      <div class="tile">
+        <div class="tile__label">Диск</div>
+        <div class="tile__value"><span id="disk-val">{{ metrics.disk.percent }}</span>%</div>
+        <div class="meter"><div class="meter__fill" id="disk-bar" style="width:{{ metrics.disk.percent }}%"></div></div>
+        <div class="tile__sub" id="disk-sub">{{ metrics.disk.used_h }} из {{ metrics.disk.total_h }}, свободно {{ metrics.disk.free_h }}</div>
+      </div>
+
+      <div class="tile">
+        <div class="tile__label">Средняя нагрузка</div>
+        <div class="tile__value" id="load-val">{{ metrics.load.one }}</div>
+        <div class="tile__sub" id="load-sub">{{ metrics.load.five }} / {{ metrics.load.fifteen }} — на ядро {{ metrics.load.per_core }}</div>
+      </div>
+
+      <div class="tile">
+        <div class="tile__label">Сеть</div>
+        <div class="tile__value" style="font-size:15px" id="net-val">
+          ↓ {{ metrics.net.rx_rate_h }}<br>↑ {{ metrics.net.tx_rate_h }}
+        </div>
+        <div class="tile__sub" id="net-sub">всего ↓ {{ metrics.net.rx_total_h }} · ↑ {{ metrics.net.tx_total_h }}</div>
+      </div>
+
+      <div class="tile">
+        <div class="tile__label">Работает без перезагрузки</div>
+        <div class="tile__value" style="font-size:15px" id="up-val">{{ metrics.uptime.human }}</div>
+        <div class="tile__sub" id="proc-sub">процессов: {{ metrics.processes }}</div>
+      </div>
+
+    </div>
+  </div>
+</div>
+
+<div class="panel">
+  <div class="panel__head">
+    История за сутки
+    <span class="spacer"></span>
+    <span class="chart-legend">
+      <span><i style="background:var(--link)"></i>процессор</span>
+      <span><i style="background:var(--accent-deep)"></i>память</span>
+    </span>
+  </div>
+  <div class="panel__body">
+    <canvas class="chart" id="chart" width="1200" height="130"></canvas>
+    <div class="faint" id="chart-note">загрузка истории…</div>
+  </div>
+</div>
+
+<div class="grid2">
+  <div class="panel">
+    <div class="panel__head">Расход за сегодня</div>
+    <div class="panel__body panel__body--flush">
+      <table class="table">
+        <tbody>
+          <tr><td>Стоимость</td><td class="num" id="u-today-cost">${{ '%.4f'|format(usage.today.cost) }}</td></tr>
+          <tr><td>Запросов</td><td class="num" id="u-today-req">{{ usage.today.requests }}</td></tr>
+          <tr><td>Токенов на вход</td><td class="num" id="u-today-in">{{ '{:,}'.format(usage.today.input_tokens)|replace(',', ' ') }}</td></tr>
+          <tr><td>Токенов на выход</td><td class="num" id="u-today-out">{{ '{:,}'.format(usage.today.output_tokens)|replace(',', ' ') }}</td></tr>
+          <tr><td>Прочитано из кэша</td><td class="num" id="u-today-cr">{{ '{:,}'.format(usage.today.cache_read)|replace(',', ' ') }}</td></tr>
+          <tr><td>Записано в кэш</td><td class="num" id="u-today-cw">{{ '{:,}'.format(usage.today.cache_write)|replace(',', ' ') }}</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <div class="panel">
+    <div class="panel__head">Расход за месяц</div>
+    <div class="panel__body">
+      <div class="tile__value" id="u-month-cost">${{ '%.2f'|format(usage.month.cost) }}</div>
+      {% if usage.month.limit %}
+        <div class="meter">
+          <div class="meter__fill {% if usage.month.share >= 100 %}meter__fill--err{% elif usage.month.share >= 80 %}meter__fill--warn{% endif %}"
+               id="u-month-bar" style="width:{{ [usage.month.share, 100]|min }}%"></div>
+        </div>
+        <div class="tile__sub">
+          <span id="u-month-share">{{ usage.month.share }}</span>% предела
+          ${{ '%.0f'|format(usage.month.limit) }}
+        </div>
+      {% else %}
+        <div class="tile__sub">Месячный предел не задан</div>
+      {% endif %}
+      <table class="table" style="margin-top:10px">
+        <thead><tr><th>Раздел</th><th class="num">Запросов</th><th class="num">Стоимость</th></tr></thead>
+        <tbody>
+          <tr><td>Чатики</td>
+            <td class="num">{{ usage.by_kind.get('chat', {}).get('requests', 0) }}</td>
+            <td class="num">${{ '%.4f'|format(usage.by_kind.get('chat', {}).get('cost', 0)) }}</td></tr>
+          <tr><td>Проекты</td>
+            <td class="num">{{ usage.by_kind.get('topic', {}).get('requests', 0) }}</td>
+            <td class="num">${{ '%.4f'|format(usage.by_kind.get('topic', {}).get('cost', 0)) }}</td></tr>
+        </tbody>
+      </table>
+      <div class="field__hint">
+        Считается по данным, которые возвращает Claude Code после каждого запроса.
+        Остаток месячной квоты подписки таким способом получить нельзя — его никто не отдаёт.
+      </div>
+    </div>
+  </div>
+</div>
+
+{% endblock %}
+{% block scripts %}
+<script>
+initDashboard({
+    metricsUrl: "{{ url_for('api_metrics') }}",
+    historyUrl: "{{ url_for('api_metrics_history') }}",
+    intervalSec: {{ settings.refresh_seconds }}
+});
+</script>
+{% endblock %}

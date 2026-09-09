@@ -1,0 +1,45 @@
+{% extends "base.html" %}
+{% block title %}Журнал задач{% endblock %}
+{% block content %}
+<div class="panel">
+  <div class="panel__head">
+    Журнал задач <span class="faint">— log.md</span>
+    <span class="spacer"></span>
+    <label class="check"><input type="checkbox" id="only-open"> только незакрытые</label>
+  </div>
+  <div class="panel__body panel__body--flush">
+    {% if entries %}
+      <div class="tablewrap">
+        <table class="table">
+          <thead><tr><th style="width:34%">Задача</th><th style="width:16%">Статус</th><th>Ход</th></tr></thead>
+          <tbody id="journal-rows">
+          {% for e in entries %}
+            <tr data-status="{{ e.status }}">
+              <td>{{ e.title }}</td>
+              <td class="nowrap">
+                {% if 'выполнено' in e.status %}<span class="tag tag--ok">{{ e.status }}</span>
+                {% elif 'работе' in e.status %}<span class="tag tag--warn">{{ e.status }}</span>
+                {% else %}<span class="tag">{{ e.status or '—' }}</span>{% endif %}
+              </td>
+              <td><details><summary class="muted">развернуть</summary><pre style="white-space:pre-wrap">{{ e.body }}</pre></details></td>
+            </tr>
+          {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    {% else %}
+      <div class="empty">Файл log.md не найден или пуст</div>
+    {% endif %}
+  </div>
+</div>
+{% endblock %}
+{% block scripts %}
+<script>
+document.getElementById('only-open')?.addEventListener('change', function () {
+    document.querySelectorAll('#journal-rows tr').forEach(function (row) {
+        const done = (row.dataset.status || '').includes('выполнено');
+        row.hidden = this.checked && done;
+    }, this);
+});
+</script>
+{% endblock %}

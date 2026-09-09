@@ -21,3 +21,10 @@ Thumbs.db
 desktop.ini
 .vscode/
 .idea/
+
+# Веб-интерфейс: окружение, секреты и загруженные файлы вне версий
+webui/.venv/
+webui/.env
+webui/uploads/
+__pycache__/
+*.pyc

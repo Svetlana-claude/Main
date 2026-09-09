@@ -1,0 +1,49 @@
+{% extends "base.html" %}
+{% block title %}Поиск{% endblock %}
+{% block content %}
+<div class="panel">
+  <div class="panel__head">Поиск по диалогам</div>
+  <div class="panel__body">
+    <form method="get" action="{{ url_for('search') }}" class="formrow">
+      <div class="field" style="flex:1;margin:0">
+        <input class="input" name="q" value="{{ q }}" placeholder="Что искать" autofocus>
+        <div class="field__hint">Поддерживаются кавычки для точной фразы и знак минус для исключения</div>
+      </div>
+      <button class="btn btn--primary" type="submit">Найти</button>
+    </form>
+  </div>
+</div>
+
+{% if q %}
+<div class="panel">
+  <div class="panel__head">Найдено: {{ results|length }}{% if results|length == 60 %} (показаны первые 60){% endif %}</div>
+  <div class="panel__body panel__body--flush">
+    {% if results %}
+    <div class="tablewrap">
+      <table class="table table--zebra">
+        <thead><tr><th>Когда</th><th>Где</th><th>Кто</th><th>Фрагмент</th></tr></thead>
+        <tbody>
+        {% for r in results %}
+          <tr>
+            <td class="nowrap">{{ r.created_at.strftime('%d.%m.%Y %H:%M') }}</td>
+            <td class="nowrap">
+              {% if r.kind == 'topic' %}
+                <a href="{{ url_for('projects') }}?topic={{ r.conv_id }}">{{ r.project_name }} / {{ r.title }}</a>
+              {% else %}
+                <a href="{{ url_for('chats') }}?id={{ r.conv_id }}">{{ r.title }}</a>
+              {% endif %}
+            </td>
+            <td class="nowrap">{% if r.role == 'user' %}Светлана{% elif r.role == 'assistant' %}Claude{% else %}Ошибка{% endif %}</td>
+            <td>{{ r.excerpt|safe }}</td>
+          </tr>
+        {% endfor %}
+        </tbody>
+      </table>
+    </div>
+    {% else %}
+      <div class="empty">Ничего не найдено</div>
+    {% endif %}
+  </div>
+</div>
+{% endif %}
+{% endblock %}

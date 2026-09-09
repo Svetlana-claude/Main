@@ -1,0 +1,145 @@
+{% extends "base.html" %}
+{% block title %}Проекты{% endblock %}
+{% block layout %}
+<main class="main main--flush">
+<div class="workspace">
+
+  <aside class="sidebar">
+    <div class="cmdbar">
+      <form method="post" action="{{ url_for('project_new') }}" class="formrow" style="gap:4px">
+        <input class="input" name="name" placeholder="Название проекта" style="width:140px" required>
+        <button class="btn btn--primary" type="submit">Создать</button>
+      </form>
+    </div>
+    <div class="sidebar__list">
+      {% for item in items %}
+        <a class="sidebar__item {% if project and item.id == project.id %}sidebar__item--active{% endif %}"
+           href="{{ url_for('projects') }}?id={{ item.id }}">
+          {{ item.name }}
+          <small>{{ item.topics }} тем · {{ item.files }} файл. {% if item.allow_bash %}· команды разрешены{% endif %}</small>
+        </a>
+      {% else %}
+        <div class="empty">Проектов пока нет</div>
+      {% endfor %}
+    </div>
+  </aside>
+
+  <section class="chat">
+    {% if not project %}
+      <div class="empty" style="margin:auto">Создайте проект, чтобы начать работу</div>
+    {% else %}
+      <div class="cmdbar">
+        <strong>{{ project.name }}</strong>
+        <span class="tag mono">{{ project.workdir }}</span>
+        <span class="cmdbar__sep"></span>
+        <form method="post" action="{{ url_for('project_toggle_bash', project_id=project.id) }}">
+          <label class="check" title="Правка файлов разрешена всегда. Запуск команд — только по этому флагу.">
+            <input type="checkbox" name="allow" {% if project.allow_bash %}checked{% endif %}
+                   onchange="this.form.submit()">
+            разрешить запуск команд
+          </label>
+        </form>
+        <span class="spacer"></span>
+        <form method="post" action="{{ url_for('topic_new', project_id=project.id) }}" class="formrow" style="gap:4px">
+          <input class="input" name="title" placeholder="Новая тема" style="width:150px" required>
+          <button class="btn" type="submit">Добавить тему</button>
+        </form>
+      </div>
+
+      {% if request.query_params.get('err') == 'big' %}
+        <div class="note note--err" style="margin:8px">Файл больше 64 МБ — не принят</div>
+      {% endif %}
+
+      <div style="display:flex;flex:1;min-height:0">
+
+        <div style="width:200px;flex:0 0 200px;border-right:1px solid var(--line);overflow-y:auto;background:var(--panel-alt)">
+          {% for t in topics %}
+            <a class="sidebar__item {% if current_topic and t.id == current_topic.id %}sidebar__item--active{% endif %}"
+               href="{{ url_for('projects') }}?id={{ project.id }}&topic={{ t.id }}">
+              {{ t.title }}
+              <small>{{ t.msg_count }} сообщ.</small>
+            </a>
+          {% else %}
+            <div class="empty">Тем нет</div>
+          {% endfor %}
+        </div>
+
+        <div class="chat">
+          {% if current_topic %}
+            <div class="cmdbar">
+              <strong>{{ current_topic.title }}</strong>
+              <span class="spacer"></span>
+              <a class="btn" href="{{ url_for('export_conversation', conversation_id=current_topic.id) }}">Экспорт</a>
+              <form method="post" action="{{ url_for('topic_delete', topic_id=current_topic.id) }}"
+                    onsubmit="return confirm('Удалить тему «{{ current_topic.title }}»?')">
+                <button class="btn btn--danger" type="submit">Удалить тему</button>
+              </form>
+            </div>
+
+            <div class="chat__scroll" id="scroll">
+              {% for m in messages %}
+                <div class="msg msg--{{ m.role }}">
+                  <div class="msg__head">
+                    <span class="msg__who">{% if m.role == 'user' %}Светлана{% elif m.role == 'assistant' %}Claude{% else %}Ошибка{% endif %}</span>
+                    <span>{{ m.created_at.strftime('%d.%m.%Y %H:%M') }}</span>
+                  </div>
+                  <div class="msg__body">{{ m.content }}</div>
+                  {% if m.role == 'assistant' %}
+                    <div class="msg__meta">
+                      {{ m.model or '—' }} · ${{ '%.4f'|format(m.cost_usd) }} ·
+                      {{ m.input_tokens }}→{{ m.output_tokens }} токенов ·
+                      {{ (m.duration_ms / 1000)|round(1) }} с
+                    </div>
+                  {% endif %}
+                </div>
+              {% else %}
+                <div class="empty">В теме пока нет сообщений</div>
+              {% endfor %}
+            </div>
+
+            <form class="chat__form" id="send-form" data-url="{{ url_for('topic_send', topic_id=current_topic.id) }}">
+              <textarea class="chat__input" id="text" name="text" rows="2"
+                        placeholder="Задача по проекту. Ctrl+Enter — отправить" required></textarea>
+              <button class="btn btn--primary" type="submit" id="send-btn">Отправить</button>
+            </form>
+          {% else %}
+            <div class="empty" style="margin:auto">Добавьте тему, чтобы вести диалог по проекту</div>
+          {% endif %}
+        </div>
+
+        <div style="width:230px;flex:0 0 230px;border-left:1px solid var(--line);overflow-y:auto">
+          <div class="panel__head">Файлы</div>
+          <form method="post" action="{{ url_for('project_upload', project_id=project.id) }}"
+                enctype="multipart/form-data" style="padding:8px">
+            <input class="input" type="file" name="upload" required style="margin-bottom:6px">
+            <button class="btn" type="submit" style="width:100%;justify-content:center">Загрузить</button>
+            <div class="field__hint">До 64 МБ</div>
+          </form>
+          {% for f in files %}
+            <div style="padding:5px 8px;border-top:1px solid var(--line-soft)">
+              <a href="{{ url_for('project_file_download', file_id=f.id) }}">{{ f.filename }}</a>
+              <div class="faint" style="font-size:12px">
+                {{ (f.size_bytes / 1024)|round(1) }} КБ · {{ f.created_at.strftime('%d.%m %H:%M') }}
+              </div>
+              <form method="post" action="{{ url_for('project_file_delete', file_id=f.id) }}"
+                    onsubmit="return confirm('Удалить файл {{ f.filename }}?')">
+                <button class="btn btn--plain btn--danger" type="submit" style="font-size:12px;min-height:18px;padding:0 4px">удалить</button>
+              </form>
+            </div>
+          {% else %}
+            <div class="empty" style="padding:12px">Файлов нет</div>
+          {% endfor %}
+        </div>
+
+      </div>
+    {% endif %}
+  </section>
+
+</div>
+</main>
+{% endblock %}
+{% block scripts %}
+{% if current_topic %}
+<script>initConversation({ who: "Светлана", showTools: true });</script>
+{% endif %}
+{% endblock %}

@@ -1,0 +1,47 @@
+<!doctype html>
+<html lang="ru" {% if theme != 'system' %}data-theme="{{ theme }}"{% endif %}>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>{% block title %}Веб-интерфейс{% endblock %}</title>
+<link rel="stylesheet" href="{{ url_for('static', path='/css/app.css') }}">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'><rect width='16' height='16' fill='%23e8b000'/></svg>">
+</head>
+<body>
+<div class="shell">
+
+  <div class="titlebar">
+    <span class="titlebar__mark">1</span>
+    <span class="titlebar__name">Рабочее место</span>
+    <span class="titlebar__spacer"></span>
+    {% if user %}
+      <span class="titlebar__user">{{ user.login }}</span>
+      <form method="post" action="{{ url_for('logout') }}">
+        <button class="btn btn--plain" type="submit">Выход</button>
+      </form>
+    {% endif %}
+  </div>
+
+  {% if user and not user.must_change %}
+  <nav class="nav">
+    <a class="nav__item {% if active == 'dashboard' %}nav__item--active{% endif %}" href="{{ url_for('dashboard') }}">Дашборд</a>
+    <a class="nav__item {% if active == 'chats' %}nav__item--active{% endif %}" href="{{ url_for('chats') }}">Чатики</a>
+    <a class="nav__item {% if active == 'projects' %}nav__item--active{% endif %}" href="{{ url_for('projects') }}">Проекты</a>
+    <a class="nav__item {% if active == 'settings' %}nav__item--active{% endif %}" href="{{ url_for('settings_page') }}">Настройки</a>
+    <span class="titlebar__spacer"></span>
+    <a class="nav__item {% if active == 'journal' %}nav__item--active{% endif %}" href="{{ url_for('journal') }}">Журнал</a>
+    <a class="nav__item {% if active == 'search' %}nav__item--active{% endif %}" href="{{ url_for('search') }}">Поиск</a>
+  </nav>
+  {% endif %}
+
+  {% block layout %}
+  <main class="main">
+    {% block content %}{% endblock %}
+  </main>
+  {% endblock %}
+
+</div>
+<script src="{{ url_for('static', path='/js/app.js') }}"></script>
+{% block scripts %}{% endblock %}
+</body>
+</html>

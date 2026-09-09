@@ -1,0 +1,26 @@
+{% extends "base.html" %}
+{% block title %}Вход{% endblock %}
+{% block layout %}
+<div class="login">
+  <div class="login__box">
+    <div class="login__head">
+      <span class="titlebar__mark">1</span>
+      <strong>Вход в систему</strong>
+    </div>
+    <div class="login__body">
+      {% if error %}<div class="note note--err">{{ error }}</div>{% endif %}
+      <form method="post" action="{{ url_for('login_submit') }}">
+        <div class="field">
+          <label class="field__label" for="login">Пользователь</label>
+          <input class="input" id="login" name="login" autocomplete="username" autofocus required>
+        </div>
+        <div class="field">
+          <label class="field__label" for="password">Пароль</label>
+          <input class="input" id="password" name="password" type="password" autocomplete="current-password" required>
+        </div>
+        <button class="btn btn--primary" type="submit" style="width:100%;justify-content:center">Войти</button>
+      </form>
+    </div>
+  </div>
+</div>
+{% endblock %}
