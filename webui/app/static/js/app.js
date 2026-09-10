@@ -151,6 +151,146 @@ async function drawHistory(url) {
     series('mem', css.getPropertyValue('--accent-deep').trim() || '#b98a00');
 }
 
+/* ── Ход работы ───────────────────────────────────────────────────── */
+
+/* Продолжительность в виде 1:23 или 1:02:03 — секунды в таймере нужны всегда,
+   иначе непонятно, идёт процесс или замер. */
+function fmtElapsed(ms) {
+    const total = Math.max(0, Math.round(ms / 1000));
+    const s = String(total % 60).padStart(2, '0');
+    const m = Math.floor(total / 60) % 60;
+    const h = Math.floor(total / 3600);
+    return h ? h + ':' + String(m).padStart(2, '0') + ':' + s : m + ':' + s;
+}
+
+/* Из аргументов инструмента вытаскиваем то единственное, что стоит показать
+   в узкой колонке: команду, путь, образец поиска. */
+function toolTarget(input) {
+    if (!input || typeof input !== 'object') return '';
+    const key = ['command', 'file_path', 'pattern', 'url', 'query', 'path', 'description']
+        .find(function (k) { return typeof input[k] === 'string' && input[k]; });
+    return key ? input[key] : '';
+}
+
+/* Панель промежуточных действий. Команды и инструменты идут сюда, а не в ленту
+   сообщений — там остаётся только разговор. Панели может не быть (чатики):
+   тогда возвращаем null, и вызывающая сторона просто ничего не показывает. */
+function createRunPanel() {
+    const log = document.getElementById('run-log');
+    const stat = document.getElementById('run-stat');
+    if (!log || !stat) return null;
+
+    const MAX_ROWS = 200;          // хвост важнее начала: старое вытесняем
+    let startedAt = 0;
+    let steps = 0;
+    let tokensDone = 0;            // выход завершённых шагов
+    let tokensStep = 0;            // выход текущего шага, значение накопительное
+    let ticker = null;
+
+    const atBottom = () => log.scrollHeight - log.scrollTop - log.clientHeight < 40;
+    const toBottom = () => { log.scrollTop = log.scrollHeight; };
+
+    function say(text, mod) {
+        stat.textContent = text;
+        stat.className = 'runstat' + (mod ? ' runstat--' + mod : '');
+    }
+
+    function tokensOut() {
+        return tokensDone + tokensStep;
+    }
+
+    function live() {
+        let text = '● идёт ' + fmtElapsed(Date.now() - startedAt);
+        if (steps) text += ' · шагов ' + steps;
+        if (tokensOut()) text += ' · ↑ ' + fmtNum(tokensOut()) + ' токенов';
+        say(text, 'live');
+    }
+
+    return {
+        start: function () {
+            startedAt = Date.now();
+            steps = 0;
+            tokensDone = 0;
+            tokensStep = 0;
+            const empty = log.querySelector('.empty');
+            if (empty) empty.remove();
+            live();
+            if (ticker) clearInterval(ticker);
+            ticker = setInterval(live, 1000);
+        },
+
+        step: function (name, input) {
+            steps += 1;
+            const stick = atBottom();
+            const row = document.createElement('div');
+            row.className = 'runrow';
+
+            const head = document.createElement('div');
+            head.className = 'runrow__head';
+            const who = document.createElement('span');
+            who.className = 'runrow__name';
+            who.textContent = name;
+            const when = document.createElement('span');
+            when.className = 'runrow__time';
+            when.textContent = new Date().toLocaleTimeString('ru-RU');
+            head.append(who, when);
+            row.append(head);
+
+            const target = toolTarget(input);
+            if (target) {
+                const what = document.createElement('div');
+                what.className = 'runrow__what';
+                what.textContent = target;
+                what.title = target;          // в колонке помещается не всё
+                row.append(what);
+            }
+
+            log.append(row);
+            while (log.children.length > MAX_ROWS) log.removeChild(log.firstChild);
+            if (stick) toBottom();
+            live();
+        },
+
+        /* Расход приходит по ходу ответа: в пределах шага значение накопительное,
+           на новом шаге счёт начинается заново — потому и две переменные. */
+        usage: function (event) {
+            if (event.new_message) {
+                tokensDone += tokensStep;
+                tokensStep = 0;
+            }
+            if (typeof event.output_tokens === 'number') {
+                tokensStep = event.output_tokens;
+            }
+            live();
+        },
+
+        finish: function (event) {
+            if (ticker) { clearInterval(ticker); ticker = null; }
+            const parts = ['готово за ' + fmtElapsed(event.duration_ms || (Date.now() - startedAt))];
+            if (steps) parts.push('шагов ' + steps);
+            if (event.cost_usd) parts.push('$' + Number(event.cost_usd).toFixed(4));
+            if (event.input_tokens || event.output_tokens) {
+                parts.push(fmtNum(event.input_tokens || 0) + '→' +
+                           fmtNum(event.output_tokens || 0) + ' токенов');
+            }
+            say(parts.join(' · '), 'done');
+        },
+
+        fail: function (message) {
+            if (ticker) { clearInterval(ticker); ticker = null; }
+            say('сбой · ' + message, 'err');
+        },
+
+        clear: function () {
+            log.textContent = '';
+            const empty = document.createElement('div');
+            empty.className = 'empty';
+            empty.textContent = 'Здесь появятся команды и обращения к файлам';
+            log.append(empty);
+        },
+    };
+}
+
 /* ── Диалог ───────────────────────────────────────────────────────── */
 
 function initConversation(opts) {
@@ -163,6 +303,10 @@ function initConversation(opts) {
     const atBottom = () => scroll.scrollHeight - scroll.scrollTop - scroll.clientHeight < 60;
     const toBottom = () => { scroll.scrollTop = scroll.scrollHeight; };
     toBottom();
+
+    const run = createRunPanel();
+    const clearBtn = document.getElementById('run-clear');
+    if (run && clearBtn) clearBtn.addEventListener('click', run.clear);
 
     function addMessage(role, who, text) {
         const empty = scroll.querySelector('.empty');
@@ -206,6 +350,16 @@ function initConversation(opts) {
         answer.body.innerHTML = '<span class="typing">думает</span>';
         let collected = '';
 
+        // Пока не пришло ни слова, счёт времени идёт прямо в пузыре ответа:
+        // на странице чатика панели «Ход работы» нет, а понять, что процесс
+        // не завис, надо и там.
+        const startedAt = Date.now();
+        const waitTicker = setInterval(function () {
+            const typing = answer.body.querySelector('.typing');
+            if (typing) typing.textContent = 'думает ' + fmtElapsed(Date.now() - startedAt);
+        }, 1000);
+        if (run) run.start();
+
         try {
             const res = await fetch(form.dataset.url, {
                 method: 'POST',
@@ -240,10 +394,18 @@ function initConversation(opts) {
                         collected = event.text;
                         answer.body.textContent = collected;
                     } else if (event.type === 'tool' && opts.showTools) {
-                        const line = document.createElement('div');
-                        line.className = 'toolline';
-                        line.textContent = 'инструмент: ' + event.name;
-                        answer.wrap.insertBefore(line, answer.body);
+                        // Промежуточные действия — в свою панель; лента остаётся
+                        // разговором. Панели нет — показываем строкой, как раньше.
+                        if (run) {
+                            run.step(event.name, event.input);
+                        } else {
+                            const line = document.createElement('div');
+                            line.className = 'toolline';
+                            line.textContent = 'инструмент: ' + event.name;
+                            answer.wrap.insertBefore(line, answer.body);
+                        }
+                    } else if (event.type === 'usage') {
+                        if (run) run.usage(event);
                     } else if (event.type === 'result') {
                         if (event.text) {
                             collected = event.text;
@@ -256,9 +418,11 @@ function initConversation(opts) {
                             ' · ' + (event.input_tokens || 0) + '→' + (event.output_tokens || 0) + ' токенов' +
                             ' · ' + ((event.duration_ms || 0) / 1000).toFixed(1) + ' с';
                         answer.wrap.append(meta);
+                        if (run) run.finish(event);
                     } else if (event.type === 'error') {
                         answer.wrap.className = 'msg msg--error';
                         answer.body.textContent = event.message;
+                        if (run) run.fail(event.message);
                     } else if (event.type === 'title') {
                         document.title = event.title;
                         const active = document.querySelector('.sidebar__item--active');
@@ -275,7 +439,9 @@ function initConversation(opts) {
         } catch (err) {
             answer.wrap.className = 'msg msg--error';
             answer.body.textContent = 'Не удалось получить ответ: ' + err.message;
+            if (run) run.fail(err.message);
         } finally {
+            clearInterval(waitTicker);
             input.disabled = false;
             button.disabled = false;
             button.textContent = 'Отправить';

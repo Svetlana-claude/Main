@@ -1,5 +1,7 @@
 {% extends "base.html" %}
 {% block title %}Проекты{% endblock %}
+{# Страница диалога занимает ровно окно: лента прокручивается, поле ввода внизу #}
+{% block shell_mod %}shell--fixed{% endblock %}
 {% block layout %}
 <main class="main main--flush">
 <div class="workspace">
@@ -107,29 +109,49 @@
           {% endif %}
         </div>
 
-        <div style="width:230px;flex:0 0 230px;border-left:1px solid var(--line);overflow-y:auto">
-          <div class="panel__head">Файлы</div>
-          <form method="post" action="{{ url_for('project_upload', project_id=project.id) }}"
-                enctype="multipart/form-data" style="padding:8px">
-            <input class="input" type="file" name="upload" required style="margin-bottom:6px">
-            <button class="btn" type="submit" style="width:100%;justify-content:center">Загрузить</button>
-            <div class="field__hint">До 64 МБ</div>
-          </form>
-          {% for f in files %}
-            <div style="padding:5px 8px;border-top:1px solid var(--line-soft)">
-              <a href="{{ url_for('project_file_download', file_id=f.id) }}">{{ f.filename }}</a>
-              <div class="faint" style="font-size:12px">
-                {{ (f.size_bytes / 1024)|round(1) }} КБ · {{ f.created_at.strftime('%d.%m %H:%M') }}
-              </div>
-              <form method="post" action="{{ url_for('project_file_delete', file_id=f.id) }}"
-                    onsubmit="return confirm('Удалить файл {{ f.filename }}?')">
-                <button class="btn btn--plain btn--danger" type="submit" style="font-size:12px;min-height:18px;padding:0 4px">удалить</button>
+        <aside class="rail">
+
+          <div class="rail__block">
+            <div class="panel__head">Файлы</div>
+            <div class="rail__body">
+              <form method="post" action="{{ url_for('project_upload', project_id=project.id) }}"
+                    enctype="multipart/form-data" style="padding:8px">
+                <input class="input" type="file" name="upload" required style="margin-bottom:6px">
+                <button class="btn" type="submit" style="width:100%;justify-content:center">Загрузить</button>
+                <div class="field__hint">До 64 МБ</div>
               </form>
+              {% for f in files %}
+                <div style="padding:5px 8px;border-top:1px solid var(--line-soft)">
+                  <a href="{{ url_for('project_file_download', file_id=f.id) }}">{{ f.filename }}</a>
+                  <div class="faint" style="font-size:12px">
+                    {{ (f.size_bytes / 1024)|round(1) }} КБ · {{ f.created_at.strftime('%d.%m %H:%M') }}
+                  </div>
+                  <form method="post" action="{{ url_for('project_file_delete', file_id=f.id) }}"
+                        onsubmit="return confirm('Удалить файл {{ f.filename }}?')">
+                    <button class="btn btn--plain btn--danger" type="submit" style="font-size:12px;min-height:18px;padding:0 4px">удалить</button>
+                  </form>
+                </div>
+              {% else %}
+                <div class="empty" style="padding:12px">Файлов нет</div>
+              {% endfor %}
             </div>
-          {% else %}
-            <div class="empty" style="padding:12px">Файлов нет</div>
-          {% endfor %}
-        </div>
+          </div>
+
+          {# Промежуточные действия ответа: команды и обращения к файлам.
+             Здесь же информационная строка — по ней видно, что процесс идёт. #}
+          <div class="rail__block rail__block--run">
+            <div class="panel__head">
+              Ход работы
+              <span class="spacer"></span>
+              <button class="btn btn--plain" type="button" id="run-clear">очистить</button>
+            </div>
+            <div class="runstat" id="run-stat" aria-live="polite">простой</div>
+            <div class="rail__body" id="run-log">
+              <div class="empty" style="padding:12px">Здесь появятся команды и обращения к файлам</div>
+            </div>
+          </div>
+
+        </aside>
 
       </div>
     {% endif %}

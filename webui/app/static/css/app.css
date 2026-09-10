@@ -131,6 +131,14 @@ a:hover { color: var(--link-hover); text-decoration: underline; }
 
 .shell { display: flex; flex-direction: column; min-height: 100vh; }
 
+/* Страницы диалога занимают ровно окно: лента сообщений прокручивается внутри
+   себя, поле ввода остаётся внизу. Высота задаётся явно (`height`, а не
+   `min-height`): при неопределённой высоте контейнера `flex-basis: 0%` внутри
+   не разрешается, `.main` считается по содержимому, и вниз уезжает вся страница
+   вместе с полем ввода. `dvh` — для мобильных, где панели браузера съедают часть
+   окна; для браузеров без `dvh` строкой выше остаётся `vh`. */
+.shell--fixed { height: 100vh; height: 100dvh; overflow: hidden; }
+
 .titlebar {
     display: flex; align-items: center; gap: 12px;
     padding: 0 12px; height: 34px;
@@ -364,7 +372,8 @@ a:hover { color: var(--link-hover); text-decoration: underline; }
 .sidebar__item small { display: block; color: var(--ink-faint); font-size: var(--fs-sm); }
 
 .chat { flex: 1; display: flex; flex-direction: column; min-height: 0; min-width: 0; }
-.chat__scroll { flex: 1; overflow-y: auto; padding: 12px; }
+/* overscroll-behavior: докрутив ленту до края, не утягиваем за собой страницу */
+.chat__scroll { flex: 1; overflow-y: auto; overscroll-behavior: contain; padding: 12px; }
 .chat__form {
     border-top: 1px solid var(--line);
     background: var(--cmdbar-flat);
@@ -396,10 +405,49 @@ a:hover { color: var(--link-hover); text-decoration: underline; }
 .msg__body pre, .msg__body code { font-family: var(--mono); font-size: var(--fs-sm); }
 .msg__body pre { overflow-x: auto; padding: 6px; background: var(--bg-sunken); border: 1px solid var(--line-soft); }
 
+/* Строка инструмента в ленте. Остаётся для чатиков и как запас: в проектах
+   промежуточные действия уходят в панель «Ход работы». */
 .toolline {
     margin: 3px 0; padding: 2px 8px;
     background: var(--panel-alt); border-left: 3px solid var(--accent);
     color: var(--ink-soft); font-size: var(--fs-sm); font-family: var(--mono);
+}
+
+/* ── Правая колонка: «Файлы» и «Ход работы» ───────────────────────── */
+
+.rail {
+    width: 250px; flex: 0 0 250px;
+    border-left: 1px solid var(--line);
+    display: flex; flex-direction: column; min-height: 0;
+}
+
+/* Блоки делят колонку по высоте, каждый прокручивается сам: список файлов
+   не должен утягивать за собой ход работы и наоборот. */
+.rail__block { display: flex; flex-direction: column; min-height: 0; flex: 1 1 50%; }
+.rail__block--run { border-top: 1px solid var(--line); }
+.rail__body { overflow-y: auto; flex: 1; min-height: 0; }
+
+/* Информационная строка блока: таймер, счётчик шагов, расход */
+.runstat {
+    padding: 3px 10px;
+    border-bottom: 1px solid var(--line-soft);
+    background: var(--panel-alt);
+    color: var(--ink-faint);
+    font-size: var(--fs-sm);
+}
+.runstat--live { color: var(--accent-deep); background: var(--accent-wash); }
+.runstat--done { color: var(--ok); background: var(--ok-wash); }
+.runstat--err  { color: var(--err); background: var(--err-wash); }
+
+.runrow { padding: 4px 8px; border-bottom: 1px solid var(--line-soft); }
+.runrow__head { display: flex; gap: 6px; align-items: baseline; }
+.runrow__name { font-weight: 600; font-size: var(--fs-sm); }
+.runrow__time { margin-left: auto; color: var(--ink-faint); font-size: 12px; }
+/* Команда бывает длинной: переносим по любому месту, чтобы колонка не разъезжалась */
+.runrow__what {
+    margin-top: 2px;
+    color: var(--ink-soft); font-family: var(--mono); font-size: 12px;
+    overflow-wrap: anywhere;
 }
 
 .typing { color: var(--ink-faint); font-size: var(--fs-sm); }

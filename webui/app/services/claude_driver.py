@@ -237,6 +237,26 @@ async def run(
                         if chunk:
                             yield {"type": "delta", "text": chunk}
 
+                # Расход по ходу ответа — для информационной строки «Хода работы».
+                # В пределах одного шага значение накопительное, на новом шаге
+                # счёт начинается заново, поэтому начало шага отмечается особо.
+                elif ev.get("type") == "message_start":
+                    usage = ((ev.get("message") or {}).get("usage")) or {}
+                    yield {
+                        "type": "usage",
+                        "new_message": True,
+                        "input_tokens": int(usage.get("input_tokens") or 0),
+                        "output_tokens": int(usage.get("output_tokens") or 0),
+                    }
+                elif ev.get("type") == "message_delta":
+                    usage = ev.get("usage") or {}
+                    if usage.get("output_tokens") is not None:
+                        yield {
+                            "type": "usage",
+                            "new_message": False,
+                            "output_tokens": int(usage.get("output_tokens") or 0),
+                        }
+
             elif etype == "assistant":
                 message = event.get("message") or {}
                 text = _extract_text(message)

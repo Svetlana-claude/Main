@@ -1,5 +1,7 @@
 {% extends "base.html" %}
 {% block title %}Чатики{% endblock %}
+{# Страница диалога занимает ровно окно: лента прокручивается, поле ввода внизу #}
+{% block shell_mod %}shell--fixed{% endblock %}
 {% block layout %}
 <main class="main main--flush">
 <div class="workspace">
