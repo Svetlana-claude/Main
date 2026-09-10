@@ -8,6 +8,7 @@ from fastapi.responses import JSONResponse, PlainTextResponse, RedirectResponse
 
 from .. import config, db
 from ..deps import current_user, render
+from ..services import restart
 
 router = APIRouter()
 
@@ -86,6 +87,7 @@ def settings_page(request: Request, file: str | None = None):
             "preview": preview,
             "sessions": sessions,
             "projects": projects,
+            "restart": restart.current().as_dict(),
             "current_session": user["session_id"],
         },
     )
@@ -155,6 +157,28 @@ def settings_session_close(request: Request, session_id: str):
     if session_id == user["session_id"]:
         return RedirectResponse(request.url_for("login_form"), status_code=303)
     return RedirectResponse(request.url_for("settings_page"), status_code=303)
+
+
+@router.post("/settings/restart", name="settings_restart")
+async def settings_restart(request: Request):
+    """Ставит перезапуск приложения в очередь.
+
+    Служба не останавливается сразу: сперва дописываются выполняющиеся ответы,
+    иначе остановка оборвала бы их вместе с проделанной работой — см.
+    `services/restart.py`.
+    """
+    user, redirect = _guard(request)
+    if redirect:
+        return JSONResponse({"error": "нет доступа"}, status_code=401)
+    return JSONResponse(restart.request(user["login"]).as_dict())
+
+
+@router.get("/settings/restart/state", name="settings_restart_state")
+def settings_restart_state(request: Request):
+    """Состояние перезапуска для опроса из браузера."""
+    if not current_user(request):
+        return JSONResponse({"error": "нет доступа"}, status_code=401)
+    return JSONResponse(restart.current().as_dict())
 
 
 @router.get("/export/{conversation_id}", name="export_conversation")

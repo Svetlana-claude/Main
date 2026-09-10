@@ -33,6 +33,16 @@ BASH_FAMILY = ["Bash", "BashOutput", "KillShell"]
 
 RUN_TIMEOUT_SEC = 1800  # 30 минут: агентская работа бывает долгой
 
+# Сколько ответов выполняется прямо сейчас. По этому счётчику перезапуск
+# приложения ждёт: остановка службы гасит и запущенный ею `claude`, а ответ
+# пишется в базу только по завершении — значит оборванный ответ пропадёт.
+_active_runs = 0
+
+
+def active_runs() -> int:
+    """Число выполняющихся ответов. Ноль — приложение можно перезапускать."""
+    return _active_runs
+
 
 @dataclass
 class RunResult:
@@ -128,6 +138,8 @@ async def run(
     )
     cwd = str(workdir) if workdir else str(config.REPO_ROOT)
 
+    global _active_runs
+    _active_runs += 1
     try:
         proc = await asyncio.create_subprocess_exec(
             *argv,
@@ -136,6 +148,7 @@ async def run(
             cwd=cwd,
         )
     except FileNotFoundError:
+        _active_runs -= 1
         yield {"type": "error", "message": f"Не найден исполняемый файл {config.CLAUDE_BIN}"}
         return
 
@@ -252,6 +265,7 @@ async def run(
             "tools_used": result.tools_used,
         }
     finally:
+        _active_runs -= 1
         stderr_task.cancel()
         if proc.returncode is None:
             proc.kill()

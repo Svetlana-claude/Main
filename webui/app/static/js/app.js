@@ -283,3 +283,79 @@ function initConversation(opts) {
         }
     });
 }
+
+/* ── Перезапуск приложения ────────────────────────────────────────── */
+
+function initRestart(opts) {
+    const btn = document.getElementById('restart-btn');
+    const label = document.getElementById('restart-state');
+    if (!btn || !label) return;
+
+    // Служба уже остановилась — дальше ждём не состояние, а её возвращение:
+    // отвечать на запрос о состоянии некому, приложение и есть перезапускаемое
+    let wentDown = false;
+
+    function say(text) {
+        label.textContent = text;
+    }
+
+    function later() {
+        setTimeout(poll, 2000);
+    }
+
+    async function poll() {
+        if (wentDown) {
+            try {
+                const res = await fetch(opts.healthUrl, { cache: 'no-store' });
+                if (res.ok) {
+                    say('Приложение поднялось, обновляю страницу');
+                    location.reload();
+                    return;
+                }
+            } catch (err) {
+                /* ещё не поднялось — ждём дальше */
+            }
+            later();
+            return;
+        }
+
+        try {
+            const res = await fetch(opts.stateUrl, { cache: 'no-store' });
+            if (!res.ok) throw new Error('нет ответа');
+            const state = await res.json();
+            if (state.pending) {
+                say(state.waiting_for > 0
+                    ? 'Ждём завершения ответов, осталось: ' + state.waiting_for
+                    : 'Служба уходит на перезапуск');
+                later();
+            } else {
+                btn.disabled = false;
+                say(state.error ? 'Перезапуск не состоялся: ' + state.error : 'Служба работает');
+            }
+        } catch (err) {
+            wentDown = true;
+            say('Служба перезапускается');
+            later();
+        }
+    }
+
+    btn.addEventListener('click', async function () {
+        if (!confirm('Перезапустить приложение? Оно будет недоступно несколько секунд.')) return;
+        btn.disabled = true;
+        say('Перезапуск запланирован');
+        try {
+            const res = await fetch(opts.requestUrl, { method: 'POST' });
+            if (!res.ok) throw new Error('отказ');
+        } catch (err) {
+            btn.disabled = false;
+            say('Не удалось запросить перезапуск');
+            return;
+        }
+        poll();
+    });
+
+    if (opts.pending) {
+        btn.disabled = true;
+        poll();
+    }
+}

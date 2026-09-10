@@ -132,6 +132,27 @@
 {% endif %}
 
 <div class="panel">
+  <div class="panel__head">Перезапуск приложения</div>
+  <div class="panel__body">
+    <p class="field__hint" style="margin-top:0">
+      Правки кода <code class="mono">webui</code> вступают в силу только после перезапуска службы. Кнопка не
+      останавливает её сразу: сперва дописываются выполняющиеся ответы, иначе остановка
+      оборвала бы их вместе с проделанной работой. Страница обновится сама, когда
+      приложение поднимется.
+    </p>
+    <div class="cmdbar" style="padding-left:0">
+      <button class="btn btn--danger" type="button" id="restart-btn"
+              {% if restart.pending %}disabled{% endif %}>Перезапустить приложение</button>
+      <span id="restart-state" class="faint" role="status" aria-live="polite">
+        {%- if restart.pending %}Перезапуск запланирован
+        {%- elif restart.error %}Перезапуск не состоялся: {{ restart.error }}
+        {%- else %}Служба работает{% endif -%}
+      </span>
+    </div>
+  </div>
+</div>
+
+<div class="panel">
   <div class="panel__head">Активные сессии</div>
   <div class="panel__body panel__body--flush">
     <div class="tablewrap">
@@ -165,6 +186,13 @@
 document.getElementById('show-preview')?.addEventListener('change', function () {
     const box = document.getElementById('preview-box');
     if (box) box.hidden = !this.checked;
+});
+
+initRestart({
+    requestUrl: "{{ url_for('settings_restart') }}",
+    stateUrl: "{{ url_for('settings_restart_state') }}",
+    healthUrl: "{{ url_for('healthz') }}",
+    pending: {{ 'true' if restart.pending else 'false' }}
 });
 </script>
 {% endblock %}
