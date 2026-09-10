@@ -33,6 +33,13 @@ BASH_FAMILY = ["Bash", "BashOutput", "KillShell"]
 
 RUN_TIMEOUT_SEC = 1800  # 30 минут: агентская работа бывает долгой
 
+# Каким куском забирается вывод движка
+READ_CHUNK = 64 * 1024
+
+# Потолок на одну строку JSON. Строка длиннее — уже не событие, а что-то нештатное,
+# копить её в памяти незачем: такая строка пропускается, поток продолжается.
+MAX_LINE_BYTES = 64 * 1024 * 1024
+
 # Сколько ответов выполняется прямо сейчас. По этому счётчику перезапуск
 # приложения ждёт: остановка службы гасит и запущенный ею `claude`, а ответ
 # пишется в базу только по завершении — значит оборванный ответ пропадёт.
@@ -105,6 +112,43 @@ def _build_argv(
     return argv
 
 
+async def _iter_lines(
+    stream: asyncio.StreamReader, timeout: float | None = None
+) -> AsyncIterator[bytes]:
+    """Читает поток построчно без ограничения на длину строки.
+
+    Штатный `StreamReader.readline()` держит буфер в 64 КиБ и на строке длиннее
+    падает с «Separator is not found, and chunk exceed the limit», а вызывающая
+    сторона показывает это как «Сбой обработки». Движок такие строки выдаёт
+    постоянно: в одну строку JSON укладывается и содержимое прочитанного файла,
+    и вывод команды, и текст ответа целиком.
+
+    `timeout` считается на кусок, а не на строку, — это время молчания движка.
+    """
+    buf = bytearray()
+    skipping = False     # строка переросла потолок: досматриваем её до конца и выбрасываем
+    while True:
+        chunk = await asyncio.wait_for(stream.read(READ_CHUNK), timeout=timeout)
+        if not chunk:
+            break
+        buf.extend(chunk)
+        while True:
+            nl = buf.find(b"\n")
+            if nl < 0:
+                break
+            line = bytes(buf[:nl])
+            del buf[: nl + 1]
+            if skipping:
+                skipping = False     # это был хвост выброшенной строки
+                continue
+            yield line
+        if len(buf) > MAX_LINE_BYTES:
+            buf.clear()
+            skipping = True
+    if buf and not skipping:
+        yield bytes(buf)     # последняя строка без перевода в конце
+
+
 def _extract_text(message: dict) -> str:
     """Собирает текст из блоков content ответа."""
     parts = []
@@ -157,7 +201,7 @@ async def run(
 
     async def drain_stderr() -> None:
         assert proc.stderr is not None
-        async for raw in proc.stderr:
+        async for raw in _iter_lines(proc.stderr):
             line = raw.decode("utf-8", "replace").rstrip()
             if line:
                 stderr_tail.append(line)
@@ -167,16 +211,7 @@ async def run(
 
     try:
         assert proc.stdout is not None
-        while True:
-            try:
-                raw = await asyncio.wait_for(proc.stdout.readline(), timeout=RUN_TIMEOUT_SEC)
-            except asyncio.TimeoutError:
-                proc.kill()
-                yield {"type": "error", "message": "Превышено время ожидания ответа"}
-                return
-            if not raw:
-                break
-
+        async for raw in _iter_lines(proc.stdout, RUN_TIMEOUT_SEC):
             line = raw.decode("utf-8", "replace").strip()
             if not line:
                 continue
@@ -264,6 +299,11 @@ async def run(
             "error_message": result.error_message,
             "tools_used": result.tools_used,
         }
+    except asyncio.TimeoutError:
+        # Молчание движка дольше RUN_TIMEOUT_SEC: ждать больше нечего
+        proc.kill()
+        yield {"type": "error", "message": "Превышено время ожидания ответа"}
+        return
     finally:
         _active_runs -= 1
         stderr_task.cancel()
