@@ -2,15 +2,32 @@
 {% block title %}Дашборд{% endblock %}
 {% block content %}
 
-{% if usage.month.over %}
+{% macro num(v) -%}
+{{ '{:,}'.format(v|int)|replace(',', ' ') }}
+{%- endmacro %}
+
+{% if usage.window_5h.over %}
   <div class="note note--err">
-    Расход за месяц ${{ '%.2f'|format(usage.month.cost) }} достиг установленного предела
-    ${{ '%.0f'|format(usage.month.limit) }}. Предел правится в настройках.
+    Пятичасовое окно: набрано {{ num(usage.window_5h.tokens) }} токенов — это
+    заданный предел {{ num(usage.window_5h.limit) }}. Обнулится через
+    {{ usage.window_5h.resets_in }}.
   </div>
-{% elif usage.month.near %}
+{% elif usage.window_5h.near %}
   <div class="note note--warn">
-    Израсходовано {{ usage.month.share }}% месячного предела
-    (${{ '%.2f'|format(usage.month.cost) }} из ${{ '%.0f'|format(usage.month.limit) }}).
+    Пятичасовое окно израсходовано на {{ usage.window_5h.share }}%
+    ({{ num(usage.window_5h.tokens) }} из {{ num(usage.window_5h.limit) }}),
+    осталось {{ num(usage.window_5h.left) }}. Обнулится через {{ usage.window_5h.resets_in }}.
+  </div>
+{% endif %}
+{% if usage.window_week.over %}
+  <div class="note note--err">
+    Недельное окно: набрано {{ num(usage.window_week.tokens) }} токенов при пределе
+    {{ num(usage.window_week.limit) }}. Обнулится через {{ usage.window_week.resets_in }}.
+  </div>
+{% elif usage.window_week.near %}
+  <div class="note note--warn">
+    Недельное окно израсходовано на {{ usage.window_week.share }}%, осталось
+    {{ num(usage.window_week.left) }}.
   </div>
 {% endif %}
 
@@ -85,53 +102,108 @@
   </div>
 </div>
 
+{% macro window_panel(w, title, note, id) %}
+  <div class="panel">
+    <div class="panel__head">
+      {{ title }}
+      <span class="spacer"></span>
+      <span class="faint" id="{{ id }}-resets">
+        {% if w.idle %}запросов не было{% else %}обнулится через {{ w.resets_in }}{% endif %}
+      </span>
+    </div>
+    <div class="panel__body">
+      <div class="tile__value"><span id="{{ id }}-tokens">{{ num(w.tokens) }}</span>
+        <span class="faint" style="font-size:14px">токенов</span></div>
+      {% if w.limit %}
+        <div class="meter">
+          <div class="meter__fill {% if w.share >= 100 %}meter__fill--err{% elif w.share >= 80 %}meter__fill--warn{% endif %}"
+               id="{{ id }}-bar" style="width:{{ [w.share, 100]|min }}%"></div>
+        </div>
+        <div class="tile__sub">
+          <span id="{{ id }}-share">{{ w.share }}</span>% предела {{ num(w.limit) }} ·
+          осталось <span id="{{ id }}-left">{{ num(w.left) }}</span>
+        </div>
+      {% else %}
+        <div class="tile__sub">
+          Предел не задан — мера остатка не показывается.
+          Задаётся в <a href="{{ url_for('settings_page') }}">настройках</a>.
+        </div>
+      {% endif %}
+      <table class="table" style="margin-top:10px">
+        <tbody>
+          <tr><td>Запросов</td><td class="num" id="{{ id }}-req">{{ w.requests }}</td></tr>
+          <tr><td>На вход</td><td class="num" id="{{ id }}-in">{{ num(w.input_tokens) }}</td></tr>
+          <tr><td>На выход</td><td class="num" id="{{ id }}-out">{{ num(w.output_tokens) }}</td></tr>
+          <tr><td>Из кэша</td><td class="num" id="{{ id }}-cr">{{ num(w.cache_read) }}</td></tr>
+        </tbody>
+      </table>
+      <div class="field__hint">{{ note }}</div>
+    </div>
+  </div>
+{% endmacro %}
+
+<div class="grid2">
+  {{ window_panel(usage.window_5h, 'Пятичасовое окно',
+     'Окно скользящее: отсчёт идёт от первого запроса, а не от круглого часа.
+      В меру берутся токены на вход и выход; чтение из кэша показано отдельно,
+      потому что оно и тарифицируется иначе.', 'u-w5') }}
+
+  {{ window_panel(usage.window_week, 'Недельное окно',
+     'Те же правила, окно длиной семь суток.', 'u-week') }}
+</div>
+
 <div class="grid2">
   <div class="panel">
     <div class="panel__head">Расход за сегодня</div>
     <div class="panel__body panel__body--flush">
       <table class="table">
         <tbody>
-          <tr><td>Стоимость</td><td class="num" id="u-today-cost">${{ '%.4f'|format(usage.today.cost) }}</td></tr>
           <tr><td>Запросов</td><td class="num" id="u-today-req">{{ usage.today.requests }}</td></tr>
-          <tr><td>Токенов на вход</td><td class="num" id="u-today-in">{{ '{:,}'.format(usage.today.input_tokens)|replace(',', ' ') }}</td></tr>
-          <tr><td>Токенов на выход</td><td class="num" id="u-today-out">{{ '{:,}'.format(usage.today.output_tokens)|replace(',', ' ') }}</td></tr>
-          <tr><td>Прочитано из кэша</td><td class="num" id="u-today-cr">{{ '{:,}'.format(usage.today.cache_read)|replace(',', ' ') }}</td></tr>
-          <tr><td>Записано в кэш</td><td class="num" id="u-today-cw">{{ '{:,}'.format(usage.today.cache_write)|replace(',', ' ') }}</td></tr>
+          <tr><td>Токенов на вход</td><td class="num" id="u-today-in">{{ num(usage.today.input_tokens) }}</td></tr>
+          <tr><td>Токенов на выход</td><td class="num" id="u-today-out">{{ num(usage.today.output_tokens) }}</td></tr>
+          <tr><td>Прочитано из кэша</td><td class="num" id="u-today-cr">{{ num(usage.today.cache_read) }}</td></tr>
+          <tr><td>Записано в кэш</td><td class="num" id="u-today-cw">{{ num(usage.today.cache_write) }}</td></tr>
         </tbody>
       </table>
     </div>
   </div>
 
   <div class="panel">
-    <div class="panel__head">Расход за месяц</div>
+    <div class="panel__head">По разделам за неделю</div>
     <div class="panel__body">
-      <div class="tile__value" id="u-month-cost">${{ '%.2f'|format(usage.month.cost) }}</div>
-      {% if usage.month.limit %}
-        <div class="meter">
-          <div class="meter__fill {% if usage.month.share >= 100 %}meter__fill--err{% elif usage.month.share >= 80 %}meter__fill--warn{% endif %}"
-               id="u-month-bar" style="width:{{ [usage.month.share, 100]|min }}%"></div>
-        </div>
-        <div class="tile__sub">
-          <span id="u-month-share">{{ usage.month.share }}</span>% предела
-          ${{ '%.0f'|format(usage.month.limit) }}
-        </div>
-      {% else %}
-        <div class="tile__sub">Месячный предел не задан</div>
-      {% endif %}
-      <table class="table" style="margin-top:10px">
-        <thead><tr><th>Раздел</th><th class="num">Запросов</th><th class="num">Стоимость</th></tr></thead>
+      <table class="table">
+        <thead><tr><th>Раздел</th><th class="num">Запросов</th><th class="num">Токенов</th></tr></thead>
         <tbody>
           <tr><td>Чатики</td>
             <td class="num">{{ usage.by_kind.get('chat', {}).get('requests', 0) }}</td>
-            <td class="num">${{ '%.4f'|format(usage.by_kind.get('chat', {}).get('cost', 0)) }}</td></tr>
+            <td class="num">{{ num(usage.by_kind.get('chat', {}).get('tokens', 0)) }}</td></tr>
           <tr><td>Проекты</td>
             <td class="num">{{ usage.by_kind.get('topic', {}).get('requests', 0) }}</td>
-            <td class="num">${{ '%.4f'|format(usage.by_kind.get('topic', {}).get('cost', 0)) }}</td></tr>
+            <td class="num">{{ num(usage.by_kind.get('topic', {}).get('tokens', 0)) }}</td></tr>
         </tbody>
       </table>
       <div class="field__hint">
-        Считается по данным, которые возвращает Claude Code после каждого запроса.
-        Остаток месячной квоты подписки таким способом получить нельзя — его никто не отдаёт.
+        <b>Откуда числа.</b> Окна считаются по стенограммам сессий Claude Code,
+        {% if usage.source == 'стенограммы' %}
+          поэтому в них попадает и работа из терминала, а не только через этот
+          интерфейс — окно плана она расходует наравне. Разбивка по разделам
+          ниже идёт по своей базе, её стенограммы не знают.
+        {% else %}
+          но сейчас они недоступны, и счёт идёт по своей базе — то есть
+          <b>только по работе через этот интерфейс</b>. Запуски
+          <code>claude</code> из терминала в это число не попали, хотя окно
+          расходуют.
+        {% endif %}
+        Остаток по подписке программно спросить нечем: Admin и Analytics API
+        личным подпискам не выдаются и показывают прошлый расход, а не остаток,
+        у телеметрии метрики остатка нет вовсе. Остаток показывают только
+        <code>/status</code> и <code>/usage</code> внутри живой сессии —
+        отсюда и предел, задаваемый вручную.
+        {% if usage.today.cost_reference %}
+          Справочно, в пересчёте по тарифам API, — то есть сколько стоило бы
+          то же самое без подписки: ${{ '%.2f'|format(usage.today.cost_reference) }}
+          за сегодня. С подписки эти деньги не списываются.
+        {% endif %}
       </div>
     </div>
   </div>

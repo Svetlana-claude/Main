@@ -46,17 +46,28 @@ function initDashboard(opts) {
         if (net) net.innerHTML = '↓ ' + m.net.rx_rate_h + '<br>↑ ' + m.net.tx_rate_h;
 
         const u = data.usage;
-        setText('u-today-cost', '$' + u.today.cost.toFixed(4));
         setText('u-today-req', u.today.requests);
         setText('u-today-in', fmtNum(u.today.input_tokens));
         setText('u-today-out', fmtNum(u.today.output_tokens));
         setText('u-today-cr', fmtNum(u.today.cache_read));
         setText('u-today-cw', fmtNum(u.today.cache_write));
-        setText('u-month-cost', '$' + u.month.cost.toFixed(2));
-        if (u.month.limit) {
-            setText('u-month-share', u.month.share);
-            setMeter('u-month-bar', u.month.share);
-        }
+
+        // Окна тарифного плана. Мера и остаток обновляются только когда предел
+        // задан: иначе на странице их просто нет, и писать некуда.
+        [['u-w5', u.window_5h], ['u-week', u.window_week]].forEach(function (pair) {
+            const id = pair[0], w = pair[1];
+            setText(id + '-tokens', fmtNum(w.tokens));
+            setText(id + '-req', w.requests);
+            setText(id + '-in', fmtNum(w.input_tokens));
+            setText(id + '-out', fmtNum(w.output_tokens));
+            setText(id + '-cr', fmtNum(w.cache_read));
+            setText(id + '-resets', w.idle ? 'запросов не было' : 'обнулится через ' + w.resets_in);
+            if (w.limit) {
+                setText(id + '-share', w.share);
+                setText(id + '-left', fmtNum(w.left));
+                setMeter(id + '-bar', w.share);
+            }
+        });
 
         const stamp = new Date();
         setText('stamp', 'обновлено ' + stamp.toLocaleTimeString('ru-RU'));

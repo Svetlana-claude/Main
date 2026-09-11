@@ -28,10 +28,22 @@
           <div class="field__hint">Псевдоним передаётся Claude Code, он берёт актуальную версию</div>
         </div>
         <div class="field">
-          <label class="field__label" for="monthly_limit_usd">Месячный предел расхода, $</label>
-          <input class="input input--narrow" id="monthly_limit_usd" name="monthly_limit_usd"
-                 type="number" min="0" step="1" value="{{ values.monthly_limit_usd }}">
-          <div class="field__hint">0 — не предупреждать</div>
+          <label class="field__label" for="limit_5h_tokens">Предел пятичасового окна, токенов</label>
+          <input class="input input--narrow" id="limit_5h_tokens" name="limit_5h_tokens"
+                 type="number" min="0" step="1000" value="{{ values.limit_5h_tokens }}">
+          <div class="field__hint">0 — меру не показывать</div>
+        </div>
+        <div class="field">
+          <label class="field__label" for="limit_week_tokens">Предел недельного окна, токенов</label>
+          <input class="input input--narrow" id="limit_week_tokens" name="limit_week_tokens"
+                 type="number" min="0" step="10000" value="{{ values.limit_week_tokens }}">
+          <div class="field__hint">
+            Числом Anthropic пределы плана не публикует: счёт ведётся на его стороне
+            и зависит от модели и размера контекста. Поэтому предел подбирается
+            наблюдением — когда Claude Code сообщит, что окно исчерпано, посмотрите
+            на дашборде набранное в этом окне число и впишите его сюда.
+            Пока стоит 0, расход показывается без меры остатка.
+          </div>
         </div>
         <div class="field">
           <label class="field__label" for="theme">Тема оформления</label>

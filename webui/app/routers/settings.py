@@ -98,9 +98,10 @@ def settings_save(
     request: Request,
     refresh_seconds: str = Form("10"),
     model: str = Form("opus"),
-    monthly_limit_usd: str = Form("50"),
     theme: str = Form("light"),
     metrics_keep_hours: str = Form("48"),
+    limit_5h_tokens: str = Form("0"),
+    limit_week_tokens: str = Form("0"),
 ):
     user, redirect = _guard(request)
     if redirect:
@@ -119,11 +120,11 @@ def settings_save(
     db.set_setting("model", model if model in allowed_models else "opus")
     db.set_setting("theme", theme if theme in {"light", "dark", "system"} else "light")
 
-    try:
-        limit = max(0.0, float(monthly_limit_usd))
-    except (TypeError, ValueError):
-        limit = 50.0
-    db.set_setting("monthly_limit_usd", f"{limit:g}")
+    # Пределы окон: ноль — «предел не задан», меры тогда не показываются.
+    # Верхняя граница взята с большим запасом, она защищает от описки вроде
+    # лишнего нуля, а не задаёт осмысленный потолок.
+    db.set_setting("limit_5h_tokens", clamp_int(limit_5h_tokens, 0, 1_000_000_000, 0))
+    db.set_setting("limit_week_tokens", clamp_int(limit_week_tokens, 0, 1_000_000_000, 0))
 
     return RedirectResponse(request.url_for("settings_page"), status_code=303)
 
