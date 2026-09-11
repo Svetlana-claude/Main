@@ -62,6 +62,15 @@
           {% for t in topics %}
             <a class="sidebar__item {% if current_topic and t.id == current_topic.id %}sidebar__item--active{% endif %}"
                href="{{ url_for('projects') }}?id={{ project.id }}&topic={{ t.id }}">
+              {# Кружок состояния. Цвет — не единственный признак: то же самое
+                 сказано словами в подсказке и для чтения с экрана.
+                 Условие — про тот же разрыв, что и у адреса опроса: пока службу
+                 не перезапустили, состояние со страницей не приходит, и кружок
+                 не рисуется вовсе. Серый «неизвестно» врал бы про пустую тему. #}
+              {% if t.state %}
+                <span class="dot dot--{{ t.state }}" data-topic-dot="{{ t.id }}"
+                      title="{{ t.state_title }}" role="img" aria-label="{{ t.state_title }}"></span>
+              {% endif %}
               {{ t.title }}
               <small>{{ t.msg_count }} сообщ.</small>
             </a>
@@ -204,12 +213,21 @@
 <script>initProjectFiles({
   listUrl: "{{ url_for('project_tree', project_id=project.id) }}",
   downloadUrl: "{{ url_for('project_tree_download', project_id=project.id) }}"
+});
+{# Адрес собран вручную, а не через url_for('project_topics_state'): шаблоны
+   подхватываются сразу, а маршрут — только после перезапуска службы, и до него
+   url_for уронил бы всю страницу. Пока маршрута нет, опрос получает 404
+   и молча ждёт следующего раза. #}
+initTopicDots({
+  stateUrl: "{{ url_for('projects') }}/{{ project.id }}/topics/state",
+  intervalSec: 10
 });</script>
 {% endif %}
 {% if current_topic %}
 <script>initConversation({
   who: "Светлана",
   showTools: true,
+  topicId: {{ current_topic.id }},
   streamUrl: "{{ url_for('topic_stream', topic_id=current_topic.id) }}"
 });</script>
 {% endif %}

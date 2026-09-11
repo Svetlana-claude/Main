@@ -302,6 +302,54 @@ function createRunPanel() {
     };
 }
 
+/* ── Кружки состояния тем ─────────────────────────────────────────── */
+
+const TOPIC_STATE_TITLE = {
+    work: 'есть незавершённое',
+    done: 'всё выполнено',
+    empty: 'сообщений нет',
+};
+
+/* Перечень тем: кружок у каждой темы. Состояние берётся с сервера опросом —
+   ответ в соседней теме идёт фоном, и её кружок должен позеленеть сам,
+   без перезагрузки страницы. */
+function initTopicDots(opts) {
+    const dots = new Map();
+    document.querySelectorAll('[data-topic-dot]').forEach(function (el) {
+        dots.set(String(el.dataset.topicDot), el);
+    });
+    if (!dots.size) return;
+
+    function paint(id, state, title) {
+        const el = dots.get(String(id));
+        if (!el || !TOPIC_STATE_TITLE[state]) return;
+        el.className = 'dot dot--' + state;
+        el.title = title || TOPIC_STATE_TITLE[state];
+        el.setAttribute('aria-label', el.title);
+    }
+
+    async function tick() {
+        try {
+            const res = await fetch(opts.stateUrl, { cache: 'no-store' });
+            if (!res.ok) return;              // не пускают — перерисовывать нечем
+            const data = await res.json();
+            const topics = data.topics || {};
+            Object.keys(topics).forEach(function (id) {
+                paint(id, topics[id].state, topics[id].title);
+            });
+        } catch (err) {
+            /* связь моргнула — состояние подтянется следующим опросом */
+        }
+    }
+
+    document.addEventListener('topic-state', function (e) {
+        paint(e.detail.topicId, e.detail.state);
+    });
+
+    setInterval(tick, Math.max(5, opts.intervalSec || 10) * 1000);
+    tick();
+}
+
 /* ── Диалог ───────────────────────────────────────────────────────── */
 
 function initConversation(opts) {
@@ -352,6 +400,15 @@ function initConversation(opts) {
     // на страницу, где ответ уже идёт.
     let following = false;
 
+    /* Кружок открытой темы перекрашивается сразу: здесь о начале и конце ответа
+       известно раньше, чем о нём скажет опрос перечня тем. */
+    function tellTopicState(state) {
+        if (!opts.topicId) return;
+        document.dispatchEvent(new CustomEvent('topic-state', {
+            detail: { topicId: opts.topicId, state: state },
+        }));
+    }
+
     function lockInput(locked) {
         input.disabled = locked;
         button.disabled = locked;
@@ -383,6 +440,7 @@ function initConversation(opts) {
             }, 1000);
             if (run) run.start();
             lockInput(true);
+            tellTopicState('work');
         }
 
         try {
@@ -458,10 +516,12 @@ function initConversation(opts) {
                                 ' · ' + ((event.duration_ms || 0) / 1000).toFixed(1) + ' с';
                             answer.wrap.append(meta);
                             if (run) run.finish(event);
+                            tellTopicState('done');
                         } else if (event.type === 'error') {
                             answer.wrap.className = 'msg msg--error';
                             answer.body.textContent = event.message;
                             if (run) run.fail(event.message);
+                            tellTopicState('work');     // оборванное — незакрытое
                         } else if (event.type === 'title') {
                             document.title = event.title;
                             const active = document.querySelector('.sidebar__item--active');

@@ -151,6 +151,63 @@ def _resolve_in_dir(root_dir: Path, relative: str) -> Path:
     return candidate
 
 
+# ── Состояние темы ──────────────────────────────────────────────────────
+#
+# Кружок в перечне тем отвечает на один вопрос: осталось ли тут незакрытое.
+# Красным он горит в двух случаях, и оба означают «не доделано»:
+#
+# * по теме прямо сейчас идёт ответ — это видно по запуску в памяти;
+# * последняя запись в теме — вопрос без ответа или ошибка. Так остаётся тема,
+#   чей ответ оборвался: перезапуском службы, сбоем движка, разрывом связи.
+#   Именно этот случай из перечня тем раньше было не разглядеть.
+#
+# Пустая тема — не зелёная: зелёный значит «сделано», а в ней ничего не делали.
+TOPIC_WORK = "work"
+TOPIC_DONE = "done"
+TOPIC_EMPTY = "empty"
+
+TOPIC_STATE_TITLE = {
+    TOPIC_WORK: "есть незавершённое",
+    TOPIC_DONE: "всё выполнено",
+    TOPIC_EMPTY: "сообщений нет",
+}
+
+
+def _topic_state(topic_id: int, last_role: str | None) -> str:
+    """Состояние темы: `work`, `done` или `empty`.
+
+    `last_role` — роль последней записи в теме; `None`, если записей нет.
+    """
+    if runs.active("project", topic_id):
+        return TOPIC_WORK
+    if not last_role:
+        return TOPIC_EMPTY
+    # Ответ движка закрывает обмен; вопрос и ошибка оставляют его открытым
+    return TOPIC_DONE if last_role == "assistant" else TOPIC_WORK
+
+
+def _topics_state_map(project_id: int) -> dict[str, dict]:
+    """Состояние всех тем проекта: номер темы строкой -> состояние и подсказка.
+
+    Одна функция и для страницы, и для опроса: разойдись они, кружок при
+    перезагрузке менял бы цвет сам по себе.
+    """
+    rows = db.query(
+        """
+        SELECT c.id,
+               (SELECT m.role FROM messages m WHERE m.conversation_id = c.id
+                 ORDER BY m.id DESC LIMIT 1) AS last_role
+        FROM conversations c WHERE c.project_id = %s
+        """,
+        (project_id,),
+    )
+    out: dict[str, dict] = {}
+    for row in rows:
+        state = _topic_state(row["id"], row["last_role"])
+        out[str(row["id"])] = {"state": state, "title": TOPIC_STATE_TITLE[state]}
+    return out
+
+
 def _guard(request: Request):
     user = current_user(request)
     if not user:
@@ -222,11 +279,16 @@ def projects(request: Request, id: int | None = None, topic: int | None = None):
         topics = db.query(
             """
             SELECT c.id, c.title, c.updated_at,
-                   (SELECT count(*) FROM messages m WHERE m.conversation_id = c.id) AS msg_count
+                   (SELECT count(*) FROM messages m WHERE m.conversation_id = c.id) AS msg_count,
+                   (SELECT m.role FROM messages m WHERE m.conversation_id = c.id
+                     ORDER BY m.id DESC LIMIT 1) AS last_role
             FROM conversations c WHERE c.project_id = %s ORDER BY c.updated_at DESC
             """,
             (project["id"],),
         )
+        for t in topics:
+            t["state"] = _topic_state(t["id"], t["last_role"])
+            t["state_title"] = TOPIC_STATE_TITLE[t["state"]]
         files = db.query(
             "SELECT id, filename, size_bytes, mime, created_at FROM files "
             "WHERE project_id = %s ORDER BY created_at DESC",
@@ -431,6 +493,19 @@ async def topic_stream(request: Request, topic_id: int, start: int = 0, active: 
         media_type="text/event-stream",
         headers={"Cache-Control": "no-cache", "X-Accel-Buffering": "no"},
     )
+
+
+@router.get("/projects/{project_id}/topics/state", name="project_topics_state")
+def project_topics_state(request: Request, project_id: int):
+    """Состояние тем проекта — его опрашивает перечень тем.
+
+    Отдельным запросом, а не перерисовкой страницы: ответ в соседней теме идёт
+    фоном и после ухода со страницы, поэтому кружок должен позеленеть сам.
+    """
+    if not current_user(request):
+        return JSONResponse({"error": "нет доступа"}, status_code=401)
+
+    return JSONResponse({"topics": _topics_state_map(project_id)})
 
 
 @router.get("/projects/{project_id}/tree", name="project_tree")

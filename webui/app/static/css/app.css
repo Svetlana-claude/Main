@@ -371,6 +371,20 @@ a:hover { color: var(--link-hover); text-decoration: underline; }
 .sidebar__item--active { background: var(--row-select); font-weight: 600; }
 .sidebar__item small { display: block; color: var(--ink-faint); font-size: var(--fs-sm); }
 
+/* Кружок состояния темы. Цветом дело не ограничивается: рядом подсказка
+   словами — иначе для тех, кто не различает красный и зелёный, признака нет. */
+.dot {
+    display: inline-block; width: 8px; height: 8px;
+    margin-right: 6px; border-radius: 50%;
+    border: 1px solid var(--line);
+    background: var(--ink-faint);
+    vertical-align: baseline;
+}
+.dot--done { background: var(--ok);  border-color: var(--ok); }
+.dot--work { background: var(--err); border-color: var(--err); }
+/* Пустая тема: делать нечего, но и сделанного нет — зелёный тут соврал бы */
+.dot--empty { background: transparent; }
+
 .chat { flex: 1; display: flex; flex-direction: column; min-height: 0; min-width: 0; }
 /* overscroll-behavior: докрутив ленту до края, не утягиваем за собой страницу */
 .chat__scroll { flex: 1; overflow-y: auto; overscroll-behavior: contain; padding: 12px; }
