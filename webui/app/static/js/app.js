@@ -346,30 +346,158 @@ function initConversation(opts) {
         }
     });
 
+    // Показ ответа отвязан от отправки. Работа идёт в приложении и о браузере
+    // не знает, страница только читает события с нужной позиции. Поэтому один
+    // и тот же ход годится и для только что заданного вопроса, и для возврата
+    // на страницу, где ответ уже идёт.
+    let following = false;
+
+    function lockInput(locked) {
+        input.disabled = locked;
+        button.disabled = locked;
+        button.textContent = locked ? 'Отправлено…' : 'Отправить';
+        if (!locked) input.focus();
+    }
+
+    async function follow(from, onlyActive) {
+        if (following) return;
+        following = true;
+
+        let answer = null;
+        let collected = '';
+        let waitTicker = null;
+        let index = from;
+        let finished = false;
+        let attempt = 0;
+        const startedAt = Date.now();
+
+        // Пузырь ответа заводится не сразу: при открытии страницы может
+        // оказаться, что отвечать нечего, и пустой пузырь был бы враньём.
+        function ensureAnswer() {
+            if (answer) return;
+            answer = addMessage('assistant', 'Claude', '');
+            answer.body.innerHTML = '<span class="typing">думает</span>';
+            waitTicker = setInterval(function () {
+                const typing = answer.body.querySelector('.typing');
+                if (typing) typing.textContent = 'думает ' + fmtElapsed(Date.now() - startedAt);
+            }, 1000);
+            if (run) run.start();
+            lockInput(true);
+        }
+
+        try {
+            while (!finished && attempt < 120) {
+                attempt += 1;
+                let res;
+                try {
+                    res = await fetch(opts.streamUrl + '?start=' + index +
+                                      (onlyActive ? '&active=1' : ''), { cache: 'no-store' });
+                } catch (netErr) {
+                    // Сеть моргнула — работа в приложении идёт своим ходом,
+                    // поэтому просто подключаемся заново с той же позиции
+                    await new Promise(r => setTimeout(r, 1000));
+                    continue;
+                }
+                if (!res.ok || !res.body) throw new Error('сервер ответил ' + res.status);
+
+                const reader = res.body.getReader();
+                const decoder = new TextDecoder();
+                let buffer = '';
+
+                while (true) {
+                    const chunk = await reader.read();
+                    if (chunk.done) break;
+                    buffer += decoder.decode(chunk.value, { stream: true });
+
+                    let cut;
+                    while ((cut = buffer.indexOf('\n\n')) !== -1) {
+                        const frame = buffer.slice(0, cut);
+                        buffer = buffer.slice(cut + 2);
+                        if (!frame.startsWith('data: ')) continue;
+
+                        let event;
+                        try { event = JSON.parse(frame.slice(6)); } catch (_) { continue; }
+
+                        if (event.type === 'idle') { finished = true; break; }
+                        if (event.type === 'done') { finished = true; break; }
+
+                        // Позиция запоминается до разбора: по ней подключаемся
+                        // заново, не пересчитывая уже показанное
+                        index += 1;
+                        const stick = atBottom();
+                        ensureAnswer();
+
+                        if (event.type === 'delta') {
+                            collected += event.text;
+                            answer.body.textContent = collected;
+                        } else if (event.type === 'text' && !collected) {
+                            collected = event.text;
+                            answer.body.textContent = collected;
+                        } else if (event.type === 'tool' && opts.showTools) {
+                            // Промежуточные действия — в свою панель; лента остаётся
+                            // разговором. Панели нет — показываем строкой, как раньше.
+                            if (run) {
+                                run.step(event.name, event.input);
+                            } else {
+                                const line = document.createElement('div');
+                                line.className = 'toolline';
+                                line.textContent = 'инструмент: ' + event.name;
+                                answer.wrap.insertBefore(line, answer.body);
+                            }
+                        } else if (event.type === 'usage') {
+                            if (run) run.usage(event);
+                        } else if (event.type === 'result') {
+                            if (event.text) {
+                                collected = event.text;
+                                answer.body.textContent = collected;
+                            }
+                            const meta = document.createElement('div');
+                            meta.className = 'msg__meta';
+                            meta.textContent = (event.model || '—') +
+                                ' · ' + (event.input_tokens || 0) + '→' + (event.output_tokens || 0) + ' токенов' +
+                                ' · ' + ((event.duration_ms || 0) / 1000).toFixed(1) + ' с';
+                            answer.wrap.append(meta);
+                            if (run) run.finish(event);
+                        } else if (event.type === 'error') {
+                            answer.wrap.className = 'msg msg--error';
+                            answer.body.textContent = event.message;
+                            if (run) run.fail(event.message);
+                        } else if (event.type === 'title') {
+                            document.title = event.title;
+                            const active = document.querySelector('.sidebar__item--active');
+                            if (active) active.childNodes[0].textContent = event.title + ' ';
+                        }
+
+                        if (stick) toBottom();
+                    }
+                    if (finished) break;
+                }
+            }
+
+            if (answer && !collected && answer.body.querySelector('.typing')) {
+                answer.body.textContent = '(пустой ответ)';
+            }
+        } catch (err) {
+            if (answer) {
+                answer.wrap.className = 'msg msg--error';
+                answer.body.textContent = 'Не удалось получить ответ: ' + err.message;
+            }
+            if (run) run.fail(err.message);
+        } finally {
+            following = false;
+            clearInterval(waitTicker);
+            if (answer) lockInput(false);
+        }
+    }
+
     form.addEventListener('submit', async function (e) {
         e.preventDefault();
         const text = input.value.trim();
         if (!text) return;
 
         input.value = '';
-        input.disabled = true;
-        button.disabled = true;
-        button.textContent = 'Отправлено…';
-
+        lockInput(true);
         addMessage('user', opts.who, text);
-        const answer = addMessage('assistant', 'Claude', '');
-        answer.body.innerHTML = '<span class="typing">думает</span>';
-        let collected = '';
-
-        // Пока не пришло ни слова, счёт времени идёт прямо в пузыре ответа:
-        // на странице чатика панели «Ход работы» нет, а понять, что процесс
-        // не завис, надо и там.
-        const startedAt = Date.now();
-        const waitTicker = setInterval(function () {
-            const typing = answer.body.querySelector('.typing');
-            if (typing) typing.textContent = 'думает ' + fmtElapsed(Date.now() - startedAt);
-        }, 1000);
-        if (run) run.start();
 
         try {
             const res = await fetch(form.dataset.url, {
@@ -377,88 +505,24 @@ function initConversation(opts) {
                 headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
                 body: new URLSearchParams({ text: text })
             });
-            if (!res.ok || !res.body) throw new Error('сервер ответил ' + res.status);
-
-            const reader = res.body.getReader();
-            const decoder = new TextDecoder();
-            let buffer = '';
-
-            while (true) {
-                const chunk = await reader.read();
-                if (chunk.done) break;
-                buffer += decoder.decode(chunk.value, { stream: true });
-
-                let cut;
-                while ((cut = buffer.indexOf('\n\n')) !== -1) {
-                    const frame = buffer.slice(0, cut);
-                    buffer = buffer.slice(cut + 2);
-                    if (!frame.startsWith('data: ')) continue;
-
-                    let event;
-                    try { event = JSON.parse(frame.slice(6)); } catch (_) { continue; }
-                    const stick = atBottom();
-
-                    if (event.type === 'delta') {
-                        collected += event.text;
-                        answer.body.textContent = collected;
-                    } else if (event.type === 'text' && !collected) {
-                        collected = event.text;
-                        answer.body.textContent = collected;
-                    } else if (event.type === 'tool' && opts.showTools) {
-                        // Промежуточные действия — в свою панель; лента остаётся
-                        // разговором. Панели нет — показываем строкой, как раньше.
-                        if (run) {
-                            run.step(event.name, event.input);
-                        } else {
-                            const line = document.createElement('div');
-                            line.className = 'toolline';
-                            line.textContent = 'инструмент: ' + event.name;
-                            answer.wrap.insertBefore(line, answer.body);
-                        }
-                    } else if (event.type === 'usage') {
-                        if (run) run.usage(event);
-                    } else if (event.type === 'result') {
-                        if (event.text) {
-                            collected = event.text;
-                            answer.body.textContent = collected;
-                        }
-                        const meta = document.createElement('div');
-                        meta.className = 'msg__meta';
-                        meta.textContent = (event.model || '—') +
-                            ' · $' + Number(event.cost_usd || 0).toFixed(4) +
-                            ' · ' + (event.input_tokens || 0) + '→' + (event.output_tokens || 0) + ' токенов' +
-                            ' · ' + ((event.duration_ms || 0) / 1000).toFixed(1) + ' с';
-                        answer.wrap.append(meta);
-                        if (run) run.finish(event);
-                    } else if (event.type === 'error') {
-                        answer.wrap.className = 'msg msg--error';
-                        answer.body.textContent = event.message;
-                        if (run) run.fail(event.message);
-                    } else if (event.type === 'title') {
-                        document.title = event.title;
-                        const active = document.querySelector('.sidebar__item--active');
-                        if (active) active.childNodes[0].textContent = event.title + ' ';
-                    }
-
-                    if (stick) toBottom();
-                }
-            }
-
-            if (!collected && answer.body.querySelector('.typing')) {
-                answer.body.textContent = '(пустой ответ)';
+            if (!res.ok) {
+                const payload = await res.json().catch(() => ({}));
+                throw new Error(payload.error || 'сервер ответил ' + res.status);
             }
         } catch (err) {
-            answer.wrap.className = 'msg msg--error';
-            answer.body.textContent = 'Не удалось получить ответ: ' + err.message;
-            if (run) run.fail(err.message);
-        } finally {
-            clearInterval(waitTicker);
-            input.disabled = false;
-            button.disabled = false;
-            button.textContent = 'Отправить';
-            input.focus();
+            const bad = addMessage('assistant', 'Claude', 'Не удалось отправить: ' + err.message);
+            bad.wrap.className = 'msg msg--error';
+            lockInput(false);
+            return;
         }
+
+        follow(0, false);
     });
+
+    // Ответ мог начаться до того, как эту страницу открыли: например, её
+    // покинули посреди работы и вернулись. Тогда подхватываем с начала —
+    // в базе его ещё нет, он сохраняется только по завершении.
+    follow(0, true);
 }
 
 /* ── Перезапуск приложения ────────────────────────────────────────── */

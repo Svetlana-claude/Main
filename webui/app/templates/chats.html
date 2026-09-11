@@ -78,6 +78,9 @@
 {% endblock %}
 {% block scripts %}
 {% if current %}
-<script>initConversation({ who: "Светлана" });</script>
+<script>initConversation({
+  who: "Светлана",
+  streamUrl: "{{ url_for('chat_stream', chat_id=current.id) }}"
+});</script>
 {% endif %}
 {% endblock %}

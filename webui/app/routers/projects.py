@@ -5,7 +5,6 @@
 allow_bash. Так у веб-интерфейса нет права выполнять произвольные команды
 по умолчанию.
 """
-import json
 import mimetypes
 import re
 import unicodedata
@@ -17,7 +16,7 @@ from fastapi.responses import FileResponse, JSONResponse, RedirectResponse, Stre
 
 from .. import config, db
 from ..deps import current_user, render
-from ..services import claude_driver
+from ..services import claude_driver, runs
 from .chats import _save_answer
 
 router = APIRouter()
@@ -247,6 +246,11 @@ async def topic_send(request: Request, topic_id: int, text: str = Form(...)):
     if not prompt:
         return JSONResponse({"error": "пустое сообщение"}, status_code=400)
 
+    # Проверка до записи вопроса: иначе при отказе вопрос остался бы в ленте
+    # висеть без ответа, и выглядело бы это как потерянное сообщение.
+    if runs.active("topic", topic_id):
+        return JSONResponse({"error": "в этой теме уже идёт ответ"}, status_code=409)
+
     db.execute(
         "INSERT INTO messages (conversation_id, role, content) VALUES (%s, 'user', %s)",
         (topic_id, prompt),
@@ -256,32 +260,46 @@ async def topic_send(request: Request, topic_id: int, text: str = Form(...)):
     model = db.get_settings().get("model", "opus")
     workdir = Path(conv["workdir"])
 
-    async def stream():
-        try:
-            async for event in claude_driver.run(
-                prompt,
-                model=model,
-                session_id=conv["claude_session_id"],
-                with_tools=True,
-                workdir=workdir,
-                allow_bash=bool(conv["allow_bash"]),
-            ):
-                if event["type"] == "result":
-                    _save_answer(topic_id, event)
-                elif event["type"] == "error":
-                    db.execute(
-                        "INSERT INTO messages (conversation_id, role, content) "
-                        "VALUES (%s, 'error', %s)",
-                        (topic_id, event["message"]),
-                    )
-                yield f"data: {json.dumps(event, ensure_ascii=False)}\n\n"
-        except Exception as exc:                       # noqa: BLE001
-            payload = {"type": "error", "message": f"Сбой обработки: {exc}"}
-            yield f"data: {json.dumps(payload, ensure_ascii=False)}\n\n"
-        yield "data: {\"type\": \"done\"}\n\n"
+    async def producer(run):
+        """Работа движка. Идёт в задаче приложения и о браузере не знает."""
+        async for event in claude_driver.run(
+            prompt,
+            model=model,
+            session_id=conv["claude_session_id"],
+            with_tools=True,
+            workdir=workdir,
+            allow_bash=bool(conv["allow_bash"]),
+        ):
+            if event["type"] == "result":
+                _save_answer(topic_id, event)
+            elif event["type"] == "error":
+                db.execute(
+                    "INSERT INTO messages (conversation_id, role, content) "
+                    "VALUES (%s, 'error', %s)",
+                    (topic_id, event["message"]),
+                )
+            await run.append(event)
+
+    runs.start("topic", topic_id, producer)
+    # Ответ отдаётся сразу: за событиями страница приходит отдельно, и уход
+    # с неё работу больше не обрывает.
+    return JSONResponse({"ok": True})
+
+
+@router.get("/projects/topics/{topic_id}/stream", name="topic_stream")
+async def topic_stream(request: Request, topic_id: int, start: int = 0, active: int = 0):
+    """События идущего ответа, начиная с позиции `start`.
+
+    Поток можно оборвать и открыть заново — работа от этого не страдает.
+    Если запуска нет, сразу отвечаем `idle`: страница поймёт, что показывать
+    нечего, и не станет ждать впустую.
+    """
+    user = current_user(request)
+    if not user or user["must_change"]:
+        return JSONResponse({"error": "нет доступа"}, status_code=401)
 
     return StreamingResponse(
-        stream(),
+        runs.sse(runs.get("topic", topic_id), start, only_active=bool(active)),
         media_type="text/event-stream",
         headers={"Cache-Control": "no-cache", "X-Accel-Buffering": "no"},
     )

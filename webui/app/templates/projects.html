@@ -162,6 +162,10 @@
 {% endblock %}
 {% block scripts %}
 {% if current_topic %}
-<script>initConversation({ who: "Светлана", showTools: true });</script>
+<script>initConversation({
+  who: "Светлана",
+  showTools: true,
+  streamUrl: "{{ url_for('topic_stream', topic_id=current_topic.id) }}"
+});</script>
 {% endif %}
 {% endblock %}
