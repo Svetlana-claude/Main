@@ -30,5 +30,11 @@
     sudo -u postgres createdb -O webui webui
     cd /home/mokeeva/main/webui
     python3 -m venv .venv && ./.venv/bin/pip install -r requirements.txt
-    cp .env.example .env    # заполнить значения
+    install -d -m 700 ~/.config/webui
+    install -m 600 .env.example ~/.config/webui/webui.env   # заполнить значения
     # схема применяется сама при первом запуске
+
+Файл настроек лежит вне каталога проекта намеренно: `webui/` — рабочий каталог
+темы в разделе «Проекты», а чтение файлов там разрешено всегда, и `.env` с
+`SECRET_KEY` и паролем базы попал бы в ответ по первой же просьбе показать
+настройки. Другой путь задаётся переменной `WEBUI_ENV`.

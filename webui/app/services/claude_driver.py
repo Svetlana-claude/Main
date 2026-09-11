@@ -12,6 +12,7 @@
 """
 import asyncio
 import json
+import os
 from dataclasses import dataclass, field
 from pathlib import Path
 from typing import AsyncIterator
@@ -30,6 +31,18 @@ PROJECT_ALLOWED = ["Read", "Write", "Edit", "Glob", "Grep", "WebSearch", "WebFet
 # Всё, чем можно выполнить команду: запрещается целиком, иначе запрет обходится
 # соседним инструментом того же семейства
 BASH_FAMILY = ["Bash", "BashOutput", "KillShell"]
+
+# Запрет на файл настроек. Нужен именно явный запрет: перечисление Read в
+# --allowed-tools авто-одобряет чтение ЛЮБОГО пути, а не только каталога
+# проекта, — проверено пробником, файл читался и после выноса из каталога.
+#
+# ВАЖЕН ДВОЙНОЙ СЛЕШ. Абсолютный путь в правиле пишется как `//home/...`;
+# с одним слешем правило молча не срабатывает — проверено тем же пробником,
+# файл при таком написании читался.
+_SECRET_DIR = str(config.ENV_FILE.parent).lstrip("/")
+SECRET_DENY = [
+    f"{tool}(//{_SECRET_DIR}/**)" for tool in ("Read", "Write", "Edit")
+]
 
 RUN_TIMEOUT_SEC = 1800  # 30 минут: агентская работа бывает долгой
 
@@ -92,19 +105,21 @@ def _build_argv(
 
     if with_tools:
         allowed = list(PROJECT_ALLOWED)
+        denied = list(SECRET_DENY)
         if allow_bash:
             allowed.append("Bash")
         else:
             # --allowed-tools только авто-одобряет перечисленное и НЕ запрещает
             # остальное: с одним этим флагом Bash всё равно выполняется.
             # Запрет даёт только явный --disallowed-tools.
-            argv += ["--disallowed-tools", *BASH_FAMILY]
+            denied += BASH_FAMILY
+        argv += ["--disallowed-tools", *denied]
         argv += ["--allowed-tools", *allowed]
         argv += ["--permission-mode", "acceptEdits"]
         if workdir:
             argv += ["--add-dir", str(workdir)]
     else:
-        argv += ["--disallowed-tools", *CHAT_DISALLOWED]
+        argv += ["--disallowed-tools", *CHAT_DISALLOWED, *SECRET_DENY]
 
     # Ничто не должно ждать ответа на запрос разрешения: некому нажимать кнопку.
     # Всё, что вышло бы за разрешённое, отклоняется автоматически.
@@ -149,6 +164,19 @@ async def _iter_lines(
         yield bytes(buf)     # последняя строка без перевода в конце
 
 
+def _child_env() -> dict[str, str]:
+    """Окружение для `claude` без наших ключей.
+
+    Приложение читает настройки через dotenv, а тот кладёт их в `os.environ` —
+    и дочерний процесс наследует и `SECRET_KEY`, и пароль базы. Вычищаем ровно
+    те имена, что заданы в файле настроек.
+    """
+    env = dict(os.environ)
+    for key in config.ENV_FILE_KEYS:
+        env.pop(key, None)
+    return env
+
+
 def _extract_text(message: dict) -> str:
     """Собирает текст из блоков content ответа."""
     parts = []
@@ -190,6 +218,7 @@ async def run(
             stdout=asyncio.subprocess.PIPE,
             stderr=asyncio.subprocess.PIPE,
             cwd=cwd,
+            env=_child_env(),
         )
     except FileNotFoundError:
         _active_runs -= 1

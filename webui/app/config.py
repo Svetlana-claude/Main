@@ -1,13 +1,36 @@
-"""Настройки приложения. Читаются из .env рядом с проектом."""
+"""Настройки приложения. Читаются из файла окружения вне каталога проекта.
+
+Файл держится **снаружи** `webui/` намеренно. Каталог проекта — рабочий каталог
+темы в разделе «Проекты», а инструмент `Read` там доступен всегда, независимо от
+флага запуска команд. Лежи `.env` внутри, `SECRET_KEY` и пароль базы попали бы
+в ответ по первой же просьбе показать настройки проекта, а оттуда — в таблицу
+сообщений, в поиск и в резервные копии.
+
+Путь переопределяется переменной `WEBUI_ENV`; по умолчанию —
+`~/.config/webui/webui.env` с правами 600.
+"""
 from pathlib import Path
 import os
 
-from dotenv import load_dotenv
+from dotenv import dotenv_values, load_dotenv
 
 BASE_DIR = Path(__file__).resolve().parent          # .../webui/app
 PROJECT_DIR = BASE_DIR.parent                        # .../webui
 
-load_dotenv(PROJECT_DIR / ".env")
+ENV_FILE = Path(os.environ.get("WEBUI_ENV") or Path.home() / ".config/webui/webui.env")
+load_dotenv(ENV_FILE)
+
+if "DATABASE_URL" not in os.environ:
+    # Иначе падение выглядело бы как KeyError без единой подсказки, где искать
+    raise RuntimeError(
+        f"Не найдены настройки: файл {ENV_FILE} отсутствует или неполон. "
+        "Образец состава — webui/.env.example, путь задаётся переменной WEBUI_ENV."
+    )
+
+# Имена ключей из файла настроек. По ним драйвер вычищает окружение перед
+# запуском `claude`: иначе SECRET_KEY и пароль базы уезжают в дочерний процесс
+# и видны там простым `env`, безо всякого доступа к файлу.
+ENV_FILE_KEYS = frozenset(dotenv_values(ENV_FILE))
 
 DATABASE_URL = os.environ["DATABASE_URL"]
 SECRET_KEY = os.environ["SECRET_KEY"]
