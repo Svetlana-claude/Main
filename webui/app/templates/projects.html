@@ -30,7 +30,14 @@
     {% if not project %}
       <div class="empty" style="margin:auto">Создайте проект, чтобы начать работу</div>
     {% else %}
+      {# Новая тема идёт первой: с неё начинается работа по проекту. Название
+         проекта и разрешение запуска команд — следом, это справка и настройка. #}
       <div class="cmdbar">
+        <form method="post" action="{{ url_for('topic_new', project_id=project.id) }}" class="formrow" style="gap:4px">
+          <input class="input" name="title" placeholder="Новая тема" style="width:150px" required>
+          <button class="btn" type="submit">Добавить тему</button>
+        </form>
+        <span class="cmdbar__sep"></span>
         <strong>{{ project.name }}</strong>
         <span class="tag mono">{{ project.workdir }}</span>
         <span class="cmdbar__sep"></span>
@@ -42,10 +49,6 @@
           </label>
         </form>
         <span class="spacer"></span>
-        <form method="post" action="{{ url_for('topic_new', project_id=project.id) }}" class="formrow" style="gap:4px">
-          <input class="input" name="title" placeholder="Новая тема" style="width:150px" required>
-          <button class="btn" type="submit">Добавить тему</button>
-        </form>
       </div>
 
       {% if request.query_params.get('err') == 'big' %}
