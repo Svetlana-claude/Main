@@ -168,11 +168,11 @@ def _child_env() -> dict[str, str]:
     """Окружение для `claude` без наших ключей.
 
     Приложение читает настройки через dotenv, а тот кладёт их в `os.environ` —
-    и дочерний процесс наследует и `SECRET_KEY`, и пароль базы. Вычищаем ровно
-    те имена, что заданы в файле настроек.
+    и дочерний процесс наследует и `SECRET_KEY`, и пароль базы. То же и когда
+    значения приходят от systemd. Вычищаем имена из `config.SCRUB_ENV_KEYS`.
     """
     env = dict(os.environ)
-    for key in config.ENV_FILE_KEYS:
+    for key in config.SCRUB_ENV_KEYS:
         env.pop(key, None)
     return env
 

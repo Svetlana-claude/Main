@@ -27,10 +27,19 @@ if "DATABASE_URL" not in os.environ:
         "Образец состава — webui/.env.example, путь задаётся переменной WEBUI_ENV."
     )
 
-# Имена ключей из файла настроек. По ним драйвер вычищает окружение перед
-# запуском `claude`: иначе SECRET_KEY и пароль базы уезжают в дочерний процесс
-# и видны там простым `env`, безо всякого доступа к файлу.
-ENV_FILE_KEYS = frozenset(dotenv_values(ENV_FILE))
+# Ключи приложения. По ним драйвер вычищает окружение перед запуском `claude`:
+# иначе SECRET_KEY и пароль базы уезжают в дочерний процесс и видны там простым
+# `env`, безо всякого доступа к файлу.
+#
+# Перечислены явно, а не только собираются из файла. Если ключи однажды переедут
+# в EnvironmentFile юнита, файла у пользователя не будет вовсе — набор из файла
+# оказался бы пустым, и вычистка отказала бы ровно тогда, когда она главное, что
+# защищает ключи. Имена из файла добавляются сверх списка: там могут появиться
+# свои переменные.
+APP_ENV_KEYS = frozenset({
+    "DATABASE_URL", "SECRET_KEY", "CLAUDE_BIN", "REPO_ROOT", "ROOT_PATH", "WEBUI_ENV",
+})
+SCRUB_ENV_KEYS = APP_ENV_KEYS | frozenset(dotenv_values(ENV_FILE))
 
 DATABASE_URL = os.environ["DATABASE_URL"]
 SECRET_KEY = os.environ["SECRET_KEY"]
