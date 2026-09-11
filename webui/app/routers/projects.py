@@ -6,9 +6,12 @@ allow_bash. Так у веб-интерфейса нет права выполн
 по умолчанию.
 """
 import mimetypes
+import os
 import re
+import stat
 import unicodedata
 import uuid
+from datetime import datetime, timezone
 from pathlib import Path
 
 from fastapi import APIRouter, File, Form, Request, UploadFile
@@ -22,6 +25,130 @@ from .chats import _save_answer
 router = APIRouter()
 
 MAX_UPLOAD_BYTES = 64 * 1024 * 1024      # 64 МБ на файл
+
+# ── Папка выдачи проекта ─────────────────────────────────────────────────
+#
+# Раздел «Файлы» справа показывает только то, что загрузили через форму,
+# а забрать из браузера сделанное Claude было нечем. Кнопка «Файлы проекта»
+# открывает окошко со списком папки `downloads/` в каталоге проекта.
+#
+# Показывается именно она, а не весь рабочий каталог: там сотни файлов кода,
+# и нужный среди них не найти. Папка выдачи — место, куда кладётся то, что
+# просили сделать или выложить, и список в окошке короткий и осмысленный.
+DOWNLOADS_DIR = "downloads"
+
+# Служебное и тяжёлое: в список не попадает и по прямой ссылке не отдаётся.
+# Папка выдачи такого содержать не должна, но проверка дешевле уверенности.
+TREE_SKIP_DIRS = frozenset({
+    ".git", ".venv", "venv", "node_modules", "__pycache__",
+    ".mypy_cache", ".pytest_cache", ".ruff_cache", "dist", "build",
+})
+TREE_SKIP_SUFFIXES = frozenset({".pyc", ".pyo", ".key", ".pem"})
+
+# Предел на список: окошко должно открываться сразу. Лучше показать свежие
+# файлы и честно сказать, что список обрезан.
+TREE_MAX_FILES = 2000
+TREE_MAX_DEPTH = 12
+
+
+def _downloads_dir(workdir: str | Path) -> Path:
+    """Папка выдачи проекта. Заводится при первом обращении.
+
+    Создаётся здесь, а не только при создании проекта: проекты, заведённые
+    записью в таблице (каталог уже был), формы не проходили — и папки у них
+    нет. Пустая папка лучше пустого окошка с ошибкой.
+    """
+    target = Path(workdir).resolve() / DOWNLOADS_DIR
+    target.mkdir(parents=True, exist_ok=True)
+    return target
+
+
+def _tree_closed(name: str) -> bool:
+    """Имя, которое не показывается и не отдаётся ни при каких условиях.
+
+    Файлы настроек держатся вне каталога проекта (см. `config`), но проект
+    заводится на любой каталог, и `.env` может оказаться внутри. Отдавать его
+    кнопкой «скачать» — то же самое, что отдать ключи.
+    """
+    return name.startswith(".env") or Path(name).suffix in TREE_SKIP_SUFFIXES
+
+
+def _tree_visible(root: Path, path: Path) -> bool:
+    """Показывается ли этот файл в списке. По нему же решается и скачивание:
+    иначе прямой ссылкой забирался бы файл, скрытый из списка."""
+    try:
+        rel = path.relative_to(root)
+    except ValueError:
+        return False
+    if any(part in TREE_SKIP_DIRS for part in rel.parts[:-1]):
+        return False
+    return not _tree_closed(rel.name)
+
+
+def _tree_entries(root_dir: Path) -> tuple[list[dict], bool]:
+    """Файлы папки выдачи, свежие сверху.
+
+    Второе значение — признак того, что список упёрся в предел и обрезан.
+    Символьные ссылки пропускаются целиком: ссылка наружу всё равно была бы
+    отбита при скачивании, и строка в списке обещала бы то, чего не будет.
+    """
+    root = root_dir.resolve()
+    rows: list[dict] = []
+    truncated = False
+
+    for dirpath, dirnames, filenames in os.walk(root, followlinks=False):
+        here = Path(dirpath)
+        depth = len(here.relative_to(root).parts)
+        if depth >= TREE_MAX_DEPTH:
+            dirnames[:] = []
+        else:
+            dirnames[:] = sorted(d for d in dirnames if d not in TREE_SKIP_DIRS)
+
+        for name in filenames:
+            if _tree_closed(name):
+                continue
+            path = here / name
+            if path.is_symlink():
+                continue
+            try:
+                info = path.stat()
+            except OSError:
+                continue                     # исчез между обходом и чтением
+            if not stat.S_ISREG(info.st_mode):
+                continue                     # сокеты, устройства, битые ссылки
+            if len(rows) >= TREE_MAX_FILES:
+                truncated = True
+                break
+            rows.append({
+                "path": str(path.relative_to(root)),
+                "name": name,
+                "size": info.st_size,
+                "mtime": datetime.fromtimestamp(info.st_mtime, timezone.utc).isoformat(),
+                "mtime_ts": info.st_mtime,
+            })
+        if truncated:
+            break
+
+    rows.sort(key=lambda r: r["mtime_ts"], reverse=True)
+    for row in rows:
+        del row["mtime_ts"]
+    return rows, truncated
+
+
+def _resolve_in_dir(root_dir: Path, relative: str) -> Path:
+    """Путь внутри папки выдачи — либо ValueError.
+
+    Проверка не косметическая: без неё `?path=../../.config/webui/webui.env`
+    отдаёт кнопкой «скачать» ключи приложения. Сравнение идёт после `resolve()`,
+    поэтому и `..`, и абсолютный путь, и символьная ссылка наружу упираются
+    в одно и то же условие. Заодно `..` не выпускает и в сам рабочий каталог:
+    наружу папки выдачи ходить незачем.
+    """
+    root = root_dir.resolve()
+    candidate = (root / relative).resolve()
+    if candidate == root or root not in candidate.parents:
+        raise ValueError("путь вне папки выдачи проекта")
+    return candidate
 
 
 def _guard(request: Request):
@@ -169,6 +296,7 @@ def project_new(request: Request, name: str = Form(...)):
         workdir = _safe_workdir(slug)
 
     workdir.mkdir(parents=True, exist_ok=True)
+    _downloads_dir(workdir)          # папка выдачи заводится сразу вместе с проектом
     row = db.query_one(
         "INSERT INTO projects (name, slug, workdir) VALUES (%s, %s, %s) RETURNING id",
         (clean, slug, str(workdir)),
@@ -302,6 +430,67 @@ async def topic_stream(request: Request, topic_id: int, start: int = 0, active: 
         runs.sse(runs.get("topic", topic_id), start, only_active=bool(active)),
         media_type="text/event-stream",
         headers={"Cache-Control": "no-cache", "X-Accel-Buffering": "no"},
+    )
+
+
+@router.get("/projects/{project_id}/tree", name="project_tree")
+def project_tree(request: Request, project_id: int):
+    """Список файлов папки выдачи — его читает окошко «Файлы проекта»."""
+    if not current_user(request):
+        return JSONResponse({"error": "нет доступа"}, status_code=401)
+
+    project = db.query_one(
+        "SELECT id, name, workdir FROM projects WHERE id = %s", (project_id,)
+    )
+    if not project:
+        return JSONResponse({"error": "проект не найден"}, status_code=404)
+
+    if not Path(project["workdir"]).is_dir():
+        return JSONResponse(
+            {"error": f"рабочий каталог {project['workdir']} не найден"}, status_code=404
+        )
+
+    try:
+        root_dir = _downloads_dir(project["workdir"])
+    except OSError as exc:
+        return JSONResponse(
+            {"error": f"не удалось завести папку выдачи: {exc}"}, status_code=500
+        )
+
+    rows, truncated = _tree_entries(root_dir)
+    return JSONResponse({
+        "dir": str(root_dir),
+        "files": rows,
+        "truncated": truncated,
+        "limit": TREE_MAX_FILES,
+    })
+
+
+@router.get("/projects/{project_id}/tree/file", name="project_tree_download")
+def project_tree_download(request: Request, project_id: int, path: str = ""):
+    """Отдаёт файл из папки выдачи проекта."""
+    if not current_user(request):
+        return JSONResponse({"error": "нет доступа"}, status_code=401)
+
+    project = db.query_one("SELECT id, workdir FROM projects WHERE id = %s", (project_id,))
+    if not project:
+        return JSONResponse({"error": "проект не найден"}, status_code=404)
+
+    root_dir = Path(project["workdir"]).resolve() / DOWNLOADS_DIR
+    try:
+        target = _resolve_in_dir(root_dir, path)
+    except ValueError as exc:
+        return JSONResponse({"error": str(exc)}, status_code=400)
+
+    if not _tree_visible(root_dir.resolve(), target):
+        return JSONResponse({"error": "файл закрыт для скачивания"}, status_code=403)
+    if not target.is_file():
+        return JSONResponse({"error": "файл не найден"}, status_code=404)
+
+    return FileResponse(
+        target,
+        filename=target.name,
+        media_type=mimetypes.guess_type(target.name)[0] or "application/octet-stream",
     )
 
 

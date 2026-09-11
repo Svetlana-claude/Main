@@ -600,3 +600,121 @@ function initRestart(opts) {
         poll();
     }
 }
+
+/* ── Папка выдачи проекта ─────────────────────────────────────────── */
+
+function fmtBytes(n) {
+    const units = ['Б', 'КБ', 'МБ', 'ГБ'];
+    let value = n, unit = 0;
+    while (value >= 1024 && unit < units.length - 1) { value /= 1024; unit += 1; }
+    return (unit === 0 ? value : value.toFixed(1)) + ' ' + units[unit];
+}
+
+function initProjectFiles(opts) {
+    const dialog = document.getElementById('files-dialog');
+    const openBtn = document.getElementById('files-open');
+    if (!dialog || !openBtn) return;
+
+    const rows = document.getElementById('files-rows');
+    const table = document.getElementById('files-table');
+    const note = document.getElementById('files-note');
+    const count = document.getElementById('files-count');
+    const filter = document.getElementById('files-filter');
+
+    let files = [];       // последний полученный список
+    let loaded = false;   // список уже забран — повторно при открытии не тянем
+
+    function say(text) {
+        note.textContent = text;
+        note.hidden = !text;
+    }
+
+    function render() {
+        const needle = filter.value.trim().toLowerCase();
+        const shown = needle
+            ? files.filter(f => f.path.toLowerCase().indexOf(needle) !== -1)
+            : files;
+
+        rows.replaceChildren();
+        for (const file of shown) {
+            const tr = document.createElement('tr');
+
+            // Имя файла приходит с диска, поэтому только textContent:
+            // innerHTML тут означал бы разметку из имени файла.
+            const name = document.createElement('td');
+            name.className = 'mono';
+            name.textContent = file.path;
+            name.title = file.path;
+
+            const size = document.createElement('td');
+            size.className = 'num';
+            size.textContent = fmtBytes(file.size);
+
+            const when = document.createElement('td');
+            when.textContent = new Date(file.mtime).toLocaleString('ru-RU',
+                { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' });
+
+            const act = document.createElement('td');
+            const link = document.createElement('a');
+            link.href = opts.downloadUrl + '?path=' + encodeURIComponent(file.path);
+            link.textContent = 'скачать';
+            link.setAttribute('download', '');
+            act.append(link);
+
+            tr.append(name, size, when, act);
+            rows.append(tr);
+        }
+
+        table.hidden = shown.length === 0;
+        count.textContent = needle
+            ? shown.length + ' из ' + files.length
+            : files.length + ' файл.';
+        if (shown.length === 0) {
+            say(files.length
+                ? 'Под фильтр ничего не подошло'
+                : 'Папка выдачи пуста. Сюда складывается то, что просили сделать или выложить.');
+        } else {
+            say('');
+        }
+    }
+
+    async function load() {
+        table.hidden = true;
+        rows.replaceChildren();
+        count.textContent = '';
+        say('Загрузка…');
+        try {
+            const res = await fetch(opts.listUrl, { cache: 'no-store' });
+            const payload = await res.json().catch(() => ({}));
+            if (!res.ok) throw new Error(payload.error || 'сервер ответил ' + res.status);
+            files = payload.files || [];
+            loaded = true;
+            // Путь берём с сервера: он завёл папку и знает её настоящее место
+            const dir = document.getElementById('files-dir');
+            if (dir && payload.dir) dir.textContent = payload.dir;
+            render();
+            // Список обрезан по пределу — сказать об этом обязательно:
+            // молча показанная часть выглядит как весь каталог.
+            if (payload.truncated) {
+                count.textContent += ' (показаны свежие ' + payload.limit + ')';
+            }
+        } catch (err) {
+            files = [];
+            say('Не удалось получить список: ' + err.message);
+        }
+    }
+
+    openBtn.addEventListener('click', function () {
+        dialog.showModal();
+        if (!loaded) load();
+    });
+    document.getElementById('files-close').addEventListener('click', () => dialog.close());
+    document.getElementById('files-reload').addEventListener('click', load);
+    filter.addEventListener('input', function () { if (loaded) render(); });
+
+    // Щелчок мимо окошка закрывает его: само окно занимает не весь экран,
+    // и промах по нему — обычное дело.
+    dialog.addEventListener('click', function (e) {
+        if (e.target === dialog) dialog.close();
+    });
+}

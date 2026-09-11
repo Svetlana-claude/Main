@@ -465,6 +465,36 @@ a:hover { color: var(--link-hover); text-decoration: underline; }
 }
 .chart-legend i { display: inline-block; width: 9px; height: 9px; margin-right: 4px; }
 
+/* ── Окошко поверх страницы ───────────────────────────────────────── */
+
+/* Нативный <dialog>: сам держит фокус, закрывается по Esc и не требует
+   ни строки на управление стопкой окон. Вид — как у панели: рамка, шапка
+   командной панелью, без скруглений и теней. */
+.modal {
+    padding: 0;
+    width: min(760px, 92vw);
+    max-height: min(72vh, 640px);
+    background: var(--panel);
+    color: var(--ink);
+    border: 1px solid var(--line-strong);
+    border-radius: var(--radius);
+}
+.modal[open] { display: flex; flex-direction: column; }
+.modal::backdrop { background: rgba(0, 0, 0, .35); }
+.modal__head {
+    display: flex; align-items: center; gap: 8px;
+    padding: 5px 10px;
+    background: var(--cmdbar);
+    border-bottom: 1px solid var(--line);
+    font-weight: 600;
+}
+.modal__head .spacer { flex: 1; }
+/* Список длинный — прокручивается сам, окно на месте */
+.modal__body { overflow: auto; min-height: 80px; }
+.modal__body .table th {
+    position: sticky; top: 0; z-index: 1;    /* шапка не уезжает при прокрутке */
+}
+
 /* ── Служебное ────────────────────────────────────────────────────── */
 
 .muted { color: var(--ink-soft); }

@@ -40,6 +40,7 @@
         <span class="cmdbar__sep"></span>
         <strong>{{ project.name }}</strong>
         <span class="tag mono">{{ project.workdir }}</span>
+        <button class="btn" type="button" id="files-open">Файлы проекта</button>
         <span class="cmdbar__sep"></span>
         <form method="post" action="{{ url_for('project_toggle_bash', project_id=project.id) }}">
           <label class="check" title="Правка файлов разрешена всегда. Запуск команд — только по этому флагу.">
@@ -157,6 +158,41 @@
         </aside>
 
       </div>
+
+      {# Папка выдачи проекта: сюда кладётся то, что просили сделать или
+         выложить. Показывается она, а не весь рабочий каталог, — среди сотен
+         файлов кода нужный не найти. Окошко нативное (<dialog>): само держит
+         фокус и закрывается по Esc. #}
+      <dialog class="modal" id="files-dialog" aria-labelledby="files-title">
+        <div class="modal__head">
+          <strong id="files-title">Файлы проекта</strong>
+          <span class="tag mono" id="files-dir">{{ project.workdir }}/downloads</span>
+          <span class="spacer"></span>
+          <button class="btn btn--plain" type="button" id="files-close"
+                  aria-label="Закрыть окно">✕</button>
+        </div>
+        <div class="cmdbar">
+          <input class="input" type="search" id="files-filter" style="width:200px"
+                 placeholder="Фильтр по имени" aria-label="Фильтр по имени">
+          <span class="spacer"></span>
+          <span class="faint" id="files-count"></span>
+          <button class="btn" type="button" id="files-reload">Обновить</button>
+        </div>
+        <div class="modal__body">
+          <table class="table table--zebra" id="files-table" hidden>
+            <thead>
+              <tr>
+                <th>Файл</th>
+                <th style="width:90px">Размер</th>
+                <th style="width:110px">Изменён</th>
+                <th style="width:80px"></th>
+              </tr>
+            </thead>
+            <tbody id="files-rows"></tbody>
+          </table>
+          <div class="empty" id="files-note">Загрузка…</div>
+        </div>
+      </dialog>
     {% endif %}
   </section>
 
@@ -164,6 +200,12 @@
 </main>
 {% endblock %}
 {% block scripts %}
+{% if project %}
+<script>initProjectFiles({
+  listUrl: "{{ url_for('project_tree', project_id=project.id) }}",
+  downloadUrl: "{{ url_for('project_tree_download', project_id=project.id) }}"
+});</script>
+{% endif %}
 {% if current_topic %}
 <script>initConversation({
   who: "Светлана",
