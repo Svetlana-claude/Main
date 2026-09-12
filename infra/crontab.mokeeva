@@ -9,3 +9,10 @@ PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
 # Еженедельная проверка восстановления, по воскресеньям в 04:05.
 # Без неё выгрузка остаётся предположением о копии, а не копией.
 5 4 * * 0 /bin/bash /home/mokeeva/main/infra/pg-restore-check.sh >> /home/mokeeva/backups/restore-check.log 2>&1
+
+# Ночной аудит безопасности в 00:00. Источник: bezopasnost/audit.sh, рабочая
+# копия под root в /opt/secaudit. Запускается от пользователя — root он берёт
+# только через обёртку webui-sec, и то на сбор фактов и устранение.
+# Своего вывода не даёт: путь к отчёту он печатает, а журнал ведёт сам
+# в /var/lib/secaudit/audit.log. Отчёты читаются во вкладке «Безопасность».
+0 0 * * * /bin/bash /opt/secaudit/audit.sh >/dev/null 2>&1
