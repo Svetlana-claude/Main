@@ -61,14 +61,27 @@ SIZE=$(stat -c%s "$DUMP")
 
 gzip -t "$DUMP" 2>>"$LOG" || { rm -f "$DUMP"; fail "архив повреждён"; }
 
-if ! gunzip -c "$DUMP" | grep -q 'PostgreSQL database dump complete'; then
-    rm -f "$DUMP"
-    fail "в выгрузке нет отметки о завершении — она обрезана"
-fi
+# ⚠️ Архив читается ОДИН раз, и `grep -q` в связке с `gunzip` не используется.
+# Причина не теоретическая, она стоила нам двух суток копий (11–12.09.2026):
+# `grep -q` выходит по первому совпадению и закрывает канал, `gunzip` получает
+# SIGPIPE и завершается с кодом 141, а `set -o pipefail` в начале файла делает
+# кодом всего конвейера именно 141. Проверка объявляла таблицу отсутствующей,
+# хотя та была на месте, — и следующей строкой УДАЛЯЛА годную выгрузку.
+# Пока база была маленькой, `gunzip` успевал дочитать до конца и отказа не
+# было; ошибка проявилась ровно тогда, когда данных стало больше.
+FOUND=$(gunzip -c "$DUMP" | grep -oE '^CREATE TABLE public\.[a-z_]+|PostgreSQL database dump complete')
+
+case "$FOUND" in
+    *'PostgreSQL database dump complete'*) ;;
+    *) rm -f "$DUMP"; fail "в выгрузке нет отметки о завершении — она обрезана" ;;
+esac
 
 MISSING=""
 for table in users sessions projects conversations messages files settings; do
-    gunzip -c "$DUMP" | grep -q "CREATE TABLE public.$table" || MISSING="$MISSING $table"
+    case "$FOUND" in
+        *"CREATE TABLE public.$table"*) ;;
+        *) MISSING="$MISSING $table" ;;
+    esac
 done
 [ -n "$MISSING" ] && { rm -f "$DUMP"; fail "в выгрузке нет таблиц:$MISSING"; }
 

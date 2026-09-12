@@ -63,8 +63,15 @@ if [ "${SSH_AUTH_MODE:-key}" = "password" ]; then
   # никто не вспомнит, что её не стало.
   [ "$(grep -oP '^maxauthtries \K\d+' "$CUR" | head -1)" -gt 3 ] 2>/dev/null && \
     { found=1; echo "### MaxAuthTries больше 3 — при парольном входе это подарок подбору"; echo; }
-  section "$CUR" PASSWD | grep -q 'allowusers=allow' || \
-    { found=1; echo "### Не задан AllowUsers/AllowGroups — подбирать можно любое имя"; echo; }
+  # Секция читается в переменную, а не подаётся в `grep -q` конвейером: `grep -q`
+  # выходит по первому совпадению, писатель получает SIGPIPE, и `pipefail`
+  # делает кодом конвейера 141 — проверка сообщила бы о находке там, где всё
+  # в порядке. На этом же образце двое суток терялись выгрузки базы.
+  passwd_body=$(section "$CUR" PASSWD)
+  case "$passwd_body" in
+    *allowusers=allow*) ;;
+    *) found=1; echo "### Не задан AllowUsers/AllowGroups — подбирать можно любое имя"; echo ;;
+  esac
   cnt=$(grep -oP 'failed_password_24h=\K\d+' "$CUR" | head -1)
   [ "${cnt:-0}" -gt "${BRUTE_THRESHOLD:-2000}" ] && \
     { found=1; echo "### Всплеск подбора пароля за сутки: $cnt (порог ${BRUTE_THRESHOLD:-2000})"; echo; }
