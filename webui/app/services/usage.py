@@ -25,7 +25,7 @@ accounts») и отдают суточные итоги прошлого рас�
 """
 from datetime import datetime, timedelta, timezone
 
-from .. import db
+from .. import db, timefmt
 from . import transcripts
 
 # Длина окон тарифного плана
@@ -126,8 +126,12 @@ def summary() -> dict:
                coalesce(sum(cost_usd), 0) AS cost,
                count(*) AS requests
         FROM messages
-        WHERE role = 'assistant' AND created_at >= date_trunc('day', now())
-        """
+        WHERE role = 'assistant'
+          AND created_at >= date_trunc('day', now() AT TIME ZONE %(tz)s) AT TIME ZONE %(tz)s
+        """,
+        # Полночь — в поясе из настроек. База живёт в UTC, и без этого «сегодня»
+        # на дашборде начиналось бы в 03:00 по Москве
+        {"tz": timefmt.zone_name(settings)},
     )
     by_kind = db.query(
         """

@@ -1,4 +1,5 @@
 {% extends "base.html" %}
+{% import "time-macros.html" as time with context %}
 {% block title %}Безопасность{% endblock %}
 {% block content %}
 
@@ -41,13 +42,13 @@
             <th>Последний отчёт</th>
             <td id="sec-last">
               {% if state.last_report %}
-                <a href="{{ root_path }}/sec/reports/{{ state.last_report }}">{{ state.reports[0].when }}</a>
+                <a href="{{ root_path }}/sec/reports/{{ state.last_report }}">{{ time.when(state.reports[0].mtime, fallback=state.reports[0].when) }}</a>
               {% else %}<span class="muted">не было</span>{% endif %}
             </td>
           </tr>
           <tr>
             <th>Эталон</th>
-            <td>{% if state.baseline %}{{ state.baseline }}{% else %}<span class="muted">не принят</span>{% endif %}</td>
+            <td>{% if state.baseline %}{{ time.when(state.baseline, fallback=state.baseline) }}{% else %}<span class="muted">не принят</span>{% endif %}</td>
           </tr>
           <tr>
             <th>fail2ban</th>
@@ -64,7 +65,7 @@
           </tr>
           <tr>
             <th>Правила применялись</th>
-            <td>{% if state.firewall_applied %}{{ state.firewall_applied }}{% else %}<span class="muted">ни разу</span>{% endif %}</td>
+            <td>{% if state.firewall_applied %}{{ time.when(state.firewall_applied, fallback=state.firewall_applied) }}{% else %}<span class="muted">ни разу</span>{% endif %}</td>
           </tr>
           <tr><th>В карантине</th><td id="sec-quar">{{ state.quarantine }}</td></tr>
         </tbody>
@@ -132,7 +133,7 @@
       {% for r in state.reports %}
         <tr>
           <td class="mono">{{ r.date }}</td>
-          <td>{{ r.when }}</td>
+          <td>{{ time.when(r.mtime, fallback=r.when) }}</td>
           <td>
             {% if r.findings %}
               <span class="dot dot--empty" title="есть находки"></span> {{ r.findings }}

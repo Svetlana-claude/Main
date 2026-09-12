@@ -1,4 +1,5 @@
 {% extends "base.html" %}
+{% import "time-macros.html" as time with context %}
 {% block title %}Поиск{% endblock %}
 {% block content %}
 <div class="panel">
@@ -25,7 +26,7 @@
         <tbody>
         {% for r in results %}
           <tr>
-            <td class="nowrap">{{ r.created_at.strftime('%d.%m.%Y %H:%M') }}</td>
+            <td class="nowrap">{{ time.when(r.created_at) }}</td>
             <td class="nowrap">
               {% if r.kind == 'topic' %}
                 <a href="{{ url_for('projects') }}?topic={{ r.conv_id }}">{{ r.project_name }} / {{ r.title }}</a>

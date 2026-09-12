@@ -1,0 +1,24 @@
+{# Вывод времени в поясе из настроек.
+
+   Подключение:  {% import "time-macros.html" as time with context %}
+   Вызов:        {{ time.when(m.created_at) }}
+                 {{ time.when(f.created_at, '%d.%m %H:%M') }}
+                 {{ time.when(r.mtime, fallback=r.when) }}
+
+   Перевод в пояс делает `local_time` из общего контекста (deps.render).
+   Ветки ниже него — не запасной вид, а защита от разрыва при выкладке:
+   шаблоны подхватываются с диска сразу, а Python — только после перезапуска
+   службы. Без этих веток шаблон, зовущий ещё не заведённый помощник, уронил бы
+   страницу целиком; с ними до перезапуска время идёт по-старому, в UTC.
+
+   `fallback` — готовая строка на этот промежуток для значений, у которых нет
+   strftime: секунд от начала эпохи, строк ISO. #}
+{% macro when(value, pattern='%d.%m.%Y %H:%M', fallback=none) -%}
+  {%- if local_time is defined -%}
+    {{- local_time(value, pattern) -}}
+  {%- elif fallback is not none -%}
+    {{- fallback -}}
+  {%- elif value -%}
+    {{- value.strftime(pattern) -}}
+  {%- endif -%}
+{%- endmacro %}

@@ -1,4 +1,5 @@
 {% extends "base.html" %}
+{% import "time-macros.html" as time with context %}
 {% block title %}Чатики{% endblock %}
 {# Страница диалога занимает ровно окно: лента прокручивается, поле ввода внизу #}
 {% block shell_mod %}shell--fixed{% endblock %}
@@ -19,7 +20,7 @@
         <a class="sidebar__item {% if current and item.id == current.id %}sidebar__item--active{% endif %}"
            href="{{ url_for('chats') }}?id={{ item.id }}">
           {{ item.title }}
-          <small>{{ item.msg_count }} сообщ. · {{ item.updated_at.strftime('%d.%m %H:%M') }}</small>
+          <small>{{ item.msg_count }} сообщ. · {{ time.when(item.updated_at, '%d.%m %H:%M') }}</small>
         </a>
       {% else %}
         <div class="empty">Чатов пока нет</div>
@@ -47,7 +48,7 @@
           <div class="msg msg--{{ m.role }}">
             <div class="msg__head">
               <span class="msg__who">{% if m.role == 'user' %}Светлана{% elif m.role == 'assistant' %}Claude{% else %}Ошибка{% endif %}</span>
-              <span>{{ m.created_at.strftime('%d.%m.%Y %H:%M') }}</span>
+              <span>{{ time.when(m.created_at) }}</span>
             </div>
             <div class="msg__body">{{ m.content }}</div>
             {% if m.role == 'assistant' %}

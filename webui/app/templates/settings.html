@@ -1,4 +1,5 @@
 {% extends "base.html" %}
+{% import "time-macros.html" as time with context %}
 {% block title %}Настройки{% endblock %}
 {% block content %}
 
@@ -53,6 +54,22 @@
             <option value="system" {% if values.theme == 'system' %}selected{% endif %}>как в системе</option>
           </select>
         </div>
+        {# Условие — тот же разрыв при выкладке, что описан в time-macros.html:
+           список поясов приходит из Python и появится после перезапуска службы #}
+        {% if tz_choices is defined %}
+        <div class="field">
+          <label class="field__label" for="timezone">Часовой пояс</label>
+          <select class="select" id="timezone" name="timezone">
+            {% for z in tz_choices %}
+              <option value="{{ z.value }}" {% if tz_current == z.value %}selected{% endif %}>{{ z.label }}</option>
+            {% endfor %}
+          </select>
+          <div class="field__hint">
+            По нему выводится время во всём интерфейсе и считается «сегодня» на дашборде.
+            Хранится время по-прежнему в UTC — меняется только показ.
+          </div>
+        </div>
+        {% endif %}
         <div class="field">
           <label class="field__label" for="metrics_keep_hours">Хранить историю метрик, часов</label>
           <input class="input input--narrow" id="metrics_keep_hours" name="metrics_keep_hours"
@@ -107,7 +124,7 @@
           <tr>
             <td><a href="{{ url_for('settings_page') }}?file={{ f.name }}">{{ f.name }}</a></td>
             <td class="num">{% if f.exists %}{{ f.size }} Б{% else %}—{% endif %}</td>
-            <td>{% if f.mtime %}{{ f.mtime.strftime('%d.%m.%Y %H:%M') }}{% else %}<span class="tag tag--err">нет файла</span>{% endif %}</td>
+            <td>{% if f.mtime %}{{ time.when(f.mtime) }}{% else %}<span class="tag tag--err">нет файла</span>{% endif %}</td>
           </tr>
         {% endfor %}
         </tbody>
@@ -173,8 +190,8 @@
         <tbody>
         {% for s in sessions %}
           <tr {% if s.id|string == current_session|string %}class="is-selected"{% endif %}>
-            <td class="nowrap">{{ s.created_at.strftime('%d.%m.%Y %H:%M') }}</td>
-            <td class="nowrap">{{ s.last_seen.strftime('%d.%m.%Y %H:%M') }}</td>
+            <td class="nowrap">{{ time.when(s.created_at) }}</td>
+            <td class="nowrap">{{ time.when(s.last_seen) }}</td>
             <td class="mono">{{ s.ip }}</td>
             <td class="faint" style="font-size:12px">{{ (s.user_agent or '')[:70] }}</td>
             <td class="nowrap">

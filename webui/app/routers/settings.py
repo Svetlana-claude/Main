@@ -1,12 +1,12 @@
 """Настройки: параметры приложения, файлы сопровождения, сессии, экспорт."""
-from datetime import datetime
+from datetime import datetime, timezone
 from pathlib import Path
 
 import markdown as md
 from fastapi import APIRouter, Form, Request
 from fastapi.responses import JSONResponse, PlainTextResponse, RedirectResponse
 
-from .. import config, db
+from .. import config, db, timefmt
 from ..deps import current_user, render
 from ..services import restart
 
@@ -49,7 +49,7 @@ def settings_page(request: Request, file: str | None = None):
                 "name": name,
                 "exists": path.is_file(),
                 "size": path.stat().st_size if path.is_file() else 0,
-                "mtime": datetime.fromtimestamp(path.stat().st_mtime) if path.is_file() else None,
+                "mtime": datetime.fromtimestamp(path.stat().st_mtime, timezone.utc) if path.is_file() else None,
             }
         )
 
@@ -89,6 +89,8 @@ def settings_page(request: Request, file: str | None = None):
             "projects": projects,
             "restart": restart.current().as_dict(),
             "current_session": user["session_id"],
+            "tz_choices": timefmt.zone_choices(),
+            "tz_current": timefmt.zone_name(values),
         },
     )
 
@@ -102,6 +104,7 @@ def settings_save(
     metrics_keep_hours: str = Form("48"),
     limit_5h_tokens: str = Form("0"),
     limit_week_tokens: str = Form("0"),
+    timezone_name: str = Form(timefmt.DEFAULT_TZ, alias="timezone"),
 ):
     user, redirect = _guard(request)
     if redirect:
@@ -119,6 +122,9 @@ def settings_save(
     allowed_models = {"opus", "sonnet", "haiku", "fable"}
     db.set_setting("model", model if model in allowed_models else "opus")
     db.set_setting("theme", theme if theme in {"light", "dark", "system"} else "light")
+    # Пояс — только из списка: произвольная строка из формы уронила бы
+    # перевод времени на каждой странице
+    db.set_setting("timezone", timezone_name if timefmt.valid_zone(timezone_name) else timefmt.DEFAULT_TZ)
 
     # Пределы окон: ноль — «предел не задан», меры тогда не показываются.
     # Верхняя граница взята с большим запасом, она защищает от описки вроде
@@ -205,17 +211,18 @@ def export_conversation(request: Request, conversation_id: int):
         (conversation_id,),
     )
 
+    tz = timefmt.zone()
     lines = [f"# {conv['title']}", ""]
     if conv["project_name"]:
         lines.append(f"Проект: {conv['project_name']}")
-    lines.append(f"Начат: {conv['created_at']:%d.%m.%Y %H:%M}")
+    lines.append(f"Начат: {timefmt.fmt(conv['created_at'], tz=tz)} ({timefmt.offset_text(tz)})")
     lines += ["", "---", ""]
 
     names = {"user": "Светлана", "assistant": "Claude", "error": "Ошибка"}
     total = 0.0
     for row in rows:
         total += float(row["cost_usd"] or 0)
-        lines.append(f"## {names.get(row['role'], row['role'])} — {row['created_at']:%d.%m.%Y %H:%M}")
+        lines.append(f"## {names.get(row['role'], row['role'])} — {timefmt.fmt(row['created_at'], tz=tz)}")
         lines.append("")
         lines.append(row["content"])
         lines.append("")

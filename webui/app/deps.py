@@ -5,7 +5,7 @@ from fastapi import Request
 from fastapi.responses import RedirectResponse
 from fastapi.templating import Jinja2Templates
 
-from . import config, db, security
+from . import config, db, security, timefmt
 
 templates = Jinja2Templates(directory=str(config.TEMPLATES_DIR))
 
@@ -49,6 +49,12 @@ def login_redirect(request: Request) -> RedirectResponse:
     return RedirectResponse(request.url_for("login_form"), status_code=303)
 
 
+def _local_time(tz):
+    def local_time(value, pattern: str = timefmt.DEFAULT_PATTERN) -> str:
+        return timefmt.fmt(value, pattern, tz)
+    return local_time
+
+
 def render(request: Request, template: str, ctx: dict | None = None):
     """Отрисовка с общим контекстом: пользователь, настройки, активный раздел."""
     user = ctx.get("user") if ctx and "user" in ctx else current_user(request)
@@ -59,6 +65,11 @@ def render(request: Request, template: str, ctx: dict | None = None):
         "settings": settings,
         "theme": settings.get("theme", "light"),
         "root_path": config.ROOT_PATH,
+        "tz_name": timefmt.zone_name(settings),
+        # Время в поясе из настроек: `{{ time.when(m.created_at) }}` через
+        # time-macros.html. Пояс читается здесь один раз на страницу, а не на
+        # каждую дату в списке.
+        "local_time": _local_time(timefmt.zone(settings)),
     }
     if ctx:
         data.update(ctx)

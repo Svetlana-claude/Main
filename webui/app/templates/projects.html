@@ -1,4 +1,5 @@
 {% extends "base.html" %}
+{% import "time-macros.html" as time with context %}
 {% block title %}Проекты{% endblock %}
 {# Страница диалога занимает ровно окно: лента прокручивается, поле ввода внизу #}
 {% block shell_mod %}shell--fixed{% endblock %}
@@ -95,7 +96,7 @@
                 <div class="msg msg--{{ m.role }}">
                   <div class="msg__head">
                     <span class="msg__who">{% if m.role == 'user' %}Светлана{% elif m.role == 'assistant' %}Claude{% else %}Ошибка{% endif %}</span>
-                    <span>{{ m.created_at.strftime('%d.%m.%Y %H:%M') }}</span>
+                    <span>{{ time.when(m.created_at) }}</span>
                   </div>
                   <div class="msg__body">{{ m.content }}</div>
                   {% if m.role == 'assistant' %}
@@ -146,7 +147,7 @@
                 <div style="padding:5px 8px;border-top:1px solid var(--line-soft)">
                   <a href="{{ url_for('project_file_download', file_id=f.id) }}">{{ f.filename }}</a>
                   <div class="faint" style="font-size:12px">
-                    {{ (f.size_bytes / 1024)|round(1) }} КБ · {{ f.created_at.strftime('%d.%m %H:%M') }}
+                    {{ (f.size_bytes / 1024)|round(1) }} КБ · {{ time.when(f.created_at, '%d.%m %H:%M') }}
                   </div>
                   <form method="post" action="{{ url_for('project_file_delete', file_id=f.id) }}"
                         onsubmit="return confirm('Удалить файл {{ f.filename }}?')">

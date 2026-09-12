@@ -15,6 +15,24 @@ function setMeter(barId, value) {
     bar.classList.toggle('meter__fill--err', value >= 90);
 }
 
+/* Время подписей — в поясе из настроек (data-tz на body). Сервер отдаёт
+   моменты в UTC, а браузер без явного пояса показал бы их по часам той
+   машины, где открыта страница. Пусто или пояс браузеру неизвестен —
+   берётся пояс браузера, как было раньше. */
+const TIME_OPTS = { hour: '2-digit', minute: '2-digit', second: '2-digit' };
+
+function fmtDate(date, opts) {
+    const tz = document.body ? document.body.dataset.tz : '';
+    const o = Object.assign({}, opts || {});
+    if (tz) o.timeZone = tz;
+    try {
+        return date.toLocaleString('ru-RU', o);
+    } catch (err) {
+        delete o.timeZone;              // RangeError: такого пояса браузер не знает
+        return date.toLocaleString('ru-RU', o);
+    }
+}
+
 function setText(id, text) {
     const el = document.getElementById(id);
     if (el) el.textContent = text;
@@ -70,7 +88,7 @@ function initDashboard(opts) {
         });
 
         const stamp = new Date();
-        setText('stamp', 'обновлено ' + stamp.toLocaleTimeString('ru-RU'));
+        setText('stamp', 'обновлено ' + fmtDate(stamp, TIME_OPTS));
     }
 
     async function tick() {
@@ -115,7 +133,7 @@ async function drawHistory(url) {
     }
     if (note) {
         note.textContent = 'точек: ' + points.length + ', с ' +
-            new Date(points[0].at).toLocaleString('ru-RU');
+            fmtDate(new Date(points[0].at));
     }
 
     const css = getComputedStyle(document.documentElement);
@@ -243,7 +261,7 @@ function createRunPanel() {
             who.textContent = name;
             const when = document.createElement('span');
             when.className = 'runrow__time';
-            when.textContent = new Date().toLocaleTimeString('ru-RU');
+            when.textContent = fmtDate(new Date(), TIME_OPTS);
             head.append(who, when);
             row.append(head);
 
@@ -376,7 +394,7 @@ function initConversation(opts) {
         head.className = 'msg__head';
         head.innerHTML = '<span class="msg__who"></span><span></span>';
         head.children[0].textContent = who;
-        head.children[1].textContent = new Date().toLocaleString('ru-RU',
+        head.children[1].textContent = fmtDate(new Date(),
             { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' });
         const body = document.createElement('div');
         body.className = 'msg__body';
@@ -757,7 +775,7 @@ function initProjectFiles(opts) {
             const meta = document.createElement('div');
             meta.className = 'faint';
             meta.textContent = fmtBytes(file.size) + ' · ' +
-                new Date(file.mtime).toLocaleString('ru-RU',
+                fmtDate(new Date(file.mtime),
                     { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' });
 
             li.append(link, meta);
