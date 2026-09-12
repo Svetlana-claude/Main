@@ -429,8 +429,10 @@ a:hover { color: var(--link-hover); text-decoration: underline; }
 
 /* ── Правая колонка: «Файлы» и «Ход работы» ───────────────────────── */
 
+/* 375px — полтора прежних 250: в колонке теперь список папки выдачи с путями,
+   и в узкой он читался бы по слогам. Ход работы шире вместе с ней. */
 .rail {
-    width: 250px; flex: 0 0 250px;
+    width: 375px; flex: 0 0 375px;
     border-left: 1px solid var(--line);
     display: flex; flex-direction: column; min-height: 0;
 }
@@ -440,6 +442,54 @@ a:hover { color: var(--link-hover); text-decoration: underline; }
 .rail__block { display: flex; flex-direction: column; min-height: 0; flex: 1 1 50%; }
 .rail__block--run { border-top: 1px solid var(--line); }
 .rail__body { overflow-y: auto; flex: 1; min-height: 0; }
+
+/* ── Вкладки ──────────────────────────────────────────────────────── */
+
+/* Вид — как у закладок формы 1С: активная сливается с содержимым под ней */
+.tabs {
+    display: flex; align-items: flex-end; gap: 2px;
+    padding: 3px 6px 0;
+    background: var(--cmdbar);
+    border-bottom: 1px solid var(--line);
+}
+.tabs__tab {
+    padding: 4px 12px;
+    margin-bottom: -1px;               /* активная перекрывает нижнюю черту */
+    background: transparent;
+    color: var(--ink-soft);
+    font: inherit;
+    border: 1px solid transparent;
+    border-bottom: none;
+    cursor: pointer;
+}
+.tabs__tab:hover { color: var(--ink); background: var(--row-hover); }
+.tabs__tab[aria-selected="true"] {
+    background: var(--panel);
+    color: var(--ink);
+    font-weight: 600;
+    border-color: var(--line);
+}
+.tabs__tab:focus-visible { outline: 2px solid var(--link); outline-offset: -2px; }
+
+/* Панель вкладки. Своё правило для hidden обязательно: у панели «Файлы проекта»
+   display: flex, а он перебивает встроенное скрытие браузера. */
+.tabpanel[hidden] { display: none; }
+.tabpanel--tree { display: flex; flex-direction: column; flex: 1; min-height: 0; }
+
+/* Путь к папке выдачи и счётчик */
+.treehead {
+    display: flex; gap: 8px; align-items: baseline;
+    padding: 3px 8px;
+    border-bottom: 1px solid var(--line-soft);
+    font-size: 12px;
+}
+.treehead .mono { flex: 1; color: var(--ink-soft); }
+
+/* Список папки выдачи — тем же видом, что загруженные файлы во вкладке рядом */
+.treelist { list-style: none; margin: 0; padding: 0; }
+.treelist li { padding: 5px 8px; border-bottom: 1px solid var(--line-soft); }
+.treelist a { overflow-wrap: anywhere; }
+.treelist .faint { font-size: 12px; }
 
 /* Информационная строка блока: таймер, счётчик шагов, расход */
 .runstat {

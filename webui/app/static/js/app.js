@@ -670,19 +670,66 @@ function fmtBytes(n) {
     return (unit === 0 ? value : value.toFixed(1)) + ' ' + units[unit];
 }
 
-function initProjectFiles(opts) {
-    const dialog = document.getElementById('files-dialog');
-    const openBtn = document.getElementById('files-open');
-    if (!dialog || !openBtn) return;
+/* ── Вкладки ──────────────────────────────────────────────────────── */
 
+/* Вкладки по образцу WAI-ARIA: стрелки и Home/End переключают, Tab уходит
+   в содержимое панели. Выбор помнится: загрузка файла перезагружает страницу,
+   и без этого вкладка всякий раз сбрасывалась бы на первую. */
+function initTabs(root, onShow) {
+    const tabs = Array.from(root.querySelectorAll('[role="tab"]'));
+    if (!tabs.length) return;
+    const storeKey = 'tabs:' + (root.dataset.tabs || '');
+
+    function select(tab, focus) {
+        tabs.forEach(function (t) {
+            const on = t === tab;
+            t.setAttribute('aria-selected', on ? 'true' : 'false');
+            t.tabIndex = on ? 0 : -1;      // в строку вкладок Tab попадает один раз
+            const panel = document.getElementById(t.getAttribute('aria-controls'));
+            if (panel) panel.hidden = !on;
+        });
+        if (focus) tab.focus();
+        try { localStorage.setItem(storeKey, tab.id); } catch (err) { /* хранилище закрыто */ }
+        if (onShow) onShow(tab.id);
+    }
+
+    tabs.forEach(function (tab, i) {
+        tab.addEventListener('click', function () { select(tab, false); });
+        tab.addEventListener('keydown', function (e) {
+            let next = null;
+            if (e.key === 'ArrowRight') next = tabs[(i + 1) % tabs.length];
+            else if (e.key === 'ArrowLeft') next = tabs[(i - 1 + tabs.length) % tabs.length];
+            else if (e.key === 'Home') next = tabs[0];
+            else if (e.key === 'End') next = tabs[tabs.length - 1];
+            if (!next) return;
+            e.preventDefault();
+            select(next, true);
+        });
+    });
+
+    let saved = null;
+    try { saved = localStorage.getItem(storeKey); } catch (err) { /* хранилище закрыто */ }
+    select(tabs.find(function (t) { return t.id === saved; }) || tabs[0], false);
+}
+
+/* ── Файлы проекта ────────────────────────────────────────────────── */
+
+/* Вкладка «Файлы проекта»: список папки выдачи со скачиванием. Список
+   забирается при первом показе вкладки, а не при открытии страницы: на вкладку
+   «Загрузка» ходят чаще, и тянуть обход каталога впустую незачем. */
+function initProjectFiles(opts) {
+    const tablist = document.querySelector('[data-tabs="project-files"]');
     const rows = document.getElementById('files-rows');
-    const table = document.getElementById('files-table');
+    if (!tablist || !rows) return;
+
     const note = document.getElementById('files-note');
     const count = document.getElementById('files-count');
     const filter = document.getElementById('files-filter');
 
-    let files = [];       // последний полученный список
-    let loaded = false;   // список уже забран — повторно при открытии не тянем
+    let files = [];        // последний полученный список
+    let loaded = false;    // список уже забран
+    let loading = false;   // запрос в пути — второй не шлём
+    let truncatedNote = '';
 
     function say(text) {
         note.textContent = text;
@@ -697,38 +744,30 @@ function initProjectFiles(opts) {
 
         rows.replaceChildren();
         for (const file of shown) {
-            const tr = document.createElement('tr');
+            const li = document.createElement('li');
 
             // Имя файла приходит с диска, поэтому только textContent:
             // innerHTML тут означал бы разметку из имени файла.
-            const name = document.createElement('td');
-            name.className = 'mono';
-            name.textContent = file.path;
-            name.title = file.path;
-
-            const size = document.createElement('td');
-            size.className = 'num';
-            size.textContent = fmtBytes(file.size);
-
-            const when = document.createElement('td');
-            when.textContent = new Date(file.mtime).toLocaleString('ru-RU',
-                { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' });
-
-            const act = document.createElement('td');
             const link = document.createElement('a');
             link.href = opts.downloadUrl + '?path=' + encodeURIComponent(file.path);
-            link.textContent = 'скачать';
+            link.textContent = file.path;
+            link.title = 'Скачать ' + file.path;
             link.setAttribute('download', '');
-            act.append(link);
 
-            tr.append(name, size, when, act);
-            rows.append(tr);
+            const meta = document.createElement('div');
+            meta.className = 'faint';
+            meta.textContent = fmtBytes(file.size) + ' · ' +
+                new Date(file.mtime).toLocaleString('ru-RU',
+                    { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' });
+
+            li.append(link, meta);
+            rows.append(li);
         }
 
-        table.hidden = shown.length === 0;
-        count.textContent = needle
+        rows.hidden = shown.length === 0;
+        count.textContent = (needle
             ? shown.length + ' из ' + files.length
-            : files.length + ' файл.';
+            : files.length + ' файл.') + truncatedNote;
         if (shown.length === 0) {
             say(files.length
                 ? 'Под фильтр ничего не подошло'
@@ -739,10 +778,11 @@ function initProjectFiles(opts) {
     }
 
     async function load() {
-        table.hidden = true;
-        rows.replaceChildren();
-        count.textContent = '';
-        say('Загрузка…');
+        if (loading) return;
+        loading = true;
+        // Уже показанный список не гасим на время запроса: при обновлении
+        // по окончании ответа он мигал бы надписью «Загрузка…»
+        if (!loaded) say('Загрузка…');
         try {
             const res = await fetch(opts.listUrl, { cache: 'no-store' });
             const payload = await res.json().catch(() => ({}));
@@ -752,30 +792,32 @@ function initProjectFiles(opts) {
             // Путь берём с сервера: он завёл папку и знает её настоящее место
             const dir = document.getElementById('files-dir');
             if (dir && payload.dir) dir.textContent = payload.dir;
-            render();
             // Список обрезан по пределу — сказать об этом обязательно:
             // молча показанная часть выглядит как весь каталог.
-            if (payload.truncated) {
-                count.textContent += ' (показаны свежие ' + payload.limit + ')';
-            }
+            truncatedNote = payload.truncated ? ' (свежие ' + payload.limit + ')' : '';
+            render();
         } catch (err) {
             files = [];
+            rows.replaceChildren();
+            rows.hidden = true;
+            count.textContent = '';
             say('Не удалось получить список: ' + err.message);
+        } finally {
+            loading = false;
         }
     }
 
-    openBtn.addEventListener('click', function () {
-        dialog.showModal();
-        if (!loaded) load();
+    initTabs(tablist, function (tabId) {
+        if (tabId === 'tab-tree' && !loaded) load();
     });
-    document.getElementById('files-close').addEventListener('click', () => dialog.close());
+
     document.getElementById('files-reload').addEventListener('click', load);
     filter.addEventListener('input', function () { if (loaded) render(); });
 
-    // Щелчок мимо окошка закрывает его: само окно занимает не весь экран,
-    // и промах по нему — обычное дело.
-    dialog.addEventListener('click', function (e) {
-        if (e.target === dialog) dialog.close();
+    // Ответ закончился — в папке выдачи могло появиться сделанное.
+    // Список обновляется, только если его уже смотрели.
+    document.addEventListener('topic-state', function (e) {
+        if (e.detail.state === 'done' && loaded) load();
     });
 }
 

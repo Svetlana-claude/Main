@@ -40,7 +40,6 @@
         <span class="cmdbar__sep"></span>
         <strong>{{ project.name }}</strong>
         <span class="tag mono">{{ project.workdir }}</span>
-        <button class="btn" type="button" id="files-open">Файлы проекта</button>
         <span class="cmdbar__sep"></span>
         <form method="post" action="{{ url_for('project_toggle_bash', project_id=project.id) }}">
           <label class="check" title="Правка файлов разрешена всегда. Запуск команд — только по этому флагу.">
@@ -124,9 +123,19 @@
 
         <aside class="rail">
 
+          {# Две вкладки. «Загрузка» — то, что положили сами через форму.
+             «Файлы проекта» — папка выдачи: сюда кладётся то, что просили
+             сделать или выложить. Показывается она, а не весь рабочий каталог, —
+             среди сотен файлов кода нужный не найти. #}
           <div class="rail__block">
-            <div class="panel__head">Файлы</div>
-            <div class="rail__body">
+            <div class="tabs" role="tablist" aria-label="Файлы" data-tabs="project-files">
+              <button class="tabs__tab" type="button" role="tab" id="tab-upload"
+                      aria-controls="panel-upload" aria-selected="true">Загрузка</button>
+              <button class="tabs__tab" type="button" role="tab" id="tab-tree"
+                      aria-controls="panel-tree" aria-selected="false" tabindex="-1">Файлы проекта</button>
+            </div>
+
+            <div class="rail__body tabpanel" role="tabpanel" id="panel-upload" aria-labelledby="tab-upload">
               <form method="post" action="{{ url_for('project_upload', project_id=project.id) }}"
                     enctype="multipart/form-data" style="padding:8px">
                 <input class="input" type="file" name="upload" required style="margin-bottom:6px">
@@ -148,6 +157,23 @@
                 <div class="empty" style="padding:12px">Файлов нет</div>
               {% endfor %}
             </div>
+
+            <div class="tabpanel tabpanel--tree" role="tabpanel" id="panel-tree"
+                 aria-labelledby="tab-tree" hidden>
+              <div class="cmdbar">
+                <input class="input" type="search" id="files-filter" style="flex:1;min-width:0"
+                       placeholder="Фильтр по имени" aria-label="Фильтр по имени">
+                <button class="btn" type="button" id="files-reload">Обновить</button>
+              </div>
+              <div class="treehead">
+                <span class="mono breakable" id="files-dir">{{ project.workdir }}/downloads</span>
+                <span class="faint nowrap" id="files-count"></span>
+              </div>
+              <div class="rail__body">
+                <ul class="treelist" id="files-rows"></ul>
+                <div class="empty" id="files-note" style="padding:12px">Загрузка…</div>
+              </div>
+            </div>
           </div>
 
           {# Промежуточные действия ответа: команды и обращения к файлам.
@@ -168,40 +194,6 @@
 
       </div>
 
-      {# Папка выдачи проекта: сюда кладётся то, что просили сделать или
-         выложить. Показывается она, а не весь рабочий каталог, — среди сотен
-         файлов кода нужный не найти. Окошко нативное (<dialog>): само держит
-         фокус и закрывается по Esc. #}
-      <dialog class="modal" id="files-dialog" aria-labelledby="files-title">
-        <div class="modal__head">
-          <strong id="files-title">Файлы проекта</strong>
-          <span class="tag mono" id="files-dir">{{ project.workdir }}/downloads</span>
-          <span class="spacer"></span>
-          <button class="btn btn--plain" type="button" id="files-close"
-                  aria-label="Закрыть окно">✕</button>
-        </div>
-        <div class="cmdbar">
-          <input class="input" type="search" id="files-filter" style="width:200px"
-                 placeholder="Фильтр по имени" aria-label="Фильтр по имени">
-          <span class="spacer"></span>
-          <span class="faint" id="files-count"></span>
-          <button class="btn" type="button" id="files-reload">Обновить</button>
-        </div>
-        <div class="modal__body">
-          <table class="table table--zebra" id="files-table" hidden>
-            <thead>
-              <tr>
-                <th>Файл</th>
-                <th style="width:90px">Размер</th>
-                <th style="width:110px">Изменён</th>
-                <th style="width:80px"></th>
-              </tr>
-            </thead>
-            <tbody id="files-rows"></tbody>
-          </table>
-          <div class="empty" id="files-note">Загрузка…</div>
-        </div>
-      </dialog>
     {% endif %}
   </section>
 
