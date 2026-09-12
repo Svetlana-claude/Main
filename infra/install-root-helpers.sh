@@ -22,7 +22,15 @@ declare -A HELPERS=(
     ["webui-deploy.sh"]="webui-deploy"
     ["webui-apt-install.sh"]="webui-apt-install"
     ["tls-letsencrypt.sh"]="webui-tls-issue"
+    ["webui-vpn.sh"]="webui-vpn"
 )
+
+# Обёртка webui-vpn запускает не сами скрипты из vpn-server/ — тот каталог
+# доступен на запись пользователю и агенту, и запуск оттуда от root означал бы
+# беспарольный root целиком, — а их root-овую копию. Список закрыт.
+VPN_SRC="$(dirname "$SRC")/vpn-server"
+VPN_LIB=/usr/local/lib/webui-vpn
+VPN_SCRIPTS=(install-wireguard.sh add-client.sh remove-client.sh)
 
 if [ "$(id -u)" -ne 0 ]; then
     echo "нужен root: sudo bash $0" >&2
@@ -44,9 +52,26 @@ for name in "${!HELPERS[@]}"; do
     echo "  $name -> $dst"
 done
 
+install -o root -g root -m 0755 -d "$VPN_LIB"
+for name in "${VPN_SCRIPTS[@]}"; do
+    src="$VPN_SRC/$name"
+    dst="$VPN_LIB/$name"
+    if [ ! -f "$src" ]; then
+        echo "  пропуск: нет $src"
+        continue
+    fi
+    if [ -f "$dst" ] && cmp -s "$src" "$dst"; then
+        echo "  $dst — без изменений"
+        continue
+    fi
+    install -o root -g root -m 0755 "$src" "$dst"
+    echo "  vpn-server/$name -> $dst"
+done
+
 echo
 echo "Проверка прав (должно быть root:root и без w у прочих):"
 ls -l /usr/local/sbin/webui-* 2>/dev/null
+ls -l "$VPN_LIB" 2>/dev/null
 
 cat <<'EOF'
 
