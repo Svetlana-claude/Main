@@ -30,7 +30,7 @@ declare -A HELPERS=(
 # беспарольный root целиком, — а их root-овую копию. Список закрыт.
 VPN_SRC="$(dirname "$SRC")/vpn-server"
 VPN_LIB=/usr/local/lib/webui-vpn
-VPN_SCRIPTS=(install-wireguard.sh add-client.sh remove-client.sh)
+VPN_SCRIPTS=(install-wireguard.sh add-client.sh remove-client.sh list-peers.sh)
 
 if [ "$(id -u)" -ne 0 ]; then
     echo "нужен root: sudo bash $0" >&2

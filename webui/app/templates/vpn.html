@@ -1,0 +1,155 @@
+{% extends "base.html" %}
+{% block title %}VPN{% endblock %}
+{% block content %}
+
+{% if err %}<div class="note note--warn">{{ err }}</div>{% endif %}
+{% if added %}<div class="note note--ok">Клиент «{{ added }}» заведён. QR-код и файл — в таблице ниже.</div>{% endif %}
+{% if removed %}<div class="note note--ok">Клиент «{{ removed }}» отозван и отключён.</div>{% endif %}
+{% if state.note %}<div class="note note--warn">{{ state.note }}</div>{% endif %}
+
+<div class="grid2">
+
+  <div class="panel">
+    <div class="panel__head">Сервер</div>
+    <div class="panel__body panel__body--flush">
+      <table class="table">
+        <tbody>
+          <tr>
+            <th>Состояние</th>
+            <td>
+              {% if state.active %}<span class="tag tag--ok">работает</span>
+              {% elif state.installed %}<span class="tag tag--warn">служба не запущена</span>
+              {% else %}<span class="tag tag--warn">не установлен</span>{% endif %}
+            </td>
+          </tr>
+          <tr><th>Порт</th><td class="mono">{{ state.port or '—' }}/udp</td></tr>
+          <tr><th>Ключ сервера</th><td class="mono breakable">{{ state.pubkey or '—' }}</td></tr>
+          <tr>
+            <th>Трафик всего</th>
+            <td>
+              принято <b id="vpn-rx-total">{{ state.rx_total_text }}</b>,
+              передано <b id="vpn-tx-total">{{ state.tx_total_text }}</b>
+            </td>
+          </tr>
+          <tr><th>Клиентов</th><td>{{ state.peers | length }}</td></tr>
+        </tbody>
+      </table>
+      <div class="field__hint" style="padding:8px">
+        «Принято» и «передано» — со стороны сервера: принято от клиента,
+        передано клиенту. Счёт обнуляется при перезапуске службы.
+      </div>
+    </div>
+  </div>
+
+  <div class="panel">
+    <div class="panel__head">Новый клиент</div>
+    <div class="panel__body">
+      <form method="post" action="{{ url_for('vpn_add') }}">
+        <div class="field">
+          <label class="field__label" for="vpn-name">Имя устройства</label>
+          <input class="input" id="vpn-name" name="name" required maxlength="32"
+                 pattern="[A-Za-z0-9][A-Za-z0-9_-]*" placeholder="notebook">
+          <div class="field__hint">
+            Латиница, цифры, дефис и подчёркивание; первым знаком буква или цифра.
+            Своё имя на каждое устройство — иначе отозвать одно, не трогая
+            остальные, не выйдет.
+          </div>
+        </div>
+        <div class="field">
+          <label class="check">
+            <input type="checkbox" name="split" value="1">
+            только сеть туннеля
+          </label>
+          <div class="field__hint">
+            По умолчанию через сервер идёт весь трафик устройства. С этой галочкой —
+            только обращения к самой сети <span class="mono">10.8.0.0/24</span>:
+            доступ к серверу есть, внешний адрес остаётся свой.
+          </div>
+        </div>
+        <button class="btn btn--primary" type="submit">Завести</button>
+      </form>
+    </div>
+  </div>
+
+</div>
+
+<div class="panel">
+  <div class="panel__head">Клиенты</div>
+  <div class="panel__body panel__body--flush">
+    <table class="table" id="vpn-peers">
+      <thead>
+        <tr>
+          <th>Имя</th>
+          <th class="nowrap">Адрес в туннеле</th>
+          <th class="nowrap">Последняя связь</th>
+          <th class="nowrap">Принято</th>
+          <th class="nowrap">Передано</th>
+          <th>Действия</th>
+        </tr>
+      </thead>
+      <tbody>
+      {% for p in state.peers %}
+        <tr data-peer="{{ p.name }}">
+          <td>
+            {# Те же кружки, что в перечне тем: зелёный — связь живая, пустой —
+               клиент не на связи. Цвет не единственный признак: то же сказано
+               в подсказке и в колонке «Последняя связь». #}
+            <span class="dot {% if p.online %}dot--done{% else %}dot--empty{% endif %}"
+                  data-role="dot" title="{{ 'на связи' if p.online else 'связи нет' }}"></span>
+            {{ p.name }}
+          </td>
+          <td class="mono">{{ p.ip }}</td>
+          <td data-role="seen">{{ p.seen_text }}</td>
+          <td data-role="rx">{{ p.rx_text }}</td>
+          <td data-role="tx">{{ p.tx_text }}</td>
+          <td class="nowrap">
+            {% if p.has_conf %}
+              <button class="btn btn--plain" type="button"
+                      data-qr="{{ p.name }}" data-qr-url="{{ url_for('vpn_qr', name=p.name) }}">QR-код</button>
+              <a class="btn btn--plain" href="{{ url_for('vpn_conf', name=p.name) }}">Файл</a>
+            {% else %}
+              <span class="muted" title="Конфиг с закрытым ключом не найден в exchange/vpn">файла нет</span>
+            {% endif %}
+            <form method="post" action="{{ url_for('vpn_remove') }}" style="display:inline"
+                  onsubmit="return confirm('Отозвать клиента «{{ p.name }}»? Устройство отключится сразу.')">
+              <input type="hidden" name="name" value="{{ p.name }}">
+              <button class="btn btn--plain" type="submit">Отозвать</button>
+            </form>
+          </td>
+        </tr>
+      {% else %}
+        <tr><td colspan="6" class="muted">Клиентов нет</td></tr>
+      {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<dialog class="modal" id="vpn-qr-modal">
+  <div class="modal__head">
+    <b id="vpn-qr-title">QR-код</b>
+    <span class="spacer"></span>
+    <button class="btn btn--plain" type="button" id="vpn-qr-close">Закрыть</button>
+  </div>
+  <div class="modal__body" style="text-align:center">
+    <img id="vpn-qr-img" alt="QR-код настроек подключения" style="max-width:100%;height:auto">
+    <div class="field__hint" style="padding:8px">
+      В приложении WireGuard: «+» → «Сканировать QR-код».
+      В коде — закрытый ключ устройства, не показывайте его посторонним.
+    </div>
+  </div>
+</dialog>
+
+{% endblock %}
+
+{% block scripts %}
+<script>
+{# Адрес опроса собран вручную, а не через url_for('vpn_state'): шаблон
+   подхватывается сразу, а маршрут живёт только после перезапуска службы —
+   до него url_for уронил бы страницу целиком. #}
+initVpnPanel({
+  stateUrl: "{{ root_path }}/vpn/state",
+  intervalSec: 10
+});
+</script>
+{% endblock %}

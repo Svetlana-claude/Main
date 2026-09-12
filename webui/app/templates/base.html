@@ -27,6 +27,11 @@
     <a class="nav__item {% if active == 'dashboard' %}nav__item--active{% endif %}" href="{{ url_for('dashboard') }}">Дашборд</a>
     <a class="nav__item {% if active == 'chats' %}nav__item--active{% endif %}" href="{{ url_for('chats') }}">Чатики</a>
     <a class="nav__item {% if active == 'projects' %}nav__item--active{% endif %}" href="{{ url_for('projects') }}">Проекты</a>
+    {# Адрес собран вручную, а не через url_for('vpn_page'): шаблоны подхватываются
+       сразу, а маршрут появляется только после перезапуска службы. url_for на ещё
+       не заведённый маршрут уронил бы в 500 не эту страницу, а все сразу — шапка
+       общая. Пока маршрута нет, вкладка просто ведёт в 404. #}
+    <a class="nav__item {% if active == 'vpn' %}nav__item--active{% endif %}" href="{{ root_path }}/vpn">VPN</a>
     <a class="nav__item {% if active == 'settings' %}nav__item--active{% endif %}" href="{{ url_for('settings_page') }}">Настройки</a>
     <span class="titlebar__spacer"></span>
     <a class="nav__item {% if active == 'journal' %}nav__item--active{% endif %}" href="{{ url_for('journal') }}">Журнал</a>

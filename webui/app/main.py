@@ -7,7 +7,7 @@ from fastapi import FastAPI
 from fastapi.staticfiles import StaticFiles
 
 from . import config, db
-from .routers import auth, chats, dashboard, projects, settings
+from .routers import auth, chats, dashboard, projects, settings, vpn
 
 
 async def _cleanup_loop() -> None:
@@ -59,6 +59,7 @@ app.include_router(auth.router)
 app.include_router(dashboard.router)
 app.include_router(chats.router)
 app.include_router(projects.router)
+app.include_router(vpn.router)
 app.include_router(settings.router)
 
 

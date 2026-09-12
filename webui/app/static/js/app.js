@@ -778,3 +778,75 @@ function initProjectFiles(opts) {
         if (e.target === dialog) dialog.close();
     });
 }
+
+/* ── Панель VPN ───────────────────────────────────────────────────── */
+
+function initVpnPanel(opts) {
+    // Трафик и время последней связи обновляются сами: страницу для этого
+    // перезагружать не нужно, а числа иначе устаревают молча.
+    const rows = new Map();
+    document.querySelectorAll('#vpn-peers tr[data-peer]').forEach(function (tr) {
+        rows.set(tr.dataset.peer, tr);
+    });
+
+    const rxTotal = document.getElementById('vpn-rx-total');
+    const txTotal = document.getElementById('vpn-tx-total');
+
+    function put(tr, role, text) {
+        const cell = tr.querySelector('[data-role="' + role + '"]');
+        // Только textContent: значения приходят с сервера, но разметкой им быть незачем
+        if (cell && text != null) cell.textContent = text;
+    }
+
+    async function tick() {
+        try {
+            const res = await fetch(opts.stateUrl, { cache: 'no-store' });
+            if (!res.ok) return;          // не пускают — перерисовывать нечем
+            const data = await res.json();
+            if (!data.ok) return;
+
+            if (rxTotal && data.rx_total_text) rxTotal.textContent = data.rx_total_text;
+            if (txTotal && data.tx_total_text) txTotal.textContent = data.tx_total_text;
+
+            (data.peers || []).forEach(function (peer) {
+                const tr = rows.get(peer.name);
+                if (!tr) return;          // клиента завели в другой вкладке — увидим при перезагрузке
+                put(tr, 'seen', peer.seen_text);
+                put(tr, 'rx', peer.rx_text);
+                put(tr, 'tx', peer.tx_text);
+                const dot = tr.querySelector('[data-role="dot"]');
+                if (dot) {
+                    dot.className = 'dot ' + (peer.online ? 'dot--done' : 'dot--empty');
+                    dot.title = peer.online ? 'на связи' : 'связи нет';
+                    dot.setAttribute('aria-label', dot.title);
+                }
+            });
+        } catch (err) {
+            /* связь моргнула — подтянется следующим опросом */
+        }
+    }
+
+    setInterval(tick, Math.max(5, opts.intervalSec || 10) * 1000);
+    tick();
+
+    // Окно с QR-кодом. Картинка тянется по требованию: в ней закрытый ключ,
+    // и держать её в разметке страницы для всех клиентов сразу незачем.
+    const dialog = document.getElementById('vpn-qr-modal');
+    if (!dialog) return;
+    const img = document.getElementById('vpn-qr-img');
+    const title = document.getElementById('vpn-qr-title');
+    const closeBtn = document.getElementById('vpn-qr-close');
+
+    document.querySelectorAll('[data-qr]').forEach(function (btn) {
+        btn.addEventListener('click', function () {
+            img.src = btn.dataset.qrUrl;
+            title.textContent = 'QR-код: ' + btn.dataset.qr;
+            dialog.showModal();
+        });
+    });
+    if (closeBtn) closeBtn.addEventListener('click', function () { dialog.close(); });
+    dialog.addEventListener('close', function () { img.removeAttribute('src'); });
+    dialog.addEventListener('click', function (e) {
+        if (e.target === dialog) dialog.close();
+    });
+}

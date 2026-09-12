@@ -65,7 +65,8 @@ ListenPort = 51820
 PrivateKey = $(cat "$WG_DIR/server.key")
 EOF
 
-run() { fakeroot -- env "WG_DIR=$WG_DIR" "PATH=$PATH" bash "$@" >/dev/null; }
+run()     { fakeroot -- env "WG_DIR=$WG_DIR" "PATH=$PATH" bash "$@" >/dev/null; }
+run_out() { fakeroot -- env "WG_DIR=$WG_DIR" "PATH=$PATH" bash "$@"; }
 
 peer_ip() {   # адрес пира по имени, как он записан на сервере
     awk -v m="# client: $1" '
@@ -127,7 +128,40 @@ grep -qx "AllowedIPs = 10.8.0.0/24" "$WG_DIR/clients/split-one.conf" \
     || fail "с ключом --split через туннель должна идти только сеть туннеля"
 ok "ключ --split сужает маршрут"
 
-# --- 6. Имя с посторонними знаками не принимается -----------------------------
+# --- 6. Сводка по клиентам сшивает имена с трафиком ---------------------------
+# Заглушка wg отдаёт дамп: alpha не подключался, delta качает.
+alpha_pub="$(awk '/^# client: alpha$/ { f = 1; next } f && /^PublicKey/ { print $3; exit }' "$WG_DIR/wg0.conf")"
+delta_pub="$(awk '/^# client: delta$/ { f = 1; next } f && /^PublicKey/ { print $3; exit }' "$WG_DIR/wg0.conf")"
+cat > "$WORK/dump.tsv" <<EOF
+srvkey	none	none	off
+$alpha_pub	psk	(none)	10.8.0.2/32	0	0	0	off
+$delta_pub	psk	203.0.113.9:12345	10.8.0.3/32	1757650000	4096	8192	25
+EOF
+cat > "$WORK/bin/wg" <<EOF
+#!/usr/bin/env bash
+case "\$1" in
+    genkey|pubkey|genpsk) exec "$WG_REAL" "\$@" ;;
+    show)                 [ "\${3:-}" = "dump" ] && exec cat "$WORK/dump.tsv"; exit 0 ;;
+    syncconf|set)         exit 0 ;;
+    *)                    exec "$WG_REAL" "\$@" ;;
+esac
+EOF
+chmod +x "$WORK/bin/wg"
+
+peers="$(run_out "$ROOT/list-peers.sh")"
+line="$(printf '%s\n' "$peers" | awk -F'\t' '$1 == "delta"')"
+[ -n "$line" ] || fail "delta не попал в сводку: $peers"
+[ "$(printf '%s' "$line" | cut -f2)" = "10.8.0.3/32" ] || fail "у delta не тот адрес: $line"
+[ "$(printf '%s' "$line" | cut -f4)" = "4096" ]        || fail "у delta не то «принято»: $line"
+[ "$(printf '%s' "$line" | cut -f5)" = "8192" ]        || fail "у delta не то «передано»: $line"
+[ "$(printf '%s' "$line" | cut -f6)" = "1757650000" ]  || fail "у delta не то рукопожатие: $line"
+[ "$(printf '%s' "$line" | cut -f7)" = "203.0.113.9:12345" ] || fail "у delta не тот адрес клиента: $line"
+alpha_line="$(printf '%s\n' "$peers" | awk -F'\t' '$1 == "alpha"')"
+[ "$(printf '%s' "$alpha_line" | cut -f6)" = "0" ] || fail "alpha не подключался, рукопожатие должно быть 0: $alpha_line"
+[ "$(printf '%s' "$alpha_line" | cut -f7)" = "" ]  || fail "у неподключавшегося alpha не должно быть адреса: $alpha_line"
+ok "сводка сшивает имена с трафиком по открытому ключу"
+
+# --- 7. Имя с посторонними знаками не принимается -----------------------------
 if run "$ROOT/add-client.sh" 'a b;rm' 2>/dev/null; then
     fail "имя с пробелом и точкой с запятой прошло проверку"
 fi

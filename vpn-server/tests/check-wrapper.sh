@@ -60,6 +60,7 @@ refuse "лишний довод после --split"     add phone --split ещё
 refuse "чужой ключ у add"               add phone --dns 8.8.8.8
 refuse "два имени у remove"             remove phone notebook
 refuse "довод у list"                   list лишнее
+refuse "довод у peers"                  peers лишнее
 refuse "довод у status"                 status лишнее
 
 # --- Порт --------------------------------------------------------------------
@@ -86,6 +87,7 @@ expect "$LIB/add-client.sh phone --out $OUT_DIR"            add phone
 expect "$LIB/add-client.sh phone --split --out $OUT_DIR"    add phone --split
 expect "$LIB/remove-client.sh phone"                        remove phone
 expect "$LIB/remove-client.sh --list"                       list
+expect "$LIB/list-peers.sh "                                peers
 expect "$LIB/install-wireguard.sh "                         install
 expect "WG_PORT=443 $LIB/install-wireguard.sh "             install --port 443
 

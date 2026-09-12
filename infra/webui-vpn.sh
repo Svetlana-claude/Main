@@ -5,6 +5,7 @@
 #     sudo webui-vpn add ИМЯ [--split]        завести клиента
 #     sudo webui-vpn remove ИМЯ               отозвать клиента
 #     sudo webui-vpn list                     перечислить клиентов
+#     sudo webui-vpn peers                    сводка с трафиком, таблицей TSV
 #     sudo webui-vpn status                   состояние интерфейса
 #
 # Ставится в /usr/local/sbin/webui-vpn владельцем root и БЕЗ права записи
@@ -37,7 +38,9 @@ WG=/usr/bin/wg
 die() { echo "ОТКАЗ: $*" >&2; exit 1; }
 
 usage() {
-    sed -n '3,9p' "$0" | sed 's/^# \{0,1\}//'
+    # Строки подсказки берутся по образцу, а не по номерам: добавь команду —
+    # и нумерация уехала бы, а подсказка молча потеряла бы последнюю строку.
+    sed -n 's/^#     \(sudo webui-vpn.*\)/    \1/p' "$0"
 }
 
 if [ "$(id -u)" -ne 0 ]; then
@@ -112,6 +115,10 @@ case "$cmd" in
     list)
         [ $# -eq 0 ] || die "list доводов не принимает"
         run_lib remove-client.sh --list
+        ;;
+    peers)
+        [ $# -eq 0 ] || die "peers доводов не принимает"
+        run_lib list-peers.sh
         ;;
     status)
         [ $# -eq 0 ] || die "status доводов не принимает"

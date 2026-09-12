@@ -515,6 +515,8 @@ a:hover { color: var(--link-hover); text-decoration: underline; }
 .faint { color: var(--ink-faint); }
 .mono { font-family: var(--mono); }
 .nowrap { white-space: nowrap; }
+/* Длинные ключи рвутся по месту, иначе таблица уезжает вбок вместе со страницей */
+.breakable { overflow-wrap: anywhere; }
 .right { text-align: right; }
 .grid2 { display: grid; gap: 12px; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); }
 .stack > * + * { margin-top: 8px; }
