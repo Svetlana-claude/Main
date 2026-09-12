@@ -34,7 +34,8 @@ apply_v4() {
     # Адрес плавающий: ограничиваем темп — 4 новых соединения в минуту с адреса.
     # Порядок важен: --set до --update, иначе список никогда не наполнится.
     iptables -A INPUT -p tcp --dport "$SSH_PORT" -m conntrack --ctstate NEW -m recent --set --name SSHPROBE
-    iptables -A INPUT -p tcp --dport "$SSH_PORT" -m conntrack --ctstate NEW -m recent --update --seconds 60 --hitcount 4 --name SSHPROBE -j DROP
+    iptables -A INPUT -p tcp --dport "$SSH_PORT" -m conntrack --ctstate NEW -m recent --update --seconds 60 \
+        --hitcount "${SSH_RATE_HITCOUNT:-10}" --name SSHPROBE -j DROP
     iptables -A INPUT -p tcp --dport "$SSH_PORT" -m conntrack --ctstate NEW -j ACCEPT
   else
     iptables -A INPUT -p tcp --dport "$SSH_PORT" -m conntrack --ctstate NEW -j ACCEPT

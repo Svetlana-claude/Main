@@ -83,6 +83,7 @@ known "remediate без доводов"      remediate
 known "harden-updates"             harden-updates
 known "harden-fail2ban"            harden-fail2ban
 known "harden-ssh"                 harden-ssh
+known "firewall-confirm"           firewall-confirm
 
 echo
 echo "Запуск чужого скрипта от root не допускается:"
@@ -116,6 +117,7 @@ echo "Лишние доводы (через них в инструкции пр�
 deny_why "collect с путём"          "collect доводов не принимает"          collect /etc/passwd
 deny_why "remediate с путём"        "remediate доводов не принимает"        remediate /tmp/поддельный-снимок.txt
 deny_why "firewall-apply с доводом" "firewall-apply доводов не принимает"   firewall-apply --now
+deny_why "firewall-confirm с доводом" "firewall-confirm доводов не принимает" firewall-confirm да
 deny_why "baseline-approve с путём" "baseline-approve доводов не принимает" baseline-approve /tmp/чужой-эталон.txt
 deny_why "status с доводом"         "status доводов не принимает"           status --verbose
 # Команды ужесточения пишут в /etc. Довод в них не нужен и не принимается:

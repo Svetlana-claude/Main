@@ -3,7 +3,8 @@
 #
 #     sudo webui-sec collect              снимок состояния в stdout
 #     sudo webui-sec remediate            устранение по белому списку
-#     sudo webui-sec firewall-apply       применить правила файрвола
+#     sudo webui-sec firewall-apply       применить правила файрвола на 5 минут
+#     sudo webui-sec firewall-confirm     отменить самооткат после проверки
 #     sudo webui-sec firewall-save        закрепить правила (после проверки!)
 #     sudo webui-sec baseline-approve     принять снимок дня эталоном
 #     sudo webui-sec harden-updates       включить автообновления
@@ -109,12 +110,47 @@ case "$cmd" in
         ;;
     firewall-apply)
         [ $# -eq 0 ] || die "firewall-apply доводов не принимает"
-        # Метка «файрвол применялся руками»: по ней remediate.sh решает, можно
-        # ли восстанавливать правила ночью без человека. До первого применения
-        # нельзя — ночной default-deny без проверки доступа отрезает сервер.
-        install -o root -g root -m 644 -D /dev/null "$LIB/backup/firewall-applied"
+        script="$(check_lib apply-firewall.sh)"
+        install -o root -g root -m 700 -d "$LIB/backup"
+
+        # Правила «до» сохраняются ВСЕГДА и до применения: это единственный
+        # способ вернуться, если новые отрежут доступ.
+        stamp=$(date +%F_%H%M%S)
+        iptables-save  > "$LIB/backup/rules.v4.before-$stamp"
+        ip6tables-save > "$LIB/backup/rules.v6.before-$stamp"
+        ln -sf "rules.v4.before-$stamp" "$LIB/backup/rules.v4.last"
+        ln -sf "rules.v6.before-$stamp" "$LIB/backup/rules.v6.last"
+
+        /bin/bash "$script"
+
+        # ⚠️ Самооткат. Ошибка в правилах — это потеря доступа к удалённой
+        # машине, и «проверьте из второго окна» помогает только если есть чем
+        # вернуть. Поэтому применение временное: через 5 минут правила
+        # возвращаются сами, если не подтвердить их командой firewall-confirm.
+        # Подтверждение — это и есть та самая проверка делом.
+        rm -f "$LIB/backup/firewall-applied"
+        systemctl stop webui-sec-rollback.timer 2>/dev/null || true
+        systemd-run --quiet --unit=webui-sec-rollback --on-active=300 \
+            /bin/bash -c "iptables-restore < '$LIB/backup/rules.v4.last'; ip6tables-restore < '$LIB/backup/rules.v6.last'; logger -t webui-sec 'правила файрвола откачены: подтверждения не было'"
+        echo
+        echo "⚠️ Правила применены ВРЕМЕННО. Через 5 минут они откатятся сами."
+        echo "   Проверьте ИЗ ВТОРОГО ОКНА, не закрывая это: вход по SSH, сайт,"
+        echo "   подключение VPN с телефона. Если всё живо — подтвердите:"
+        echo "       sudo webui-sec firewall-confirm"
+        echo "   Ничего не делать тоже безопасно: через 5 минут вернётся как было."
+        ;;
+    firewall-confirm)
+        [ $# -eq 0 ] || die "firewall-confirm доводов не принимает"
+        systemctl stop webui-sec-rollback.timer 2>/dev/null || true
+        systemctl reset-failed webui-sec-rollback.service 2>/dev/null || true
+        # Метка «файрвол применялся руками и проверен»: по ней remediate.sh
+        # решает, можно ли восстанавливать правила ночью без человека. До
+        # первого подтверждения нельзя — ночной default-deny без проверки
+        # доступа отрезает сервер.
         date -Is > "$LIB/backup/firewall-applied"
-        run_lib apply-firewall.sh
+        chmod 644 "$LIB/backup/firewall-applied"
+        echo "Откат отменён. Правила остаются до перезагрузки."
+        echo "Чтобы они пережили перезагрузку: sudo webui-sec firewall-save"
         ;;
     firewall-save)
         [ $# -eq 0 ] || die "firewall-save доводов не принимает"
