@@ -95,8 +95,15 @@ if [ "$DRY_RUN" = "--dry-run" ]; then
 fi
 
 # ── Установка ─────────────────────────────────────────────────────────
+# ⚠️ Копия кладётся ВНЕ /etc/sudoers.d. Раньше она ложилась рядом с целью, и
+# каталог правил обрастал файлами вида 010-mokeeva.bak-ДАТА. Действовать они не
+# действуют — sudo пропускает имена с точкой, — но лежат в каталоге, где живут
+# права root, и попадают в снимок аудита: три такие копии нашлись 12.09.2026.
+# Каталог правил должен содержать только правила.
+BACKUP_DIR=/root/sudoers-backups
 if [ -f "$TARGET" ]; then
-    cp -p "$TARGET" "$TARGET.bak-$(date +%d%m%y-%H%M%S)"
+    install -o root -g root -m 700 -d "$BACKUP_DIR"
+    cp -p "$TARGET" "$BACKUP_DIR/$(basename "$TARGET").bak-$(date +%d%m%y-%H%M%S)"
 fi
 install -o root -g root -m 0440 "$TMP" "$TARGET"
 echo "Установлено: $TARGET"

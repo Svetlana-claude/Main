@@ -6,6 +6,9 @@
 #     sudo webui-sec firewall-apply       применить правила файрвола
 #     sudo webui-sec firewall-save        закрепить правила (после проверки!)
 #     sudo webui-sec baseline-approve     принять снимок дня эталоном
+#     sudo webui-sec harden-updates       включить автообновления
+#     sudo webui-sec harden-fail2ban      настроить fail2ban из config.sh
+#     sudo webui-sec harden-ssh           ужесточить вход по SSH
 #     sudo webui-sec quarantine-list      перечень изъятого
 #     sudo webui-sec quarantine-restore ХЭШ   вернуть файл из карантина
 #     sudo webui-sec quarantine-delete ХЭШ    удалить файл из карантина
@@ -132,6 +135,101 @@ case "$cmd" in
         install -o root -g root -m 644 "$snap" "$REF"
         echo "Эталон принят из $snap"
         ;;
+    harden-updates)
+        [ $# -eq 0 ] || die "harden-updates доводов не принимает"
+        # Содержимое задано здесь целиком и доводами не управляется. Сама по
+        # себе установленная служба unattended-upgrades ничего не значит:
+        # проверено 12.09.2026 — при нулях в этом файле она не ставила годами.
+        install -o root -g root -m 644 /dev/stdin /etc/apt/apt.conf.d/20auto-upgrades <<'CONF'
+APT::Periodic::Update-Package-Lists "1";
+APT::Periodic::Unattended-Upgrade "1";
+APT::Periodic::AutocleanInterval "7";
+CONF
+        echo "Автообновления включены. Проверка делом:"
+        grep '' /etc/apt/apt.conf.d/20auto-upgrades
+        ;;
+    harden-fail2ban)
+        [ $# -eq 0 ] || die "harden-fail2ban доводов не принимает"
+        [ -f "$LIB/config.sh" ] || die "не установлен $LIB/config.sh"
+        # shellcheck source=/dev/null
+        . "$LIB/config.sh"
+        command -v fail2ban-client >/dev/null 2>&1 || die "fail2ban не установлен"
+        # Значения берутся из root-овой config.sh, не из доводов.
+        install -o root -g root -m 644 /dev/stdin /etc/fail2ban/jail.local <<CONF
+# Сгенерирован webui-sec harden-fail2ban из /opt/secaudit/config.sh.
+# Правится там, а не здесь: этот файл перезапишется.
+[DEFAULT]
+backend  = systemd
+bantime  = 24h
+findtime = 30m
+maxretry = 5
+ignoreip = ${TRUSTED_IPS}
+
+[sshd]
+enabled  = true
+mode     = aggressive
+port     = ${SSH_PORT}
+maxretry = 3
+bantime  = 7d
+
+# Тех, кого уже банили, банит надолго. При парольном входе это главная мера
+# после ограничения темпа: подбор растягивается настолько, что теряет смысл.
+[recidive]
+enabled  = true
+bantime  = 30d
+findtime = 1d
+maxretry = 3
+CONF
+        systemctl restart fail2ban
+        sleep 2
+        # Проверка делом, а не «служба active»: перезапустившийся fail2ban
+        # с битым правилом поднимается, но джейла не заводит.
+        fail2ban-client status sshd >/dev/null 2>&1 \
+            || die "fail2ban поднялся, но джейл sshd не заведён — смотрите journalctl -u fail2ban"
+        echo "fail2ban настроен. Джейлы:"
+        fail2ban-client status | sed 's/^/  /'
+        ;;
+    harden-ssh)
+        [ $# -eq 0 ] || die "harden-ssh доводов не принимает"
+        [ -f "$LIB/config.sh" ] || die "не установлен $LIB/config.sh"
+        # shellcheck source=/dev/null
+        . "$LIB/config.sh"
+        id "$ADMIN_USER" >/dev/null 2>&1 \
+            || die "учётки «$ADMIN_USER» из config.sh нет — AllowUsers отрезал бы доступ"
+
+        # ⚠️ Имя файла начинается с 10-, а не 99-: OpenSSH берёт ПЕРВОЕ
+        # встреченное значение, и 50-cloud-init.conf перебил бы более поздний
+        # файл. Инструкция описывает этот случай как уже стоивший кому-то
+        # времени: reload проходил без ошибок, файл выглядел правильно,
+        # а настройка не действовала.
+        DST=/etc/ssh/sshd_config.d/10-hardening.conf
+        BAK="$LIB/backup/10-hardening.conf.before-$(date +%F_%H%M%S)"
+        [ -f "$DST" ] && cp -a "$DST" "$BAK"
+
+        # PasswordAuthentication НЕ трогаем: решение оставить парольный вход
+        # принято сознательно (12.09.2026). Остальное — компенсирующие меры.
+        install -o root -g root -m 644 /dev/stdin "$DST" <<CONF
+# Сгенерирован webui-sec harden-ssh из /opt/secaudit/config.sh.
+# Имя с 10- намеренно: OpenSSH берёт первое встреченное значение.
+PermitRootLogin no
+MaxAuthTries 3
+LoginGraceTime 20
+LogLevel VERBOSE
+AllowUsers ${ADMIN_USER}
+CONF
+        if ! sshd -t 2>/tmp/sshd-test.log; then
+            rm -f "$DST"
+            [ -f "$BAK" ] && cp -a "$BAK" "$DST"
+            die "sshd отверг настройки, вернул как было: $(cat /tmp/sshd-test.log)"
+        fi
+        systemctl reload ssh
+        # Проверка делом: что ДЕЙСТВУЕТ, а не что написано в файле.
+        echo "Действующие настройки входа:"
+        sshd -T | grep -E '^(port|permitrootlogin|passwordauthentication|maxauthtries|allowusers)' | sed 's/^/  /'
+        echo
+        echo "⚠️ НЕ ЗАКРЫВАЙТЕ текущую сессию, пока не проверите вход из второго окна."
+        echo "   Откат: sudo rm $DST && sudo systemctl reload ssh"
+        ;;
     quarantine-list)
         [ $# -eq 0 ] || die "quarantine-list доводов не принимает"
         [ -d "$QUAR" ] || exit 0
@@ -171,7 +269,10 @@ case "$cmd" in
     status)
         [ $# -eq 0 ] || die "status доводов не принимает"
         echo "baseline=$([ -f "$REF" ] && date -Is -r "$REF" || echo нет)"
-        last=$(ls -1t "$STATE/reports"/rep_*.md 2>/dev/null | head -1)
+        # ⚠️ `|| true` обязателен. Пока отчётов нет, `ls` отдаёт 2, `head` — 0,
+        # а `pipefail` делает кодом конвейера 2, и `set -e` гасит обёртку после
+        # первой же строки. Проверено нажатием: сводка обрывалась на baseline.
+        last=$(ls -1t "$STATE/reports"/rep_*.md 2>/dev/null | head -1 || true)
         echo "last_report=${last:-нет}"
         [ -n "$last" ] && echo "last_report_at=$(date -Is -r "$last")"
         echo "fail2ban=$(systemctl is-active fail2ban 2>/dev/null)"

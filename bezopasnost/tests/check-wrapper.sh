@@ -80,6 +80,9 @@ deny_why() { # описание, причина, доводы...
 echo "Разрешённые команды распознаются:"
 known "collect без доводов"        collect
 known "remediate без доводов"      remediate
+known "harden-updates"             harden-updates
+known "harden-fail2ban"            harden-fail2ban
+known "harden-ssh"                 harden-ssh
 
 echo
 echo "Запуск чужого скрипта от root не допускается:"
@@ -115,6 +118,11 @@ deny_why "remediate с путём"        "remediate доводов не при�
 deny_why "firewall-apply с доводом" "firewall-apply доводов не принимает"   firewall-apply --now
 deny_why "baseline-approve с путём" "baseline-approve доводов не принимает" baseline-approve /tmp/чужой-эталон.txt
 deny_why "status с доводом"         "status доводов не принимает"           status --verbose
+# Команды ужесточения пишут в /etc. Довод в них не нужен и не принимается:
+# значения берутся из root-овой config.sh, а не из того, что пришло снаружи.
+deny_why "harden-updates с доводом" "harden-updates доводов не принимает"   harden-updates /etc/passwd
+deny_why "harden-fail2ban с путём"  "harden-fail2ban доводов не принимает"  harden-fail2ban /tmp/jail.local
+deny_why "harden-ssh с путём"       "harden-ssh доводов не принимает"       harden-ssh /tmp/sshd_config
 
 echo
 echo "Карантин адресуется хэшем — путь и флаг не подставить:"
