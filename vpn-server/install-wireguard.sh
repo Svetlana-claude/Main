@@ -139,6 +139,11 @@ echo
 info "Готово. Сервер слушает $WG_ENDPOINT:$WG_PORT/udp, адрес в туннеле $WG_NET.1"
 echo
 echo "Дальше — завести клиента:"
-echo "    sudo $(dirname "$(readlink -f "$0")")/add-client.sh ноутбук"
+# Запущенные из /usr/local/lib копии вызываются только через обёртку webui-vpn,
+# показывать её служебный путь как команду бессмысленно.
+case "$(readlink -f "$0")" in
+    /usr/local/lib/webui-vpn/*) echo "    sudo webui-vpn add notebook" ;;
+    *)                          echo "    sudo $(dirname "$(readlink -f "$0")")/add-client.sh notebook" ;;
+esac
 echo
 wg show "$WG_IFACE"
