@@ -1,0 +1,172 @@
+{% extends "base.html" %}
+{% block title %}Безопасность{% endblock %}
+{% block content %}
+
+{% if err %}<div class="note note--warn">{{ err }}</div>{% endif %}
+{% if ok %}<div class="note note--ok">{{ ok }}</div>{% endif %}
+{% if state.note %}<div class="note note--warn">{{ state.note }}</div>{% endif %}
+
+{# Молчание аудита — отдельная тревога, а не «всё спокойно»: отсутствие отчёта
+   означает не отсутствие находок, а то, что смотреть было некому. #}
+{% if state.silent and state.installed %}
+  <div class="note note--warn">
+    Аудит не отрабатывал больше суток. Пока он молчит, отчёт ничего не говорит
+    о состоянии машины — он просто не снимался.
+  </div>
+{% endif %}
+{% if state.installed and not state.baseline %}
+  <div class="note note--warn">
+    Эталон не принят: сверять снимок не с чем, и находками считаются только
+    проверки мимо эталона. Примите его, <b>прочитав снимок целиком</b> — всё,
+    что туда попадёт, аудит больше не покажет.
+  </div>
+{% endif %}
+
+<div class="grid2">
+
+  <div class="panel">
+    <div class="panel__head">Состояние</div>
+    <div class="panel__body panel__body--flush">
+      <table class="table">
+        <tbody>
+          <tr>
+            <th>Итог</th>
+            <td>
+              {% if not state.installed %}<span class="tag tag--warn">не установлен</span>
+              {% elif state.alarm %}<span class="tag tag--warn" id="sec-verdict">{{ state.verdict }}</span>
+              {% else %}<span class="tag tag--ok" id="sec-verdict">{{ state.verdict }}</span>{% endif %}
+            </td>
+          </tr>
+          <tr>
+            <th>Последний отчёт</th>
+            <td id="sec-last">
+              {% if state.last_report %}
+                <a href="{{ root_path }}/sec/reports/{{ state.last_report }}">{{ state.reports[0].when }}</a>
+              {% else %}<span class="muted">не было</span>{% endif %}
+            </td>
+          </tr>
+          <tr>
+            <th>Эталон</th>
+            <td>{% if state.baseline %}{{ state.baseline }}{% else %}<span class="muted">не принят</span>{% endif %}</td>
+          </tr>
+          <tr>
+            <th>fail2ban</th>
+            <td>
+              {% if state.fail2ban == 'active' %}<span class="tag tag--ok">работает</span>
+              {% else %}<span class="tag tag--warn">{{ state.fail2ban or 'неизвестно' }}</span>{% endif %}
+            </td>
+          </tr>
+          <tr>
+            <th>Политика файрвола</th>
+            <td class="mono">
+              {{ state.v4_policy or '—' }}<br>{{ state.v6_policy or '—' }}
+            </td>
+          </tr>
+          <tr>
+            <th>Правила применялись</th>
+            <td>{% if state.firewall_applied %}{{ state.firewall_applied }}{% else %}<span class="muted">ни разу</span>{% endif %}</td>
+          </tr>
+          <tr><th>В карантине</th><td id="sec-quar">{{ state.quarantine }}</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <div class="panel">
+    <div class="panel__head">Прогнать сейчас</div>
+    <div class="panel__body">
+      <div id="sec-running" class="note note--ok" {% if not running.active %}hidden{% endif %}>
+        Идёт прогон ({{ running.mode }}). Это занимает несколько минут:
+        обход файловой системы за SUID-бинарниками — самая долгая часть.
+      </div>
+
+      <form method="post" action="{{ url_for('sec_run') }}">
+        <input type="hidden" name="mode" value="full">
+        <button class="btn btn--primary" type="submit" {% if running.active %}disabled{% endif %}>
+          Прогнать с устранением
+        </button>
+      </form>
+      <div class="field__hint">
+        Соберёт факты, сверит с эталоном и устранит то, что можно вернуть за
+        минуту: поставит security-обновления, уберёт в карантин файлы с
+        сигнатурами майнеров, поднимет упавший fail2ban.
+      </div>
+
+      <form method="post" action="{{ url_for('sec_run') }}" style="margin-top:12px">
+        <input type="hidden" name="mode" value="dry">
+        <button class="btn" type="submit" {% if running.active %}disabled{% endif %}>
+          Прогнать без вмешательства
+        </button>
+      </form>
+      <div class="field__hint">
+        Только отчёт, ничего не меняет. Этим стоит пользоваться после своих
+        правок сервера, чтобы увидеть их глазами аудита.
+      </div>
+
+      <form method="post" action="{{ url_for('sec_baseline') }}" style="margin-top:16px"
+            onsubmit="return confirm('Принять снимок за сегодня эталоном? Всё, что в нём есть, аудит больше не будет считать находкой.')">
+        <button class="btn" type="submit">Принять эталон</button>
+      </form>
+      <div class="field__hint">
+        Только после того, как расхождения <b>разобраны</b>. Эталон — не способ
+        заглушить отчёт: заглушённая находка вернётся тем же, чем была.
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<div class="panel">
+  <div class="panel__head">Отчёты</div>
+  <div class="panel__body panel__body--flush">
+    <table class="table">
+      <thead>
+        <tr>
+          <th>Дата</th>
+          <th class="nowrap">Снят</th>
+          <th class="nowrap">Находок</th>
+          <th>Действия</th>
+        </tr>
+      </thead>
+      <tbody>
+      {% for r in state.reports %}
+        <tr>
+          <td class="mono">{{ r.date }}</td>
+          <td>{{ r.when }}</td>
+          <td>
+            {% if r.findings %}
+              <span class="dot dot--empty" title="есть находки"></span> {{ r.findings }}
+            {% else %}
+              <span class="dot dot--done" title="находок нет"></span> нет
+            {% endif %}
+          </td>
+          <td class="nowrap">
+            <a class="btn btn--plain" href="{{ root_path }}/sec/reports/{{ r.date }}">Открыть</a>
+            <a class="btn btn--plain" href="{{ root_path }}/sec/reports/{{ r.date }}/raw">Скачать</a>
+          </td>
+        </tr>
+      {% else %}
+        <tr><td colspan="4" class="muted">Отчётов нет — аудит ещё не отрабатывал</td></tr>
+      {% endfor %}
+      </tbody>
+    </table>
+    <div class="field__hint" style="padding:8px">
+      В отчёте — имена учёток, адреса входов и отпечатки ключей. Целиком в
+      переписку и мессенджеры его отправлять не стоит.
+    </div>
+  </div>
+</div>
+
+{% endblock %}
+
+{% block scripts %}
+<script>
+{# Адрес опроса собран вручную, а не через url_for('sec_state'): шаблон
+   подхватывается сразу, а маршрут живёт только после перезапуска службы —
+   до него url_for уронил бы страницу целиком. #}
+initSecPanel({
+  stateUrl: "{{ root_path }}/sec/state",
+  intervalSec: 10
+});
+</script>
+{% endblock %}

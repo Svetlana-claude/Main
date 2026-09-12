@@ -1,0 +1,20 @@
+{% extends "base.html" %}
+{% block title %}Отчёт безопасности {{ date }}{% endblock %}
+{% block content %}
+
+<div class="panel">
+  <div class="panel__head">
+    Отчёт за {{ date }}
+    <span class="spacer"></span>
+    <a class="btn btn--plain" href="{{ root_path }}/sec/reports/{{ date }}/raw">Скачать</a>
+    <a class="btn btn--plain" href="{{ root_path }}/sec">К списку</a>
+  </div>
+  {# Класс `md` — тот же, что у предпросмотра в «Настройках»: в нём широкие
+     блоки (таблицы и <pre> со снимком) скроллятся внутри себя, и страница
+     по горизонтали не едет. #}
+  <div class="panel__body md">
+    {{ body | safe }}
+  </div>
+</div>
+
+{% endblock %}

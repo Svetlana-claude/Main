@@ -850,3 +850,41 @@ function initVpnPanel(opts) {
         if (e.target === dialog) dialog.close();
     });
 }
+
+function initSecPanel(opts) {
+    // Прогон аудита идёт минутами, поэтому страница сама следит за его концом:
+    // иначе остаётся гадать, закончился он или завис.
+    const verdict = document.getElementById('sec-verdict');
+    const running = document.getElementById('sec-running');
+    const quar = document.getElementById('sec-quar');
+    const buttons = document.querySelectorAll('form[action$="/sec/run"] button');
+    let wasRunning = false;
+
+    async function tick() {
+        try {
+            const res = await fetch(opts.stateUrl, { cache: 'no-store' });
+            if (!res.ok) return;          // не пускают — перерисовывать нечем
+            const data = await res.json();
+            if (!data.ok) return;
+
+            // Только textContent: значения приходят с сервера, но разметкой им быть незачем
+            if (verdict) {
+                verdict.textContent = data.verdict;
+                verdict.className = 'tag ' + (data.alarm ? 'tag--warn' : 'tag--ok');
+            }
+            if (quar) quar.textContent = String(data.quarantine);
+            if (running) running.hidden = !data.running;
+            buttons.forEach(function (b) { b.disabled = !!data.running; });
+
+            // Прогон закончился — перезагружаем страницу: в списке появился
+            // новый отчёт, а дорисовывать его по кусочкам незачем.
+            if (wasRunning && !data.running) location.reload();
+            wasRunning = !!data.running;
+        } catch (err) {
+            /* связь моргнула — подтянется следующим опросом */
+        }
+    }
+
+    setInterval(tick, Math.max(5, opts.intervalSec || 10) * 1000);
+    tick();
+}

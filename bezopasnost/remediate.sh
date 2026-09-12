@@ -23,12 +23,28 @@ did=0
 act() { did=1; echo "- $*"; }
 
 # 1. Установка security-обновлений. Штатный механизм дистрибутива, откатываемо.
+#
+# ⚠️ Успех проверяется ДЕЛОМ — тем, что очередь сократилась, а не кодом возврата.
+# Проверено 12.09.2026: `unattended-upgrade` отработал с кодом 0 и не поставил
+# ни одного пакета из 193. Он берёт только источник `-security`, а на этой
+# машине кандидаты всех этих пакетов лежат в `-updates` (машина не обновлялась
+# с установки, и версия из `-updates` новее). В журнале — «kept back», в отчёте
+# было бы «Установлены security-обновления (ожидало: 193)». Отчёт, который
+# сообщает об устранении несделанного, опаснее отсутствия отчёта.
 sec_cnt=$(grep -oP 'pending_security=\K\d+' "$CUR" | head -1)
 if [ "${sec_cnt:-0}" -gt 0 ]; then
-  if unattended-upgrade -v >/tmp/uu.log 2>&1; then
-    act "Установлены security-обновления (ожидало: $sec_cnt), лог: /tmp/uu.log"
+  unattended-upgrade -v >/tmp/uu.log 2>&1
+  rc=$?
+  after=$(apt-get -s upgrade 2>/dev/null | grep '^Inst' | grep -ci security)
+  installed=$(( sec_cnt - after ))
+  if [ "$rc" -ne 0 ]; then
+    act "ОШИБКА: установка security-обновлений не удалась (код $rc), см. /tmp/uu.log"
+  elif [ "$installed" -gt 0 ]; then
+    act "Установлено security-обновлений: $installed из $sec_cnt, лог: /tmp/uu.log"
   else
-    act "ОШИБКА: установка security-обновлений не удалась, см. /tmp/uu.log"
+    act "НЕ УСТРАНЕНО: ожидало $sec_cnt security-обновлений, установлено 0." \
+        "Так бывает, когда кандидат лежит в -updates, а не в -security:" \
+        "unattended-upgrade его не берёт. Нужен обычный apt-get upgrade руками."
   fi
 fi
 
