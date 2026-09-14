@@ -111,6 +111,7 @@ case "$cmd" in
     firewall-apply)
         [ $# -eq 0 ] || die "firewall-apply доводов не принимает"
         script="$(check_lib apply-firewall.sh)"
+        rollback="$(check_lib firewall-rollback.sh)"
         install -o root -g root -m 700 -d "$LIB/backup"
 
         # Правила «до» сохраняются ВСЕГДА и до применения: это единственный
@@ -121,17 +122,21 @@ case "$cmd" in
         ln -sf "rules.v4.before-$stamp" "$LIB/backup/rules.v4.last"
         ln -sf "rules.v6.before-$stamp" "$LIB/backup/rules.v6.last"
 
-        /bin/bash "$script"
-
         # ⚠️ Самооткат. Ошибка в правилах — это потеря доступа к удалённой
         # машине, и «проверьте из второго окна» помогает только если есть чем
         # вернуть. Поэтому применение временное: через 5 минут правила
         # возвращаются сами, если не подтвердить их командой firewall-confirm.
-        # Подтверждение — это и есть та самая проверка делом.
+        #
+        # Таймер ставится ДО применения, а не после: упади apply-firewall.sh на
+        # середине — с политикой DROP и половиной правил, — и откатывать было бы
+        # нечем. Откат вынесен в отдельный скрипт: прежняя строка в одну команду
+        # не умела пустой снимок и оставила IPv6 в DROP (12.09.2026).
         rm -f "$LIB/backup/firewall-applied"
         systemctl stop webui-sec-rollback.timer 2>/dev/null || true
-        systemd-run --quiet --unit=webui-sec-rollback --on-active=300 \
-            /bin/bash -c "iptables-restore < '$LIB/backup/rules.v4.last'; ip6tables-restore < '$LIB/backup/rules.v6.last'; logger -t webui-sec 'правила файрвола откачены: подтверждения не было'"
+        systemctl reset-failed webui-sec-rollback.service 2>/dev/null || true
+        systemd-run --quiet --unit=webui-sec-rollback --on-active=300 /bin/bash "$rollback"
+
+        /bin/bash "$script"
         echo
         echo "⚠️ Правила применены ВРЕМЕННО. Через 5 минут они откатятся сами."
         echo "   Проверьте ИЗ ВТОРОГО ОКНА, не закрывая это: вход по SSH, сайт,"
@@ -233,6 +238,21 @@ CONF
         id "$ADMIN_USER" >/dev/null 2>&1 \
             || die "учётки «$ADMIN_USER» из config.sh нет — AllowUsers отрезал бы доступ"
 
+        # Режим входа. В key пароль выключается — и тогда без годного ключа в
+        # authorized_keys на машину не войти никому. Проверяем это ДО записи:
+        # замок без ключа ставится одной командой, а снимается только через
+        # консоль хостера.
+        auth_lines=""
+        if [ "${SSH_AUTH_MODE:-password}" = "key" ]; then
+            home=$(getent passwd "$ADMIN_USER" | cut -d: -f6)
+            keys="$home/.ssh/authorized_keys"
+            [ -s "$keys" ] || die "в $keys нет ключей — выключить пароль значит закрыть вход совсем"
+            ssh-keygen -lf "$keys" >/dev/null 2>&1 \
+                || die "$keys не разбирается как список ключей — пароль не выключаю"
+            auth_lines="PasswordAuthentication no
+KbdInteractiveAuthentication no"
+        fi
+
         # ⚠️ Имя файла начинается с 10-, а не 99-: OpenSSH берёт ПЕРВОЕ
         # встреченное значение, и 50-cloud-init.conf перебил бы более поздний
         # файл. Инструкция описывает этот случай как уже стоивший кому-то
@@ -242,16 +262,18 @@ CONF
         BAK="$LIB/backup/10-hardening.conf.before-$(date +%F_%H%M%S)"
         [ -f "$DST" ] && cp -a "$DST" "$BAK"
 
-        # PasswordAuthentication НЕ трогаем: решение оставить парольный вход
-        # принято сознательно (12.09.2026). Остальное — компенсирующие меры.
+        # Пароль выключается только в режиме key (SSH_AUTH_MODE в config.sh).
+        # В режиме password остаются компенсирующие меры.
         install -o root -g root -m 644 /dev/stdin "$DST" <<CONF
 # Сгенерирован webui-sec harden-ssh из /opt/secaudit/config.sh.
 # Имя с 10- намеренно: OpenSSH берёт первое встреченное значение.
+# Режим входа: ${SSH_AUTH_MODE:-password}
 PermitRootLogin no
 MaxAuthTries 3
 LoginGraceTime 20
 LogLevel VERBOSE
 AllowUsers ${ADMIN_USER}
+${auth_lines}
 CONF
         if ! sshd -t 2>/tmp/sshd-test.log; then
             rm -f "$DST"
@@ -261,7 +283,11 @@ CONF
         systemctl reload ssh
         # Проверка делом: что ДЕЙСТВУЕТ, а не что написано в файле.
         echo "Действующие настройки входа:"
-        sshd -T | grep -E '^(port|permitrootlogin|passwordauthentication|maxauthtries|allowusers)' | sed 's/^/  /'
+        sshd -T | grep -E '^(port|permitrootlogin|passwordauthentication|kbdinteractiveauthentication|maxauthtries|allowusers)' | sed 's/^/  /'
+        if [ "${SSH_AUTH_MODE:-password}" = "key" ]; then
+            sshd -T | grep -qx 'passwordauthentication no' \
+                || die "в файле пароль выключен, а sshd -T его не видит — что-то перебивает настройку"
+        fi
         echo
         echo "⚠️ НЕ ЗАКРЫВАЙТЕ текущую сессию, пока не проверите вход из второго окна."
         echo "   Откат: sudo rm $DST && sudo systemctl reload ssh"

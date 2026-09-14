@@ -26,6 +26,7 @@ fi
 
 # ── Разбор списка по разделам ─────────────────────────────────────────
 declare -a root_cmds=() postgres_cmds=()
+root_all=0
 section=""
 lineno=0
 while IFS= read -r line || [ -n "$line" ]; do
@@ -38,6 +39,13 @@ while IFS= read -r line || [ -n "$line" ]; do
     [[ "$line" =~ ^[[:space:]]*(#|$) ]] && continue
     line="$(echo "$line" | sed -e 's/^[[:space:]]*//' -e 's/[[:space:]]*$//')"
 
+    # Слово ALL в разделе root — полный беспарольный доступ (решение от
+    # 14.09.2026, см. примечание в sudo-allowed.list). Больше ничего без пути
+    # не принимается: опечатка в пути не должна молча превратиться в «всё».
+    if [ "$line" = "ALL" ] && [ "$section" = "root" ]; then
+        root_all=1
+        continue
+    fi
     if [[ "$line" != /* ]]; then
         echo "строка $lineno: команда должна начинаться с полного пути: $line" >&2
         exit 1
@@ -50,7 +58,12 @@ while IFS= read -r line || [ -n "$line" ]; do
     esac
 done < "$LIST"
 
-if [ ${#root_cmds[@]} -eq 0 ] && [ ${#postgres_cmds[@]} -eq 0 ]; then
+if [ "$root_all" -eq 1 ] && [ ${#root_cmds[@]} -gt 0 ]; then
+    echo "в разделе root одновременно ALL и перечень команд — неясно, что имелось в виду" >&2
+    exit 1
+fi
+
+if [ "$root_all" -eq 0 ] && [ ${#root_cmds[@]} -eq 0 ] && [ ${#postgres_cmds[@]} -eq 0 ]; then
     echo "список пуст — отказываюсь ставить правило, которое ничего не разрешает" >&2
     exit 1
 fi
@@ -75,11 +88,17 @@ trap 'rm -f "$TMP"' EXIT
         for cmd in "${postgres_cmds[@]:1}"; do printf ', \\\n    %s' "$cmd"; done
         printf '\n\n'
     fi
+    [ "$root_all" -eq 1 ]          && echo "$USER_NAME ALL=(ALL:ALL) NOPASSWD: ALL"
     [ ${#root_cmds[@]}     -gt 0 ] && echo "$USER_NAME ALL=(root)     NOPASSWD: MOKEEVA_ROOT"
     [ ${#postgres_cmds[@]} -gt 0 ] && echo "$USER_NAME ALL=(postgres) NOPASSWD: MOKEEVA_PG"
+    true
 } > "$TMP"
 
-echo "Команд разрешено: root — ${#root_cmds[@]}, postgres — ${#postgres_cmds[@]}"
+if [ "$root_all" -eq 1 ]; then
+    echo "Разрешено: ВСЁ без пароля"
+else
+    echo "Команд разрешено: root — ${#root_cmds[@]}, postgres — ${#postgres_cmds[@]}"
+fi
 
 # ── Проверка синтаксиса ───────────────────────────────────────────────
 if ! visudo -c -q -f "$TMP"; then

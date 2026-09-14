@@ -145,5 +145,17 @@ echo "Приём эталона без снимка за сегодня:"
 deny  "снимка нет — отказ, а не пустой эталон" baseline-approve
 
 echo
+echo "Выключение пароля без ключей — замок без ключа:"
+# Учётка nobody существует, а ключей у неё нет: домашний каталог /nonexistent.
+# harden-ssh в режиме key обязан отказать ДО записи в /etc — иначе после
+# reload на машину не войти никому.
+cat > "$WORK/lib/config.sh" <<'EOF'
+ADMIN_USER=nobody
+SSH_AUTH_MODE=key
+EOF
+deny_why "режим key без authorized_keys — отказ" "нет ключей" harden-ssh
+rm -f "$WORK/lib/config.sh"
+
+echo
 echo "Совпало: $ok, провалов: $bad."
 [ "$bad" -eq 0 ]

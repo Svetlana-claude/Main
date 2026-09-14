@@ -40,7 +40,7 @@ VPN_SCRIPTS=(install-wireguard.sh add-client.sh remove-client.sh list-peers.sh)
 SEC_SRC="$(dirname "$SRC")/bezopasnost"
 SEC_LIB=/opt/secaudit
 SEC_STATE=/var/lib/secaudit
-SEC_SCRIPTS=(collect.sh diff.sh remediate.sh apply-firewall.sh audit.sh)
+SEC_SCRIPTS=(collect.sh diff.sh remediate.sh apply-firewall.sh firewall-rollback.sh audit.sh)
 SEC_DATA=(config.sh CONTEXT.md)
 
 if [ "$(id -u)" -ne 0 ]; then
