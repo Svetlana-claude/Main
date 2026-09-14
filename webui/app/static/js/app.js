@@ -345,6 +345,14 @@ function createRunPanel() {
             say('сбой · ' + message, 'err');
         },
 
+        /* Итог с признаком ошибки — чаще всего исчерпанный лимит. Это не сбой и
+           тем более не «готово»: работа стоит до обнуления окна, строка сервера
+           уже говорит, до какого часа. */
+        stop: function (message) {
+            if (ticker) { clearInterval(ticker); ticker = null; }
+            say(message, 'err');
+        },
+
         clear: function () {
             log.textContent = '';
             const empty = document.createElement('div');
@@ -572,8 +580,14 @@ function initConversation(opts) {
                                 ' · ' + (event.input_tokens || 0) + '→' + (event.output_tokens || 0) + ' токенов' +
                                 ' · ' + ((event.duration_ms || 0) / 1000).toFixed(1) + ' с';
                             answer.wrap.append(meta);
-                            if (run) run.finish(event);
-                            tellTopicState('done');
+                            if (event.is_error) {
+                                answer.wrap.className = 'msg msg--error';
+                                if (run) run.stop(event.text || event.error_message || 'ответ оборван');
+                                tellTopicState('work');
+                            } else {
+                                if (run) run.finish(event);
+                                tellTopicState('done');
+                            }
                         } else if (event.type === 'error') {
                             answer.wrap.className = 'msg msg--error';
                             answer.body.textContent = event.message;

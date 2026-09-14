@@ -74,7 +74,7 @@ def main() -> int:
 
         # Идущий ответ перекрашивает тему, даже если последняя запись — ответ
         done_id = topic_ids["ответ получен"]
-        key = runs.key_of("project", done_id)
+        key = runs.key_of(projects.RUN_KIND, done_id)
         runs._runs[key] = runs.Run(key)
         try:
             live = projects._topics_state_map(project_id)[str(done_id)]["state"]

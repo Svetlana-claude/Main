@@ -194,7 +194,12 @@
               <span class="spacer"></span>
               <button class="btn btn--plain" type="button" id="run-clear">очистить</button>
             </div>
-            <div class="runstat" id="run-stat" aria-live="polite">простой{% if current_topic and current_topic.context_note %} · {{ current_topic.context_note }}{% endif %}</div>
+            {# Тема, упёршаяся в лимит, не «простаивает», а ждёт обнуления окна — так и сказано #}
+            {% if current_topic and current_topic.limit_note %}
+              <div class="runstat runstat--err" id="run-stat" aria-live="polite">{{ current_topic.limit_note }}{% if current_topic.context_note %} · {{ current_topic.context_note }}{% endif %}</div>
+            {% else %}
+              <div class="runstat" id="run-stat" aria-live="polite">простой{% if current_topic and current_topic.context_note %} · {{ current_topic.context_note }}{% endif %}</div>
+            {% endif %}
             <div class="rail__body" id="run-log">
               <div class="empty" style="padding:12px">Здесь появятся команды и обращения к файлам</div>
             </div>

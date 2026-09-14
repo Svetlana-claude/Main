@@ -187,6 +187,10 @@ def _resolve_in_dir(root_dir: Path, relative: str) -> Path:
 #
 # Пустая тема — не зелёная: зелёный значит «сделано», а в ней ничего не делали.
 TOPIC_WORK = "work"
+# Под этим ключом живут запуски темы в `runs`. Один на всё: кружок однажды
+# искал запуск под `project`, а заводились они под `topic`, — и тема, где
+# шло сжатие по кнопке (вопроса в ленте нет), горела зелёным.
+RUN_KIND = "topic"
 TOPIC_DONE = "done"
 TOPIC_EMPTY = "empty"
 
@@ -202,12 +206,31 @@ def _topic_state(topic_id: int, last_role: str | None) -> str:
 
     `last_role` — роль последней записи в теме; `None`, если записей нет.
     """
-    if runs.active("project", topic_id):
+    if runs.active(RUN_KIND, topic_id):
         return TOPIC_WORK
     if not last_role:
         return TOPIC_EMPTY
     # Ответ движка закрывает обмен; вопрос и ошибка оставляют его открытым
     return TOPIC_DONE if last_role == "assistant" else TOPIC_WORK
+
+
+def _limit_note(role: str | None, content: str | None, at: datetime | None) -> str:
+    """«Исчерпан лимит · обнулится в …», если последняя запись темы — такое сообщение.
+
+    Claude Code присылает его итогом с признаком ошибки, и в базе оно лежит
+    ошибкой. Выделяется особо: тема не оборвалась сбоем, а ждёт обнуления окна,
+    и об этом стоит сказать словами — с временем, когда можно продолжать.
+    """
+    if role != "error" or not content or not at:
+        return ""
+    tz = timefmt.zone()
+    if timefmt.limit_reset(content, at, tz) is None:
+        return ""
+    return timefmt.localize_limit(content, at, tz)
+
+
+def _state_title(state: str, limit_note: str) -> str:
+    return limit_note if state == TOPIC_WORK and limit_note else TOPIC_STATE_TITLE[state]
 
 
 def _topics_state_map(project_id: int) -> dict[str, dict]:
@@ -218,17 +241,22 @@ def _topics_state_map(project_id: int) -> dict[str, dict]:
     """
     rows = db.query(
         """
-        SELECT c.id,
-               (SELECT m.role FROM messages m WHERE m.conversation_id = c.id
-                 ORDER BY m.id DESC LIMIT 1) AS last_role
-        FROM conversations c WHERE c.project_id = %s
+        SELECT c.id, last.role AS last_role, last.content AS last_content,
+               last.created_at AS last_at
+        FROM conversations c
+        LEFT JOIN LATERAL (
+            SELECT m.role, m.content, m.created_at FROM messages m
+            WHERE m.conversation_id = c.id ORDER BY m.id DESC LIMIT 1
+        ) last ON true
+        WHERE c.project_id = %s
         """,
         (project_id,),
     )
     out: dict[str, dict] = {}
     for row in rows:
         state = _topic_state(row["id"], row["last_role"])
-        out[str(row["id"])] = {"state": state, "title": TOPIC_STATE_TITLE[state]}
+        note = _limit_note(row["last_role"], row["last_content"], row["last_at"])
+        out[str(row["id"])] = {"state": state, "title": _state_title(state, note)}
     return out
 
 
@@ -304,15 +332,20 @@ def projects(request: Request, id: int | None = None, topic: int | None = None):
             """
             SELECT c.id, c.title, c.updated_at,
                    (SELECT count(*) FROM messages m WHERE m.conversation_id = c.id) AS msg_count,
-                   (SELECT m.role FROM messages m WHERE m.conversation_id = c.id
-                     ORDER BY m.id DESC LIMIT 1) AS last_role
-            FROM conversations c WHERE c.project_id = %s ORDER BY c.updated_at DESC
+                   last.role AS last_role, last.content AS last_content, last.created_at AS last_at
+            FROM conversations c
+            LEFT JOIN LATERAL (
+                SELECT m.role, m.content, m.created_at FROM messages m
+                WHERE m.conversation_id = c.id ORDER BY m.id DESC LIMIT 1
+            ) last ON true
+            WHERE c.project_id = %s ORDER BY c.updated_at DESC
             """,
             (project["id"],),
         )
         for t in topics:
             t["state"] = _topic_state(t["id"], t["last_role"])
-            t["state_title"] = TOPIC_STATE_TITLE[t["state"]]
+            t["limit_note"] = _limit_note(t["last_role"], t["last_content"], t["last_at"])
+            t["state_title"] = _state_title(t["state"], t["limit_note"])
         files = db.query(
             "SELECT id, filename, size_bytes, mime, created_at FROM files "
             "WHERE project_id = %s ORDER BY created_at DESC",
@@ -329,6 +362,9 @@ def projects(request: Request, id: int | None = None, topic: int | None = None):
         if current_topic:
             current_topic["context_note"] = _context_note(
                 current_topic["context_tokens"], current_topic["context_at"])
+            # Ждёт обнуления лимита — строка простоя говорит об этом первой
+            current_topic["limit_note"] = next(
+                (t["limit_note"] for t in topics if t["id"] == current_topic["id"]), "")
             messages = db.query(
                 """
                 SELECT role, content, created_at, cost_usd, duration_ms,
@@ -464,7 +500,7 @@ async def topic_send(request: Request, topic_id: int, text: str = Form(...)):
 
     # Проверка до записи вопроса: иначе при отказе вопрос остался бы в ленте
     # висеть без ответа, и выглядело бы это как потерянное сообщение.
-    if runs.active("topic", topic_id):
+    if runs.active(RUN_KIND, topic_id):
         return JSONResponse({"error": "в этой теме уже идёт ответ"}, status_code=409)
 
     db.execute(
@@ -509,7 +545,7 @@ async def topic_send(request: Request, topic_id: int, text: str = Form(...)):
                     event["message"], datetime.now(timezone.utc), timefmt.zone())}
             await run.append(event)
 
-    runs.start("topic", topic_id, producer)
+    runs.start(RUN_KIND, topic_id, producer)
     # Ответ отдаётся сразу: за событиями страница приходит отдельно, и уход
     # с неё работу больше не обрывает.
     return JSONResponse({"ok": True})
@@ -539,7 +575,7 @@ async def topic_compact(request: Request, topic_id: int):
         return JSONResponse({"error": "тема не найдена"}, status_code=404)
     if not conv["claude_session_id"]:
         return JSONResponse({"error": "в теме ещё нет сессии — сжимать нечего"}, status_code=400)
-    if runs.active("topic", topic_id):
+    if runs.active(RUN_KIND, topic_id):
         return JSONResponse({"error": "в этой теме уже идёт ответ"}, status_code=409)
 
     settings = db.get_settings()
@@ -580,7 +616,7 @@ async def topic_compact(request: Request, topic_id: int):
                 )
             await run.append(event)
 
-    runs.start("topic", topic_id, producer)
+    runs.start(RUN_KIND, topic_id, producer)
     return JSONResponse({"ok": True})
 
 
@@ -597,7 +633,7 @@ async def topic_stream(request: Request, topic_id: int, start: int = 0, active: 
         return JSONResponse({"error": "нет доступа"}, status_code=401)
 
     return StreamingResponse(
-        runs.sse(runs.get("topic", topic_id), start, only_active=bool(active)),
+        runs.sse(runs.get(RUN_KIND, topic_id), start, only_active=bool(active)),
         media_type="text/event-stream",
         headers={"Cache-Control": "no-cache", "X-Accel-Buffering": "no"},
     )
