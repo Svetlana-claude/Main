@@ -55,6 +55,12 @@ def _local_time(tz):
     return local_time
 
 
+def _local_limit(tz):
+    def local_limit(text: str, said_at) -> str:
+        return timefmt.localize_limit(text, said_at, tz)
+    return local_limit
+
+
 def render(request: Request, template: str, ctx: dict | None = None):
     """Отрисовка с общим контекстом: пользователь, настройки, активный раздел."""
     user = ctx.get("user") if ctx and "user" in ctx else current_user(request)
@@ -70,6 +76,8 @@ def render(request: Request, template: str, ctx: dict | None = None):
         # time-macros.html. Пояс читается здесь один раз на страницу, а не на
         # каждую дату в списке.
         "local_time": _local_time(timefmt.zone(settings)),
+        # Сообщение об исчерпанном лимите — со временем сброса в том же поясе.
+        "local_limit": _local_limit(timefmt.zone(settings)),
     }
     if ctx:
         data.update(ctx)

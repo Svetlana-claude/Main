@@ -227,7 +227,10 @@ def export_conversation(request: Request, conversation_id: int):
         total += float(row["cost_usd"] or 0)
         lines.append(f"## {names.get(row['role'], row['role'])} — {timefmt.fmt(row['created_at'], tz=tz)}")
         lines.append("")
-        lines.append(row["content"])
+        content = row["content"]
+        if row["role"] == "error":
+            content = timefmt.localize_limit(content, row["created_at"], tz)
+        lines.append(content)
         lines.append("")
 
     lines += ["---", "", f"Расход по диалогу: ${total:.4f}"]

@@ -1,9 +1,11 @@
 """Чатики: болтовня на отвлечённые темы. Инструменты выключены."""
 
+from datetime import datetime, timezone
+
 from fastapi import APIRouter, Form, Request
 from fastapi.responses import JSONResponse, RedirectResponse, StreamingResponse
 
-from .. import db
+from .. import db, timefmt
 from ..deps import current_user, render
 from ..services import claude_driver, runs
 
@@ -158,12 +160,23 @@ async def chat_send(request: Request, chat_id: int, text: str = Form(...)):
         ):
             if event["type"] == "result":
                 _save_answer(chat_id, event)
+                # Исчерпанный лимит Claude Code сообщает именно так — результатом
+                # с признаком ошибки (все пять таких сообщений в базе пришли этим
+                # путём, не событием error). В базу — как есть, на экран — со
+                # временем сброса в поясе из настроек.
+                if event.get("is_error") and event.get("text"):
+                    event = {**event, "text": timefmt.localize_limit(
+                        event["text"], datetime.now(timezone.utc), timefmt.zone())}
             elif event["type"] == "error":
                 db.execute(
                     "INSERT INTO messages (conversation_id, role, content) "
                     "VALUES (%s, 'error', %s)",
                     (chat_id, event["message"]),
                 )
+                # В базе — строка Claude Code как есть, на экран — со временем
+                # сброса лимита в поясе из настроек.
+                event = {**event, "message": timefmt.localize_limit(
+                    event["message"], datetime.now(timezone.utc), timefmt.zone())}
             await run.append(event)
 
         # Название по первой реплике: «Новый чат» через неделю ничего не скажет

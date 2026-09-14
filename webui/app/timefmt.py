@@ -5,7 +5,7 @@
 шаблонов, выгрузки диалога в markdown, подписей в браузере — и границы
 «сегодня» на дашборде, которая без него наступала бы в 03:00 по Москве.
 """
-from datetime import datetime, timezone, tzinfo
+from datetime import datetime, timedelta, timezone, tzinfo
 from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
 
 from . import db
@@ -130,3 +130,104 @@ def fmt(value, pattern: str = DEFAULT_PATTERN, tz: tzinfo | None = None) -> str:
     if moment is None:
         return value if isinstance(value, str) else ""
     return moment.strftime(pattern)
+
+
+# ── Время сброса лимита в сообщениях Claude Code ─────────────────────────
+# Claude Code сообщает об исчерпанном лимите строкой вида
+#     You've hit your session limit · resets 9:50am (UTC)
+#     You've hit your weekly limit · resets Sep 16, 9am (UTC)
+# Время в ней — в поясе процесса, то есть сервера (UTC), и без даты: «9:50am»
+# означает ближайшие 9:50 после того, как сообщение пришло. Сама строка
+# хранится в базе нетронутой, переводится только при показе.
+import re  # noqa: E402
+
+_LIMIT_RE = re.compile(
+    r"resets\s+"
+    r"(?:(?P<mon>Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)[a-z]*\.?\s+(?P<day>\d{1,2}),?\s+(?:at\s+)?)?"
+    r"(?P<hour>\d{1,2})(?::(?P<minute>\d{2}))?\s*(?P<ampm>am|pm)"
+    r"\s*\((?P<zone>[^)]+)\)",
+    re.IGNORECASE,
+)
+_MONTHS = {m: i for i, m in enumerate(
+    ["jan", "feb", "mar", "apr", "may", "jun", "jul", "aug", "sep", "oct", "nov", "dec"], 1)}
+_HEADS = [
+    (re.compile(r"you'?ve hit your session limit", re.I), "Исчерпан лимит сессии"),
+    (re.compile(r"you'?ve hit your weekly limit", re.I), "Исчерпан недельный лимит"),
+    (re.compile(r"you'?ve hit your (?:usage )?limit", re.I), "Исчерпан лимит"),
+]
+
+
+def zone_label(tz: tzinfo) -> str:
+    """Подпись пояса: русское имя из списка или смещение для прочих."""
+    key = getattr(tz, "key", None)
+    for name, title in ZONES:
+        if name == key:
+            return title
+    return offset_text(tz)
+
+
+def limit_reset(text: str, said_at, tz: tzinfo) -> datetime | None:
+    """Момент сброса лимита из строки Claude Code, или None, если строка не та.
+
+    `said_at` — когда сообщение пришло: без него «9:50am» не превратить в
+    момент. Время в строке трактуется в поясе, указанном в скобках; пояс,
+    которого не знает zoneinfo, — повод не угадывать, а вернуть None.
+    """
+    m = _LIMIT_RE.search(text or "")
+    if not m:
+        return None
+    source = _zone_or_none(m.group("zone").strip())
+    base = to_local(said_at, source) if source else None
+    if base is None:
+        return None
+    raw_hour = int(m.group("hour"))
+    minute = int(m.group("minute") or 0)
+    # На циферблате am/pm часы — от 1 до 12. Проверка до пересчёта: `% 12`
+    # молча превратил бы «25:00am» в 01:00 и выдал выдумку за перевод.
+    if not 1 <= raw_hour <= 12 or minute > 59:
+        return None
+    hour = raw_hour % 12 + (12 if m.group("ampm").lower() == "pm" else 0)
+    try:
+        if m.group("mon"):
+            month = _MONTHS[m.group("mon")[:3].lower()]
+            moment = base.replace(month=month, day=int(m.group("day")), hour=hour,
+                                  minute=minute, second=0, microsecond=0)
+            # Дата без года: «Jan 2», пришедшее в декабре, — это уже следующий год.
+            if moment < base - timedelta(days=1):
+                moment = moment.replace(year=moment.year + 1)
+        else:
+            moment = base.replace(hour=hour, minute=minute, second=0, microsecond=0)
+            if moment <= base:
+                moment += timedelta(days=1)
+    except ValueError:
+        return None
+    return moment.astimezone(tz)
+
+
+def localize_limit(text: str, said_at, tz: tzinfo | None = None) -> str:
+    """Строка об исчерпанном лимите — по-русски и со временем в поясе из настроек.
+
+    Всё, что не узнано, возвращается как есть: исходное сообщение лучше
+    переведённого наугад. Дата добавляется, только если сброс приходится не
+    на тот же местный день, что само сообщение, — иначе «в 03:10» читалось бы
+    как «сегодня», а это уже завтра.
+    """
+    tz = tz or zone()
+    moment = limit_reset(text, said_at, tz)
+    if moment is None:
+        return text
+    said_local = to_local(said_at, tz)
+    when = moment.strftime("%H:%M")
+    if said_local is None or moment.date() != said_local.date():
+        when = moment.strftime("%d.%m в %H:%M")
+    else:
+        when = "в " + when
+    head = None
+    for pattern, title in _HEADS:
+        if pattern.search(text):
+            head = title
+            break
+    tail = f"обнулится {when} ({zone_label(tz)})"
+    if head:
+        return f"{head} · {tail}"
+    return _LIMIT_RE.sub(tail, text, count=1)

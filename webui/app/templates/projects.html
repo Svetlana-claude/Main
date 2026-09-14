@@ -98,7 +98,9 @@
                     <span class="msg__who">{% if m.role == 'user' %}Светлана{% elif m.role == 'assistant' %}Claude{% else %}Ошибка{% endif %}</span>
                     <span>{{ time.when(m.created_at) }}</span>
                   </div>
-                  <div class="msg__body">{{ m.content }}</div>
+                  {# Для ошибок время сброса лимита переводится в пояс из настроек. `is defined` —
+   защита от разрыва при выкладке: до перезапуска службы помощника ещё нет. #}
+<div class="msg__body">{% if m.role == 'error' and local_limit is defined %}{{ local_limit(m.content, m.created_at) }}{% else %}{{ m.content }}{% endif %}</div>
                   {% if m.role == 'assistant' %}
                     <div class="msg__meta">
                       {{ m.model or '—' }} · ${{ '%.4f'|format(m.cost_usd) }} ·

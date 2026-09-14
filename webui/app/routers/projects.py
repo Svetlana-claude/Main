@@ -17,7 +17,7 @@ from pathlib import Path
 from fastapi import APIRouter, File, Form, Request, UploadFile
 from fastapi.responses import FileResponse, JSONResponse, RedirectResponse, StreamingResponse
 
-from .. import config, db
+from .. import config, db, timefmt
 from ..deps import current_user, render
 from ..services import claude_driver, runs
 from .chats import _save_answer
@@ -462,12 +462,23 @@ async def topic_send(request: Request, topic_id: int, text: str = Form(...)):
         ):
             if event["type"] == "result":
                 _save_answer(topic_id, event)
+                # Исчерпанный лимит Claude Code сообщает именно так — результатом
+                # с признаком ошибки (все пять таких сообщений в базе пришли этим
+                # путём, не событием error). В базу — как есть, на экран — со
+                # временем сброса в поясе из настроек.
+                if event.get("is_error") and event.get("text"):
+                    event = {**event, "text": timefmt.localize_limit(
+                        event["text"], datetime.now(timezone.utc), timefmt.zone())}
             elif event["type"] == "error":
                 db.execute(
                     "INSERT INTO messages (conversation_id, role, content) "
                     "VALUES (%s, 'error', %s)",
                     (topic_id, event["message"]),
                 )
+                # В базе — строка Claude Code как есть, на экран — со временем
+                # сброса лимита в поясе из настроек.
+                event = {**event, "message": timefmt.localize_limit(
+                    event["message"], datetime.now(timezone.utc), timefmt.zone())}
             await run.append(event)
 
     runs.start("topic", topic_id, producer)
