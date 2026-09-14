@@ -114,3 +114,14 @@ CREATE TABLE IF NOT EXISTS metrics_history (
     load1       real NOT NULL
 );
 CREATE INDEX IF NOT EXISTS metrics_history_at_idx ON metrics_history(at DESC);
+
+-- Второй фактор входа (TOTP), 14.09.2026. Секрет хранится в открытом виде
+-- base32: зашифровать его нечем, чего не было бы рядом, — ключ лёг бы в тот же
+-- файл настроек. Поэтому выгрузки базы, где он окажется, по-прежнему секрет.
+-- totp_enabled поднимается только после ввода верного кода, до того секрет
+-- «ожидает подтверждения» и на вход не влияет.
+-- totp_last_step — номер последнего принятого 30-секундного отрезка: тот же
+-- код второй раз не проходит.
+ALTER TABLE users ADD COLUMN IF NOT EXISTS totp_secret    text;
+ALTER TABLE users ADD COLUMN IF NOT EXISTS totp_enabled   boolean NOT NULL DEFAULT false;
+ALTER TABLE users ADD COLUMN IF NOT EXISTS totp_last_step bigint  NOT NULL DEFAULT 0;

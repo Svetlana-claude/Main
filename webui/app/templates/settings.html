@@ -181,6 +181,23 @@
   </div>
 </div>
 
+{# Адрес собран вручную, а условие — через `is defined`: шаблон подхватывается
+   с диска сразу, а маршрут и новое поле появляются только после перезапуска
+   службы. Без этого «Настройки» отдавали бы 500 в промежутке. #}
+<div class="panel">
+  <div class="panel__head">Второй фактор входа</div>
+  <div class="panel__body">
+    {% if totp_enabled is defined and totp_enabled %}
+      <span class="tag tag--ok">включён</span>
+      — после пароля при входе запрашивается код из приложения.
+    {% elif totp_enabled is defined %}
+      <span class="tag tag--warn">не подключён</span>
+      — вход только по паролю, а за паролем панели — root на сервере.
+    {% endif %}
+    <a class="btn" href="{{ root_path }}/settings/totp" style="margin-left:8px">Настроить</a>
+  </div>
+</div>
+
 <div class="panel">
   <div class="panel__head">Активные сессии</div>
   <div class="panel__body panel__body--flush">

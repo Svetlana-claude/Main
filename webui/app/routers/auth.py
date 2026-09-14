@@ -3,9 +3,18 @@ from datetime import datetime, timedelta, timezone
 
 from fastapi import APIRouter, Form, Request
 from fastapi.responses import RedirectResponse
+from itsdangerous import BadSignature, SignatureExpired, URLSafeTimedSerializer
 
 from .. import config, db, security
 from ..deps import client_ip, current_user, render
+from ..services import totp
+
+# Пропуск ко второму шагу входа. Выдаётся только после верного пароля и живёт
+# пять минут. Подписан тем же SECRET_KEY, но со своей солью — подпись сессии
+# за пропуск не сойдёт и наоборот. В пропуск вшит хвост хеша пароля: сменили
+# пароль — выданные до этого пропуска перестают действовать.
+_pending = URLSafeTimedSerializer(config.SECRET_KEY, salt="totp-pending")
+PENDING_MAX_AGE = 300
 
 router = APIRouter()
 
@@ -53,7 +62,7 @@ def login_submit(
         )
 
     row = db.query_one(
-        "SELECT id, login, password_hash, must_change FROM users WHERE login = %s",
+        "SELECT id, login, password_hash, must_change, totp_enabled FROM users WHERE login = %s",
         (login.strip(),),
     )
     if not row or not security.verify_password(row["password_hash"], password):
@@ -66,11 +75,22 @@ def login_submit(
 
     # Параметры хеширования могли усилиться со времени последнего входа
     if security.needs_rehash(row["password_hash"]):
-        db.execute(
-            "UPDATE users SET password_hash = %s WHERE id = %s",
-            (security.hash_password(password), row["id"]),
-        )
+        fresh = security.hash_password(password)
+        db.execute("UPDATE users SET password_hash = %s WHERE id = %s", (fresh, row["id"]))
+        # Пропуск ко второму шагу строится из хеша — из нового, иначе после
+        # перехеширования второй шаг ответил бы «войдите заново».
+        row = {**row, "password_hash": fresh}
 
+    if row["totp_enabled"]:
+        # Пароль верен, но сессии ещё нет: без кода из приложения она не выдаётся.
+        token = _pending.dumps({"u": row["id"], "h": row["password_hash"][-16:]})
+        return render(request, "login_totp.html", {"user": None, "token": token})
+
+    return _start_session(request, row, ip)
+
+
+def _start_session(request: Request, row: dict, ip: str):
+    """Сессия и cookie. Вызывается только после всех факторов входа."""
     session_id = security.new_session_id()
     db.execute(
         "INSERT INTO sessions (id, user_id, expires_at, ip, user_agent) "
@@ -97,6 +117,57 @@ def login_submit(
         path="/",
     )
     return response
+
+
+@router.post("/login/totp", name="login_totp_submit")
+def login_totp_submit(request: Request, token: str = Form(""), code: str = Form("")):
+    ip = client_ip(request)
+
+    def again(message: str, token_value: str = token):
+        return render(request, "login_totp.html",
+                      {"user": None, "token": token_value, "error": message})
+
+    def restart(message: str):
+        return render(request, "login.html", {"user": None, "error": message})
+
+    # Перебор кода считается вместе с перебором пароля: окно одно на адрес.
+    if _recent_fails(ip) >= config.LOGIN_MAX_FAILS:
+        return restart(f"Слишком много неудачных попыток. "
+                       f"Повторите через {config.LOGIN_WINDOW_MIN} минут.")
+
+    try:
+        data = _pending.loads(token, max_age=PENDING_MAX_AGE)
+    except SignatureExpired:
+        return restart("Время на ввод кода вышло — войдите заново.")
+    except BadSignature:
+        return restart("Войдите заново.")
+
+    row = db.query_one(
+        "SELECT id, login, password_hash, must_change, totp_secret, totp_enabled, totp_last_step "
+        "FROM users WHERE id = %s",
+        (data.get("u"),),
+    )
+    if (not row or not row["totp_enabled"] or not row["totp_secret"]
+            or row["password_hash"][-16:] != data.get("h")):
+        return restart("Войдите заново.")
+
+    step = totp.match(row["totp_secret"], code, row["totp_last_step"])
+    if step is None:
+        _record_attempt(f"{row['login']} (код)", ip, False)
+        return again("Код не подошёл. Введите текущий код из приложения.")
+
+    # Отрезок фиксируется условным UPDATE, а не проверкой и записью порознь:
+    # два одновременных запроса с одним кодом иначе прошли бы оба.
+    taken = db.query_one(
+        "UPDATE users SET totp_last_step = %s WHERE id = %s AND totp_last_step < %s RETURNING id",
+        (step, row["id"], step),
+    )
+    if not taken:
+        _record_attempt(f"{row['login']} (код)", ip, False)
+        return again("Этот код уже использован. Дождитесь следующего.")
+
+    _record_attempt(row["login"], ip, True)
+    return _start_session(request, row, ip)
 
 
 @router.get("/password", name="change_password_form")

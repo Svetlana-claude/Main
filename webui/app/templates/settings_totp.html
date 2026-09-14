@@ -1,0 +1,109 @@
+{% extends "base.html" %}
+{% block title %}Второй фактор входа{% endblock %}
+{% block content %}
+
+{% if err %}<div class="note note--warn">{{ err }}</div>{% endif %}
+{% if ok %}<div class="note note--ok">{{ ok }}</div>{% endif %}
+
+<div class="panel">
+  <div class="panel__head">
+    Второй фактор входа
+    <span class="spacer"></span>
+    <a class="btn btn--plain" href="{{ root_path }}/settings">К настройкам</a>
+  </div>
+  <div class="panel__body">
+
+  {% if enabled %}
+
+    <p><span class="tag tag--ok">включён</span></p>
+    <p>
+      При входе после пароля запрашивается шестизначный код из приложения.
+      Сессия после входа живёт 30 дней, так что код нужен редко.
+    </p>
+
+    <form method="post" action="{{ url_for('totp_disable') }}" style="margin-top:16px;max-width:360px"
+          onsubmit="return confirm('Отключить второй фактор? Вход в панель снова будет только по паролю, а за паролем панели — root на сервере.')">
+      <div class="field">
+        <label class="field__label" for="dis-password">Пароль</label>
+        <input class="input" id="dis-password" name="password" type="password" autocomplete="current-password" required>
+      </div>
+      <div class="field">
+        <label class="field__label" for="dis-code">Текущий код</label>
+        <input class="input mono" id="dis-code" name="code" inputmode="numeric" autocomplete="one-time-code" maxlength="7" required>
+      </div>
+      <button class="btn btn--danger" type="submit">Отключить</button>
+      <div class="field__hint">
+        Нужны и пароль, и код: одной открытой сессии для отключения мало.
+      </div>
+    </form>
+
+  {% elif pending %}
+
+    <p><span class="tag tag--warn">ожидает подтверждения</span></p>
+    <ol>
+      <li>Откройте приложение-аутентификатор: Google Authenticator,
+          Яндекс Ключ, Microsoft Authenticator, 2FAS, Aegis — подойдёт любое.</li>
+      <li>Добавьте запись, отсканировав код ниже.</li>
+      <li>Введите шестизначный код, который покажет приложение.</li>
+    </ol>
+
+    <div class="grid2" style="align-items:start">
+      <div style="text-align:center">
+        {% if qr %}
+          <div style="max-width:260px;margin:0 auto;background:#fff;padding:8px" role="img"
+               aria-label="QR-код для приложения-аутентификатора">{{ qr | safe }}</div>
+        {% endif %}
+        <div class="field__hint" style="margin-top:8px">Если сканировать нечем — введите ключ вручную:</div>
+        <div class="mono breakable" style="font-size:15px;margin-top:4px">{{ secret }}</div>
+      </div>
+
+      <div>
+        <form method="post" action="{{ url_for('totp_enable') }}">
+          <div class="field">
+            <label class="field__label" for="en-code">Код из приложения</label>
+            <input class="input mono" id="en-code" name="code" required autofocus
+                   inputmode="numeric" autocomplete="one-time-code" maxlength="7"
+                   style="font-size:20px;letter-spacing:4px;text-align:center">
+            <div class="field__hint">
+              Второй фактор включится только после верного кода — ошибка при
+              сканировании вход не закроет.
+            </div>
+          </div>
+          <button class="btn btn--primary" type="submit">Включить</button>
+        </form>
+        <form method="post" action="{{ url_for('totp_cancel') }}" style="margin-top:8px">
+          <button class="btn btn--plain" type="submit">Отменить</button>
+        </form>
+      </div>
+    </div>
+
+    <div class="note note--warn" style="margin-top:16px">
+      Код и ключ выше — это секрет входа. Не делайте снимок экрана и не
+      пересылайте его: кто получит ключ, будет получать те же коды.
+    </div>
+
+  {% else %}
+
+    <p><span class="tag tag--warn">не подключён</span></p>
+    <p>
+      Вход в панель сейчас — только по паролю. У проекта «Веб-интерфейс»
+      разрешён запуск команд, а у приложения — полный доступ к серверу, так
+      что пароль панели в одиночку отделяет интернет от root.
+    </p>
+    <form method="post" action="{{ url_for('totp_start') }}">
+      <button class="btn btn--primary" type="submit">Подключить</button>
+    </form>
+
+  {% endif %}
+
+    <div class="field__hint" style="margin-top:20px">
+      <b>Потеряли телефон?</b> Войдите на сервер по SSH-ключу и выполните:
+      <div class="mono" style="margin-top:4px">
+        sudo -u postgres psql -d webui -c "UPDATE users SET totp_enabled=false, totp_secret=NULL WHERE login='{{ user.login }}'"
+      </div>
+      Вход снова станет только по паролю, после чего подключите новый телефон.
+    </div>
+  </div>
+</div>
+
+{% endblock %}

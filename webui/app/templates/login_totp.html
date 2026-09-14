@@ -1,0 +1,36 @@
+{% extends "base.html" %}
+{% block title %}Код подтверждения{% endblock %}
+{% block layout %}
+<div class="login">
+  <div class="login__box">
+    <div class="login__head">
+      <span class="titlebar__mark">1</span>
+      <strong>Код из приложения</strong>
+    </div>
+    <div class="login__body">
+      {% if error %}<div class="note note--err">{{ error }}</div>{% endif %}
+      {# Адрес формы собран вручную: шаблон мог бы попасть на диск раньше, чем
+         служба перезапустится с новым маршрутом, а url_for на незаведённый
+         маршрут уронил бы страницу входа — единственную дверь в приложение. #}
+      <form method="post" action="{{ root_path }}/login/totp">
+        <input type="hidden" name="token" value="{{ token }}">
+        <div class="field">
+          <label class="field__label" for="code">Шестизначный код</label>
+          <input class="input mono" id="code" name="code" required
+                 inputmode="numeric" autocomplete="one-time-code"
+                 pattern="[0-9 ]{6,7}" maxlength="7" autofocus
+                 style="font-size:20px;letter-spacing:4px;text-align:center">
+          <div class="field__hint">
+            Откройте приложение-аутентификатор и введите код для
+            «Рабочее место mokeevasky.ru». На ввод — пять минут.
+          </div>
+        </div>
+        <button class="btn btn--primary" type="submit" style="width:100%;justify-content:center">Подтвердить</button>
+      </form>
+      <div class="field__hint" style="margin-top:12px">
+        <a href="{{ root_path }}/login">Войти заново</a>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}

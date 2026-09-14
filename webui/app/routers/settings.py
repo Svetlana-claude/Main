@@ -74,6 +74,8 @@ def settings_page(request: Request, file: str | None = None):
         "WHERE NOT archived ORDER BY name"
     )
 
+    totp_row = db.query_one("SELECT totp_enabled FROM users WHERE id = %s", (user["id"],))
+
     return render(
         request,
         "settings.html",
@@ -91,6 +93,7 @@ def settings_page(request: Request, file: str | None = None):
             "current_session": user["session_id"],
             "tz_choices": timefmt.zone_choices(),
             "tz_current": timefmt.zone_name(values),
+            "totp_enabled": bool(totp_row and totp_row["totp_enabled"]),
         },
     )
 
