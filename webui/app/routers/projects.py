@@ -26,6 +26,30 @@ router = APIRouter()
 
 MAX_UPLOAD_BYTES = 64 * 1024 * 1024      # 64 МБ на файл
 
+# ── Размер контекста ────────────────────────────────────────────────────
+#
+# Каждый шаг агента перечитывает весь контекст сессии, а кэш с ним живёт час.
+# Вернулись к крупной теме позже — первый шаг заново записывает всё по цене
+# записи в кэш: при 600 тыс. это $6–7 за ответ из трёх шагов (rashod-tokenov.md).
+# Строка «Хода работы» в простое говорит об этом до отправки, пока можно сжать.
+CACHE_TTL_SEC = 3600
+CONTEXT_WARN_TOKENS = 100_000
+
+
+def _thousands(tokens: int) -> str:
+    return f"{max(1, round(tokens / 1000))} тыс."
+
+
+def _context_note(tokens: int | None, at: datetime | None) -> str:
+    """Строка простоя «Хода работы»: размер контекста и остыл ли кэш."""
+    if not tokens:
+        return ""
+    note = f"контекст {_thousands(tokens)} токенов"
+    if (tokens >= CONTEXT_WARN_TOKENS and at
+            and (datetime.now(timezone.utc) - at).total_seconds() > CACHE_TTL_SEC):
+        note += " · кэш остыл: первый шаг заново запишет весь контекст; после сжатия шаги дешевле"
+    return note
+
 # ── Папка выдачи проекта ─────────────────────────────────────────────────
 #
 # Раздел «Файлы» справа показывает только то, что загрузили через форму,
@@ -298,11 +322,13 @@ def projects(request: Request, id: int | None = None, topic: int | None = None):
             topic = topics[0]["id"]
         if topic is not None:
             current_topic = db.query_one(
-                "SELECT id, title, claude_session_id FROM conversations "
-                "WHERE id = %s AND project_id = %s",
+                "SELECT id, title, claude_session_id, context_tokens, context_at "
+                "FROM conversations WHERE id = %s AND project_id = %s",
                 (topic, project["id"]),
             )
         if current_topic:
+            current_topic["context_note"] = _context_note(
+                current_topic["context_tokens"], current_topic["context_at"])
             messages = db.query(
                 """
                 SELECT role, content, created_at, cost_usd, duration_ms,
@@ -447,7 +473,8 @@ async def topic_send(request: Request, topic_id: int, text: str = Form(...)):
     )
     db.execute("UPDATE conversations SET updated_at = now() WHERE id = %s", (topic_id,))
 
-    model = db.get_settings().get("model", "opus")
+    settings = db.get_settings()
+    model = settings.get("model", "opus")
     workdir = Path(conv["workdir"])
 
     async def producer(run):
@@ -459,6 +486,7 @@ async def topic_send(request: Request, topic_id: int, text: str = Form(...)):
             with_tools=True,
             workdir=workdir,
             allow_bash=bool(conv["allow_bash"]),
+            compact_window=claude_driver.compact_window(settings.get("compact_window")),
         ):
             if event["type"] == "result":
                 _save_answer(topic_id, event)
@@ -484,6 +512,75 @@ async def topic_send(request: Request, topic_id: int, text: str = Form(...)):
     runs.start("topic", topic_id, producer)
     # Ответ отдаётся сразу: за событиями страница приходит отдельно, и уход
     # с неё работу больше не обрывает.
+    return JSONResponse({"ok": True})
+
+
+@router.post("/projects/topics/{topic_id}/compact", name="topic_compact")
+async def topic_compact(request: Request, topic_id: int):
+    """Сжатие контекста темы по кнопке — то же, что `/compact` в терминале.
+
+    Идёт обычным запуском: страница следит за ним тем же потоком, что и за
+    ответом, а итог ложится в ленту сообщением с расходом — иначе стоимость
+    сжатия выпала бы из учёта на дашборде.
+    """
+    user = current_user(request)
+    if not user or user["must_change"]:
+        return JSONResponse({"error": "нет доступа"}, status_code=401)
+
+    conv = db.query_one(
+        """
+        SELECT c.id, c.claude_session_id, p.workdir, p.allow_bash
+        FROM conversations c JOIN projects p ON p.id = c.project_id
+        WHERE c.id = %s AND c.kind = 'topic'
+        """,
+        (topic_id,),
+    )
+    if not conv:
+        return JSONResponse({"error": "тема не найдена"}, status_code=404)
+    if not conv["claude_session_id"]:
+        return JSONResponse({"error": "в теме ещё нет сессии — сжимать нечего"}, status_code=400)
+    if runs.active("topic", topic_id):
+        return JSONResponse({"error": "в этой теме уже идёт ответ"}, status_code=409)
+
+    settings = db.get_settings()
+
+    async def producer(run):
+        pre = post = 0
+        failure = ""
+        async for event in claude_driver.run(
+            "/compact",
+            model=settings.get("model", "opus"),
+            session_id=conv["claude_session_id"],
+            with_tools=True,
+            workdir=Path(conv["workdir"]),
+            allow_bash=bool(conv["allow_bash"]),
+            compact_window=claude_driver.compact_window(settings.get("compact_window")),
+        ):
+            if event["type"] == "compact":
+                if event["state"] == "done":
+                    pre, post = event["pre_tokens"], event["post_tokens"]
+                elif event["state"] == "failed":
+                    failure = event.get("reason") or "причина не названа"
+            elif event["type"] == "result":
+                # У `/compact` своего текста нет — итог пишется словами. Ошибкой
+                # в ленту не кладётся: тема от неудачного сжатия не становится
+                # незавершённой, прежний контекст остаётся как был.
+                if pre:
+                    text = (f"Контекст сжат: было {_thousands(pre)} токенов, "
+                            f"сводка — {_thousands(post)}")
+                else:
+                    text = "Сжать контекст не удалось" + (f": {failure}" if failure else "") + "."
+                event = {**event, "text": text, "is_error": False}
+                _save_answer(topic_id, event)
+            elif event["type"] == "error":
+                db.execute(
+                    "INSERT INTO messages (conversation_id, role, content) "
+                    "VALUES (%s, 'error', %s)",
+                    (topic_id, event["message"]),
+                )
+            await run.append(event)
+
+    runs.start("topic", topic_id, producer)
     return JSONResponse({"ok": True})
 
 

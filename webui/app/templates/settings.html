@@ -29,6 +29,17 @@
           <div class="field__hint">Псевдоним передаётся Claude Code, он берёт актуальную версию</div>
         </div>
         <div class="field">
+          <label class="field__label" for="compact_window">Потолок контекста, токенов</label>
+          <input class="input input--narrow" id="compact_window" name="compact_window"
+                 type="number" min="0" max="1000000" step="10000" value="{{ values.compact_window }}">
+          <div class="field__hint">
+            Дорастая до потолка, Claude Code сам сжимает историю темы в сводку. Каждый
+            шаг перечитывает весь контекст, поэтому без потолка длинная тема дорожает
+            с каждым сообщением. По умолчанию 250 000; от 100 000 до 1 000 000,
+            0 — не ограничивать. Действует со следующего сообщения.
+          </div>
+        </div>
+        <div class="field">
           <label class="field__label" for="limit_5h_tokens">Предел пятичасового окна, токенов</label>
           <input class="input input--narrow" id="limit_5h_tokens" name="limit_5h_tokens"
                  type="number" min="0" step="1000" value="{{ values.limit_5h_tokens }}">

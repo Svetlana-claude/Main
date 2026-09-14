@@ -8,7 +8,7 @@ from fastapi.responses import JSONResponse, PlainTextResponse, RedirectResponse
 
 from .. import config, db, timefmt
 from ..deps import current_user, render
-from ..services import restart
+from ..services import claude_driver, restart
 
 router = APIRouter()
 
@@ -108,6 +108,7 @@ def settings_save(
     limit_5h_tokens: str = Form("0"),
     limit_week_tokens: str = Form("0"),
     timezone_name: str = Form(timefmt.DEFAULT_TZ, alias="timezone"),
+    compact_window: str = Form(config.DEFAULT_SETTINGS["compact_window"]),
 ):
     user, redirect = _guard(request)
     if redirect:
@@ -134,6 +135,10 @@ def settings_save(
     # лишнего нуля, а не задаёт осмысленный потолок.
     db.set_setting("limit_5h_tokens", clamp_int(limit_5h_tokens, 0, 1_000_000_000, 0))
     db.set_setting("limit_week_tokens", clamp_int(limit_week_tokens, 0, 1_000_000_000, 0))
+
+    # Потолок контекста: ноль или число в границах, которые CLI принимает. Что
+    # ниже 100 тыс., поднимается до границы — CLI такое молча не применил бы.
+    db.set_setting("compact_window", str(claude_driver.compact_window(compact_window)))
 
     return RedirectResponse(request.url_for("settings_page"), status_code=303)
 

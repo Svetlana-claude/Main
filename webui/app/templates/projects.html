@@ -84,6 +84,13 @@
             <div class="cmdbar">
               <strong>{{ current_topic.title }}</strong>
               <span class="spacer"></span>
+              {# Сжатие — то же, что /compact в терминале: история заменяется сводкой,
+                 и каждый следующий шаг перечитывает уже не весь разговор. Кнопка
+                 только у темы, где сессия уже есть. #}
+              {% if current_topic.claude_session_id %}
+                <button class="btn" type="button" id="compact-btn"
+                        title="Заменить историю темы сводкой: следующие шаги станут дешевле, подробности ранних сообщений модель забудет">Сжать контекст</button>
+              {% endif %}
               <a class="btn" href="{{ url_for('export_conversation', conversation_id=current_topic.id) }}">Экспорт</a>
               <form method="post" action="{{ url_for('topic_delete', topic_id=current_topic.id) }}"
                     onsubmit="return confirm('Удалить тему «{{ current_topic.title }}»?')">
@@ -187,7 +194,7 @@
               <span class="spacer"></span>
               <button class="btn btn--plain" type="button" id="run-clear">очистить</button>
             </div>
-            <div class="runstat" id="run-stat" aria-live="polite">простой</div>
+            <div class="runstat" id="run-stat" aria-live="polite">простой{% if current_topic and current_topic.context_note %} · {{ current_topic.context_note }}{% endif %}</div>
             <div class="rail__body" id="run-log">
               <div class="empty" style="padding:12px">Здесь появятся команды и обращения к файлам</div>
             </div>
@@ -223,7 +230,9 @@ initTopicDots({
   who: "Светлана",
   showTools: true,
   topicId: {{ current_topic.id }},
-  streamUrl: "{{ url_for('topic_stream', topic_id=current_topic.id) }}"
+  streamUrl: "{{ url_for('topic_stream', topic_id=current_topic.id) }}",
+  {# Собран вручную по той же причине, что адрес опроса тем выше #}
+  compactUrl: "{{ url_for('projects') }}/topics/{{ current_topic.id }}/compact"
 });</script>
 {% endif %}
 {% endblock %}

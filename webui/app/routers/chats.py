@@ -157,6 +157,7 @@ async def chat_send(request: Request, chat_id: int, text: str = Form(...)):
             model=model,
             session_id=conv["claude_session_id"],
             with_tools=False,
+            compact_window=claude_driver.compact_window(settings.get("compact_window")),
         ):
             if event["type"] == "result":
                 _save_answer(chat_id, event)
@@ -235,6 +236,16 @@ def _save_answer(conversation_id: int, event: dict) -> None:
             "UPDATE conversations SET claude_session_id = %s, updated_at = now() "
             "WHERE id = %s",
             (event["session_id"], conversation_id),
+        )
+    save_context(conversation_id, event.get("context_tokens"))
+
+
+def save_context(conversation_id: int, tokens: int | None) -> None:
+    """Размер контекста сессии и время, когда кэш последний раз был тёплым."""
+    if tokens:
+        db.execute(
+            "UPDATE conversations SET context_tokens = %s, context_at = now() WHERE id = %s",
+            (int(tokens), conversation_id),
         )
 
 

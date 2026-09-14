@@ -46,6 +46,24 @@ SECRET_DENY = [
 
 RUN_TIMEOUT_SEC = 1800  # 30 минут: агентская работа бывает долгой
 
+# Потолок контекста. Тема — одна сессия, продолжаемая `--resume`, а у модели окно
+# в 1 млн токенов: автосжатие по умолчанию срабатывает у самого края, то есть
+# не срабатывает никогда. Контекст «Безопасности» дорос до 690 тыс., и каждый шаг
+# перечитывал его целиком (разбор — `rashod-tokenov.md`). Переменная задаёт окно,
+# от которого CLI считает автосжатие; проверено пробником в `-p --resume`.
+# Меньше 100 тыс. CLI молча не сжимает (пробник на 60 тыс. контекст не тронул),
+# поэтому ниже нижней границы значение не опускается.
+COMPACT_ENV = "CLAUDE_CODE_AUTO_COMPACT_WINDOW"
+COMPACT_WINDOW_MIN = 100_000
+COMPACT_WINDOW_MAX = 1_000_000
+
+# Причины отказа сжатия, какие встречались, — словами. Незнакомая идёт как есть.
+# `too_few_groups` приходит, когда контекст упёрся в потолок за один-два шага:
+# сжимать ещё нечего, CLI попробует на следующем сообщении (проверено пробником).
+COMPACT_REASONS = {
+    "too_few_groups": "история ещё слишком короткая, сжатие отложено до следующего сообщения",
+}
+
 # Каким куском забирается вывод движка
 READ_CHUNK = 64 * 1024
 
@@ -77,6 +95,7 @@ class RunResult:
     cost_usd: float = 0.0
     duration_ms: int = 0
     num_turns: int = 0
+    context_tokens: int = 0     # размер контекста на последнем шаге
     is_error: bool = False
     error_message: str = ""
     tools_used: list[str] = field(default_factory=list)
@@ -164,17 +183,41 @@ async def _iter_lines(
         yield bytes(buf)     # последняя строка без перевода в конце
 
 
-def _child_env() -> dict[str, str]:
+def compact_window(raw: str | int | None) -> int:
+    """Потолок контекста из настройки: 0 — не задан, иначе в допустимых границах."""
+    try:
+        value = int(float(raw or 0))
+    except (TypeError, ValueError):
+        return 0
+    if value <= 0:
+        return 0
+    return max(COMPACT_WINDOW_MIN, min(COMPACT_WINDOW_MAX, value))
+
+
+def _child_env(window: int = 0) -> dict[str, str]:
     """Окружение для `claude` без наших ключей.
 
     Приложение читает настройки через dotenv, а тот кладёт их в `os.environ` —
     и дочерний процесс наследует и `SECRET_KEY`, и пароль базы. То же и когда
     значения приходят от systemd. Вычищаем имена из `config.SCRUB_ENV_KEYS`.
+
+    Потолок контекста ставится только из настройки: унаследованное значение
+    убирается, иначе «не задан» в «Настройках» молча значило бы что-то другое.
     """
     env = dict(os.environ)
     for key in config.SCRUB_ENV_KEYS:
         env.pop(key, None)
+    env.pop(COMPACT_ENV, None)
+    window = compact_window(window)
+    if window:
+        env[COMPACT_ENV] = str(window)
     return env
+
+
+def _context_of(usage: dict) -> int:
+    """Размер контекста шага: всё, что ушло модели на вход, включая кэш."""
+    return sum(int(usage.get(k) or 0) for k in (
+        "input_tokens", "cache_read_input_tokens", "cache_creation_input_tokens"))
 
 
 def _extract_text(message: dict) -> str:
@@ -194,10 +237,11 @@ async def run(
     with_tools: bool = False,
     workdir: Path | None = None,
     allow_bash: bool = False,
+    compact_window: int = 0,
 ) -> AsyncIterator[dict]:
     """Запускает Claude Code и отдаёт события по мере поступления.
 
-    Типы событий: init, delta, tool, text, result, error.
+    Типы событий: init, delta, tool, usage, compact, text, result, error.
     Вызывающая сторона переправляет их в браузер через SSE.
     """
     argv = _build_argv(
@@ -218,7 +262,7 @@ async def run(
             stdout=asyncio.subprocess.PIPE,
             stderr=asyncio.subprocess.PIPE,
             cwd=cwd,
-            env=_child_env(),
+            env=_child_env(compact_window),
         )
     except FileNotFoundError:
         _active_runs -= 1
@@ -256,6 +300,28 @@ async def run(
                 result.model = event.get("model") or result.model
                 yield {"type": "init", "session_id": result.session_id}
 
+            # Сжатие контекста — и автоматическое, и по `/compact`. Идёт десятки
+            # секунд без единого другого события, поэтому о начале говорится особо:
+            # иначе «Ход работы» выглядел бы зависшим.
+            elif etype == "system" and event.get("subtype") == "status":
+                if event.get("status") == "compacting":
+                    yield {"type": "compact", "state": "start"}
+                elif event.get("compact_result") == "failed":
+                    code = str(event.get("compact_error") or "")
+                    yield {"type": "compact", "state": "failed",
+                           "reason": COMPACT_REASONS.get(code, code)}
+
+            elif etype == "system" and event.get("subtype") == "compact_boundary":
+                meta = event.get("compact_metadata") or {}
+                result.context_tokens = int(meta.get("post_tokens") or 0)
+                yield {
+                    "type": "compact",
+                    "state": "done",
+                    "trigger": str(meta.get("trigger") or ""),
+                    "pre_tokens": int(meta.get("pre_tokens") or 0),
+                    "post_tokens": result.context_tokens,
+                }
+
             elif etype == "stream_event":
                 # Частичные куски текста — из них складывается живой вывод
                 ev = event.get("event") or {}
@@ -271,11 +337,17 @@ async def run(
                 # счёт начинается заново, поэтому начало шага отмечается особо.
                 elif ev.get("type") == "message_start":
                     usage = ((ev.get("message") or {}).get("usage")) or {}
+                    context = _context_of(usage)
+                    # Контекст считается по основному агенту: у вспомогательного
+                    # (parent_tool_use_id задан) своя, короткая история
+                    if context and not event.get("parent_tool_use_id"):
+                        result.context_tokens = context
                     yield {
                         "type": "usage",
                         "new_message": True,
                         "input_tokens": int(usage.get("input_tokens") or 0),
                         "output_tokens": int(usage.get("output_tokens") or 0),
+                        "context_tokens": result.context_tokens,
                     }
                 elif ev.get("type") == "message_delta":
                     usage = ev.get("usage") or {}
@@ -344,6 +416,7 @@ async def run(
             "cost_usd": result.cost_usd,
             "duration_ms": result.duration_ms,
             "num_turns": result.num_turns,
+            "context_tokens": result.context_tokens,
             "is_error": result.is_error,
             "error_message": result.error_message,
             "tools_used": result.tools_used,

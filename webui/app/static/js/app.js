@@ -7,6 +7,11 @@ function fmtNum(n) {
     return String(n).replace(/\B(?=(\d{3})+(?!\d))/g, ' ');
 }
 
+/* Крупные счёты токенов — в тысячах: «692 тыс.» читается, «692 118» — нет */
+function fmtThousands(n) {
+    return Math.max(1, Math.round(n / 1000)) + ' тыс.';
+}
+
 function setMeter(barId, value) {
     const bar = document.getElementById(barId);
     if (!bar) return;
@@ -214,6 +219,8 @@ function createRunPanel() {
     let steps = 0;
     let tokensDone = 0;            // выход завершённых шагов
     let tokensStep = 0;            // выход текущего шага, значение накопительное
+    let context = 0;               // размер контекста на последнем шаге
+    let compacting = false;        // идёт сжатие: событий нет десятки секунд
     let ticker = null;
 
     const atBottom = () => log.scrollHeight - log.scrollTop - log.clientHeight < 40;
@@ -229,10 +236,40 @@ function createRunPanel() {
     }
 
     function live() {
-        let text = '● идёт ' + fmtElapsed(Date.now() - startedAt);
+        let text = (compacting ? '● сжимаю контекст ' : '● идёт ') + fmtElapsed(Date.now() - startedAt);
         if (steps) text += ' · шагов ' + steps;
         if (tokensOut()) text += ' · ↑ ' + fmtNum(tokensOut()) + ' токенов';
+        if (context) text += ' · контекст ' + fmtThousands(context);
         say(text, 'live');
+    }
+
+    function addRow(name, target) {
+        const stick = atBottom();
+        const row = document.createElement('div');
+        row.className = 'runrow';
+
+        const head = document.createElement('div');
+        head.className = 'runrow__head';
+        const who = document.createElement('span');
+        who.className = 'runrow__name';
+        who.textContent = name;
+        const when = document.createElement('span');
+        when.className = 'runrow__time';
+        when.textContent = fmtDate(new Date(), TIME_OPTS);
+        head.append(who, when);
+        row.append(head);
+
+        if (target) {
+            const what = document.createElement('div');
+            what.className = 'runrow__what';
+            what.textContent = target;
+            what.title = target;          // в колонке помещается не всё
+            row.append(what);
+        }
+
+        log.append(row);
+        while (log.children.length > MAX_ROWS) log.removeChild(log.firstChild);
+        if (stick) toBottom();
     }
 
     return {
@@ -241,6 +278,8 @@ function createRunPanel() {
             steps = 0;
             tokensDone = 0;
             tokensStep = 0;
+            context = 0;
+            compacting = false;
             const empty = log.querySelector('.empty');
             if (empty) empty.remove();
             live();
@@ -250,33 +289,25 @@ function createRunPanel() {
 
         step: function (name, input) {
             steps += 1;
-            const stick = atBottom();
-            const row = document.createElement('div');
-            row.className = 'runrow';
+            addRow(name, toolTarget(input));
+            live();
+        },
 
-            const head = document.createElement('div');
-            head.className = 'runrow__head';
-            const who = document.createElement('span');
-            who.className = 'runrow__name';
-            who.textContent = name;
-            const when = document.createElement('span');
-            when.className = 'runrow__time';
-            when.textContent = fmtDate(new Date(), TIME_OPTS);
-            head.append(who, when);
-            row.append(head);
-
-            const target = toolTarget(input);
-            if (target) {
-                const what = document.createElement('div');
-                what.className = 'runrow__what';
-                what.textContent = target;
-                what.title = target;          // в колонке помещается не всё
-                row.append(what);
+        /* Сжатие контекста — автоматическое у потолка или по кнопке */
+        compact: function (event) {
+            if (event.state === 'start') {
+                compacting = true;
+                addRow('Сжатие контекста', 'история заменяется сводкой');
+            } else if (event.state === 'done') {
+                compacting = false;
+                context = event.post_tokens || 0;
+                addRow(event.trigger === 'auto' ? 'Контекст сжат у потолка' : 'Контекст сжат',
+                       'было ' + fmtThousands(event.pre_tokens || 0) +
+                       ' → сводка ' + fmtThousands(event.post_tokens || 0));
+            } else if (event.state === 'failed') {
+                compacting = false;
+                addRow('Сжатие не удалось', event.reason || '');
             }
-
-            log.append(row);
-            while (log.children.length > MAX_ROWS) log.removeChild(log.firstChild);
-            if (stick) toBottom();
             live();
         },
 
@@ -290,6 +321,7 @@ function createRunPanel() {
             if (typeof event.output_tokens === 'number') {
                 tokensStep = event.output_tokens;
             }
+            if (event.context_tokens) context = event.context_tokens;
             live();
         },
 
@@ -301,6 +333,9 @@ function createRunPanel() {
             if (event.input_tokens || event.output_tokens) {
                 parts.push(fmtNum(event.input_tokens || 0) + '→' +
                            fmtNum(event.output_tokens || 0) + ' токенов');
+            }
+            if (event.context_tokens || context) {
+                parts.push('контекст ' + fmtThousands(event.context_tokens || context));
             }
             say(parts.join(' · '), 'done');
         },
@@ -374,6 +409,7 @@ function initConversation(opts) {
     const form = document.getElementById('send-form');
     const input = document.getElementById('text');
     const button = document.getElementById('send-btn');
+    const compactBtn = document.getElementById('compact-btn');
     const scroll = document.getElementById('scroll');
     if (!form || !input || !scroll) return;
 
@@ -431,6 +467,7 @@ function initConversation(opts) {
         input.disabled = locked;
         button.disabled = locked;
         button.textContent = locked ? 'Отправлено…' : 'Отправить';
+        if (compactBtn) compactBtn.disabled = locked;
         if (!locked) input.focus();
     }
 
@@ -522,6 +559,8 @@ function initConversation(opts) {
                             }
                         } else if (event.type === 'usage') {
                             if (run) run.usage(event);
+                        } else if (event.type === 'compact') {
+                            if (run) run.compact(event);
                         } else if (event.type === 'result') {
                             if (event.text) {
                                 collected = event.text;
@@ -596,6 +635,29 @@ function initConversation(opts) {
 
         follow(0, false);
     });
+
+    // Сжатие идёт обычным запуском: за ним следим тем же ходом, что и за
+    // ответом, итог приходит в ленту сообщением
+    if (compactBtn && opts.compactUrl) {
+        compactBtn.addEventListener('click', async function () {
+            if (!confirm('Сжать контекст темы? История заменится сводкой: следующие шаги ' +
+                         'станут дешевле, но подробности ранних сообщений модель забудет.')) return;
+            lockInput(true);
+            try {
+                const res = await fetch(opts.compactUrl, { method: 'POST' });
+                if (!res.ok) {
+                    const payload = await res.json().catch(() => ({}));
+                    throw new Error(payload.error || 'сервер ответил ' + res.status);
+                }
+            } catch (err) {
+                const bad = addMessage('assistant', 'Claude', 'Не удалось сжать контекст: ' + err.message);
+                bad.wrap.className = 'msg msg--error';
+                lockInput(false);
+                return;
+            }
+            follow(0, false);
+        });
+    }
 
     // Ответ мог начаться до того, как эту страницу открыли: например, её
     // покинули посреди работы и вернулись. Тогда подхватываем с начала —

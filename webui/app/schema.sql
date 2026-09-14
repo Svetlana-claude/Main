@@ -125,3 +125,9 @@ CREATE INDEX IF NOT EXISTS metrics_history_at_idx ON metrics_history(at DESC);
 ALTER TABLE users ADD COLUMN IF NOT EXISTS totp_secret    text;
 ALTER TABLE users ADD COLUMN IF NOT EXISTS totp_enabled   boolean NOT NULL DEFAULT false;
 ALTER TABLE users ADD COLUMN IF NOT EXISTS totp_last_step bigint  NOT NULL DEFAULT 0;
+
+-- Размер контекста сессии, 14.09.2026. Тема — одна сессия Claude Code, и каждый
+-- шаг перечитывает её контекст целиком; по этим полям страница показывает, как
+-- велик он сейчас и остыл ли кэш (живёт час). Пишется по каждому ответу и сжатию.
+ALTER TABLE conversations ADD COLUMN IF NOT EXISTS context_tokens integer NOT NULL DEFAULT 0;
+ALTER TABLE conversations ADD COLUMN IF NOT EXISTS context_at     timestamptz;
