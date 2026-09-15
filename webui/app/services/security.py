@@ -209,9 +209,11 @@ def report_text(date: str) -> str:
 # Прогон долгий: `find / -perm -4000` плюс сбор фактов. Держать его в
 # обработчике нельзя, поэтому запускается фоном, а страница опрашивает
 # состояние. Отметка живёт в памяти процесса: переживать перезапуск ей незачем,
-# после него прогон всё равно оборван вместе со службой.
+# после него прогон всё равно оборван вместе со службой — поэтому перезапуск из
+# «Настроек» ждёт конца прогона (`services/restart.py`). Уход со страницы прогон
+# не обрывает: он идёт на сервере, страница только опрашивает состояние.
 _run_lock = threading.Lock()
-_running: dict[str, object] = {"active": False, "started": 0.0, "mode": "", "tail": ""}
+_running: dict[str, object] = {"active": False, "started": 0.0, "mode": "", "tail": "", "error": ""}
 
 
 def run_active() -> bool:
@@ -234,6 +236,7 @@ def start_run(remediate: bool = True) -> None:
             started=datetime.now().timestamp(),
             mode="полный" if remediate else "без вмешательства",
             tail="",
+            error="",
         )
 
     def worker() -> None:
@@ -245,15 +248,92 @@ def start_run(remediate: bool = True) -> None:
                 capture_output=True, text=True, timeout=1800, check=False, env=env,
             )
             tail = (done.stdout or done.stderr or "").strip().splitlines()
-            message = tail[-1] if tail else "прогон завершён без вывода"
+            message, error = (tail[-1] if tail else "прогон завершён без вывода"), ""
         except subprocess.TimeoutExpired:
-            message = "прогон не уложился в 30 минут и был прерван"
+            message = error = "прогон не уложился в 30 минут и был прерван"
         except OSError as exc:
-            message = f"не удалось запустить аудит: {exc}"
+            message = error = f"не удалось запустить аудит: {exc}"
         with _run_lock:
-            _running.update(active=False, tail=message)
+            _running.update(active=False, tail=message, error=error)
 
     threading.Thread(target=worker, daemon=True, name="secaudit").start()
+
+
+# ── Последний прогон ─────────────────────────────────────────────────────
+# Итог берётся из журнала аудита, а не из отметки в памяти: журнал пишут все
+# прогоны — и с панели, и ночной из cron, — и он переживает перезапуск службы.
+# Без этого вернувшийся на страницу видел только погасшую надпись «Идёт прогон»
+# и не мог отличить законченный прогон от оборванного.
+AUDIT_LOG = STATE / "audit.log"
+_LOG_LINE = re.compile(r"^\[([^\]]+)\]\s+(.*)$")
+# Сколько ждать строки «готово», прежде чем назвать прогон оборванным.
+# Столько же даёт прогону `start_run`.
+RUN_LIMIT_SEC = 1800
+
+
+@dataclass
+class LastRun:
+    started: float = 0.0
+    finished: float = 0.0
+    status: str = ""           # «идёт», «готово», «ошибка», «оборван»; пусто — прогонов не было
+    message: str = ""
+    report_date: str = ""      # дата отчёта, если прогон его записал
+
+    @property
+    def seconds(self) -> int:
+        return int(self.finished - self.started) if self.finished else 0
+
+
+def _read_log_tail(limit: int = 64 * 1024) -> list[str]:
+    try:
+        with AUDIT_LOG.open("rb") as fh:
+            fh.seek(0, os.SEEK_END)
+            size = fh.tell()
+            fh.seek(max(0, size - limit))
+            data = fh.read()
+    except OSError:
+        return []
+    return data.decode("utf-8", errors="replace").splitlines()
+
+
+def last_run(now: float | None = None, active: bool | None = None) -> LastRun:
+    """Последний прогон по журналу аудита."""
+    now = datetime.now().timestamp() if now is None else now
+    active = run_active() if active is None else active
+    run = LastRun()
+    for line in _read_log_tail():
+        m = _LOG_LINE.match(line)
+        if not m:
+            continue
+        try:
+            at = datetime.fromisoformat(m.group(1)).timestamp()
+        except ValueError:
+            continue
+        text = m.group(2).strip()
+        if text == "=== запуск аудита ===":
+            run = LastRun(started=at, status="идёт")
+        elif not run.started:
+            continue
+        elif text.startswith("готово:"):
+            run.finished, run.status = at, "готово"
+            name = Path(text.partition(":")[2].strip()).name
+            date = name[4:-3] if name.startswith("rep_") and name.endswith(".md") else ""
+            run.report_date = date if DATE_RE.match(date) else ""
+        elif text.startswith("ОШИБКА"):
+            # Ошибка сбора не обрывает аудит: отчёт всё равно пишется, но
+            # недостоверный — это и надо показать, даже если «готово» придёт.
+            run.message = text
+    if run.status == "готово" and run.message:
+        run.status = "ошибка"
+    # Сбой, которого журнал не видит: аудит не запустился или был убит по
+    # сроку. Отметка в памяти свежее последнего запуска в журнале — верим ей.
+    info = run_info()
+    if not active and info["error"] and float(info["started"]) >= run.started - 1:
+        run = LastRun(started=float(info["started"]), status="ошибка", message=str(info["error"]))
+    if run.status == "идёт" and not active and now - run.started > RUN_LIMIT_SEC:
+        run.status = "оборван"
+        run.message = "строки о завершении в журнале нет — прогон не дошёл до конца"
+    return run
 
 
 def approve_baseline() -> str:

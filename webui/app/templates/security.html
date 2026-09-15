@@ -77,9 +77,29 @@
     <div class="panel__head">Прогнать сейчас</div>
     <div class="panel__body">
       <div id="sec-running" class="note note--ok" {% if not running.active %}hidden{% endif %}>
-        Идёт прогон ({{ running.mode }}). Это занимает несколько минут:
-        обход файловой системы за SUID-бинарниками — самая долгая часть.
+        Идёт прогон ({{ running.mode }}). Обычно он укладывается в минуту;
+        со страницы можно уйти — прогон идёт на сервере, а не в браузере.
       </div>
+
+      {# Итог прошлого прогона — по журналу аудита. Без него вернувшийся на
+         страницу видит только погасшую надпись «Идёт прогон» и не отличит
+         законченный прогон от оборванного. `is defined` — до перезапуска
+         службы Python ещё старый (см. time-macros.html). #}
+      {% if last_run is defined and last_run.status and not running.active %}
+        <div id="sec-last-run" class="note {% if last_run.status == 'готово' %}note--ok{% else %}note--warn{% endif %}">
+          {% if last_run.status == 'готово' %}
+            Последний прогон закончен {{ time.when(last_run.finished, fallback='') }}
+            за {{ last_run.seconds }} с{% if last_run.report_date %} —
+            <a href="{{ root_path }}/sec/reports/{{ last_run.report_date }}">отчёт</a>{% endif %}.
+          {% elif last_run.status == 'идёт' %}
+            Идёт прогон, начатый {{ time.when(last_run.started, fallback='') }} не с этой
+            страницы (например, ночной).
+          {% else %}
+            Последний прогон ({{ time.when(last_run.started, fallback='') }}) {{ last_run.status }}:
+            {{ last_run.message }}.
+          {% endif %}
+        </div>
+      {% endif %}
 
       <form method="post" action="{{ url_for('sec_run') }}">
         <input type="hidden" name="mode" value="full">

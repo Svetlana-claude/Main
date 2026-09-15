@@ -49,6 +49,7 @@ def sec_page(request: Request):
             "active": "sec",
             "state": security.state(),
             "running": security.run_info(),
+            "last_run": security.last_run(),
             "err": request.query_params.get("err", ""),
             "ok": request.query_params.get("ok", ""),
         },
@@ -89,7 +90,8 @@ def sec_run(request: Request, mode: str = Form("full")):
         security.start_run(remediate=(mode == "full"))
     except security.SecError as exc:
         return _back(request, err=str(exc))
-    return _back(request, ok="Прогон запущен. Отчёт появится в списке, когда он закончится.")
+    return _back(request, ok="Прогон запущен. Он идёт на сервере: со страницы можно уйти, "
+                             "итог будет виден здесь, когда вернётесь.")
 
 
 @router.post("/sec/baseline", name="sec_baseline")

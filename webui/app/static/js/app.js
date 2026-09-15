@@ -1013,8 +1013,9 @@ function initSecPanel(opts) {
             buttons.forEach(function (b) { b.disabled = !!data.running; });
 
             // Прогон закончился — перезагружаем страницу: в списке появился
-            // новый отчёт, а дорисовывать его по кусочкам незачем.
-            if (wasRunning && !data.running) location.reload();
+            // новый отчёт, а дорисовывать его по кусочкам незачем. Без ?ok=:
+            // иначе после конца прогона снова висело бы «Прогон запущен».
+            if (wasRunning && !data.running) location.replace(location.pathname);
             wasRunning = !!data.running;
         } catch (err) {
             /* связь моргнула — подтянется следующим опросом */

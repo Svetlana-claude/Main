@@ -7,7 +7,8 @@
 по завершении, значит оборванный пропадает вместе с проделанной работой.
 
 Отсюда устройство кнопки: она не перезапускает службу сразу, а **ставит
-перезапуск в очередь** и ждёт, пока не завершатся все выполняющиеся ответы.
+перезапуск в очередь** и ждёт, пока не завершатся все выполняющиеся ответы
+(и ручной прогон аудита с вкладки «Безопасность» — он в той же группе).
 Счётчик ответов ведёт драйвер. Когда счётчик обнулился, служба уходит на
 перезапуск; браузер тем временем опрашивает состояние и сам обновляет страницу.
 
@@ -18,7 +19,7 @@ import asyncio
 from dataclasses import dataclass
 from datetime import datetime, timezone
 
-from . import claude_driver
+from . import claude_driver, security
 
 RESTART_ARGV = ["/usr/bin/sudo", "-n", "/usr/bin/systemctl", "restart", "webui"]
 
@@ -52,6 +53,12 @@ class State:
         }
 
 
+def _busy() -> int:
+    """Сколько работы оборвёт остановка: ответы плюс идущий прогон аудита.
+    Аудит запущен приложением и живёт в той же контрольной группе."""
+    return claude_driver.active_runs() + (1 if security.run_active() else 0)
+
+
 state = State()
 _task: asyncio.Task | None = None     # ссылка нужна, чтобы задачу не собрал сборщик
 
@@ -64,7 +71,7 @@ def request(login: str) -> State:
     state.pending = True
     state.requested_by = login
     state.requested_at = datetime.now(timezone.utc)
-    state.waiting_for = claude_driver.active_runs()
+    state.waiting_for = _busy()
     state.error = ""
     _task = asyncio.create_task(_worker())
     return state
@@ -73,7 +80,7 @@ def request(login: str) -> State:
 def current() -> State:
     """Состояние для опроса из браузера, со свежим числом ответов."""
     if state.pending:
-        state.waiting_for = claude_driver.active_runs()
+        state.waiting_for = _busy()
     return state
 
 
@@ -82,8 +89,8 @@ async def _worker() -> None:
     await asyncio.sleep(GRACE_SEC)
 
     waited = 0.0
-    while claude_driver.active_runs() > 0 and waited < MAX_WAIT_SEC:
-        state.waiting_for = claude_driver.active_runs()
+    while _busy() > 0 and waited < MAX_WAIT_SEC:
+        state.waiting_for = _busy()
         await asyncio.sleep(POLL_SEC)
         waited += POLL_SEC
     state.waiting_for = 0

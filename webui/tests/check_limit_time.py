@@ -21,6 +21,7 @@ Claude Code пишет «You've hit your session limit · resets 9:50am (UTC)» 
 """
 import json
 import os
+import shutil
 import socket
 import subprocess
 import sys
@@ -217,6 +218,9 @@ def check_live() -> None:
             db.execute("DELETE FROM settings WHERE key = 'timezone'")
         else:
             db.execute("UPDATE settings SET value = %s WHERE key = 'timezone'", (before_tz,))
+        # Заглушка исполняемая: забытая в /tmp, она попадает в ночной отчёт
+        # безопасности как признак майнера (раздел MINER_IOC)
+        shutil.rmtree(fake.parent, ignore_errors=True)
 
 
 def main() -> int:
