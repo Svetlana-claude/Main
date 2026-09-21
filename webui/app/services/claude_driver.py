@@ -18,6 +18,7 @@ from pathlib import Path
 from typing import AsyncIterator
 
 from .. import config
+from . import claude_auth
 
 # Инструменты, которые в чатике не нужны: это болтовня, а не работа с файлами
 CHAT_DISALLOWED = [
@@ -401,8 +402,17 @@ async def run(
 
         if proc.returncode != 0 and not result.text:
             tail = "\n".join(stderr_tail[-5:]) or f"код возврата {proc.returncode}"
+            if claude_auth.is_auth_error(tail):
+                claude_auth.mark_failed()
             yield {"type": "error", "message": tail}
             return
+
+        # Признак «вход не работает» для плашки в шапке: ставит его ответ
+        # с ошибкой входа, снимает любой нормальный ответ.
+        if result.is_error and claude_auth.is_auth_error(result.text):
+            claude_auth.mark_failed()
+        elif not result.is_error:
+            claude_auth.mark_ok()
 
         yield {
             "type": "result",

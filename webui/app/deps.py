@@ -6,6 +6,7 @@ from fastapi.responses import RedirectResponse
 from fastapi.templating import Jinja2Templates
 
 from . import config, db, security, timefmt
+from .services import claude_auth
 
 templates = Jinja2Templates(directory=str(config.TEMPLATES_DIR))
 
@@ -57,7 +58,7 @@ def _local_time(tz):
 
 def _local_limit(tz):
     def local_limit(text: str, said_at) -> str:
-        return timefmt.localize_limit(text, said_at, tz)
+        return claude_auth.explain(timefmt.localize_limit(text, said_at, tz))
     return local_limit
 
 
@@ -78,6 +79,8 @@ def render(request: Request, template: str, ctx: dict | None = None):
         "local_time": _local_time(timefmt.zone(settings)),
         # Сообщение об исчерпанном лимите — со временем сброса в том же поясе.
         "local_limit": _local_limit(timefmt.zone(settings)),
+        # Плашка «вход Claude истёк» в шапке — на любой странице, не только в чате.
+        "claude_auth_problem": claude_auth.problem() if user else "",
     }
     if ctx:
         data.update(ctx)

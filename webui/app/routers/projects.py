@@ -19,7 +19,7 @@ from fastapi.responses import FileResponse, JSONResponse, RedirectResponse, Stre
 
 from .. import config, db, timefmt
 from ..deps import current_user, render
-from ..services import claude_driver, runs
+from ..services import claude_auth, claude_driver, runs
 from .chats import _save_answer
 
 router = APIRouter()
@@ -531,8 +531,8 @@ async def topic_send(request: Request, topic_id: int, text: str = Form(...)):
                 # путём, не событием error). В базу — как есть, на экран — со
                 # временем сброса в поясе из настроек.
                 if event.get("is_error") and event.get("text"):
-                    event = {**event, "text": timefmt.localize_limit(
-                        event["text"], datetime.now(timezone.utc), timefmt.zone())}
+                    event = {**event, "text": claude_auth.explain(timefmt.localize_limit(
+                        event["text"], datetime.now(timezone.utc), timefmt.zone()))}
             elif event["type"] == "error":
                 db.execute(
                     "INSERT INTO messages (conversation_id, role, content) "
@@ -541,8 +541,8 @@ async def topic_send(request: Request, topic_id: int, text: str = Form(...)):
                 )
                 # В базе — строка Claude Code как есть, на экран — со временем
                 # сброса лимита в поясе из настроек.
-                event = {**event, "message": timefmt.localize_limit(
-                    event["message"], datetime.now(timezone.utc), timefmt.zone())}
+                event = {**event, "message": claude_auth.explain(timefmt.localize_limit(
+                    event["message"], datetime.now(timezone.utc), timefmt.zone()))}
             await run.append(event)
 
     runs.start(RUN_KIND, topic_id, producer)

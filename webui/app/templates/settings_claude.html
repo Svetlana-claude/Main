@@ -1,0 +1,135 @@
+{% extends "base.html" %}
+{% import "time-macros.html" as time with context %}
+{% block title %}Вход Claude{% endblock %}
+{% block content %}
+
+{% if err %}<div class="note note--warn" style="white-space:pre-wrap">{{ err }}</div>{% endif %}
+{% if ok %}<div class="note note--ok">{{ ok }}</div>{% endif %}
+
+<div class="panel">
+  <div class="panel__head">
+    Вход Claude
+    <span class="spacer"></span>
+    <a class="btn btn--plain" href="{{ root_path }}/settings">К настройкам</a>
+  </div>
+  <div class="panel__body">
+
+    <p>
+      Чаты и темы работают через Claude Code на сервере, и входит он по вашей
+      подписке. Вход продлевается сам, но примерно раз в месяц его нужно
+      подтвердить заново, иначе на каждое сообщение приходит ошибка
+      «Failed to authenticate». Здесь это делается без SSH.
+    </p>
+
+    <div class="tablewrap">
+    <table class="table" style="max-width:640px">
+      <tr>
+        <th scope="row" style="width:40%">Состояние</th>
+        <td>
+          {% if status.failed %}
+            <span class="tag tag--err">вход истёк</span>
+          {% elif status.logged_in %}
+            <span class="tag tag--ok">вход выполнен</span>
+          {% else %}
+            <span class="tag tag--warn">не выполнен</span>
+          {% endif %}
+        </td>
+      </tr>
+      <tr><th scope="row">Аккаунт</th><td class="breakable">{{ status.email or '—' }}</td></tr>
+      <tr>
+        <th scope="row">Тариф</th>
+        <td>{% if status.subscription %}Claude {{ status.subscription | capitalize }}{% else %}—{% endif %}</td>
+      </tr>
+      <tr>
+        <th scope="row">Вход действует до</th>
+        <td>{% if status.refresh_expires %}{{ time.when(status.refresh_expires) }}{% else %}—{% endif %}</td>
+      </tr>
+    </table>
+    </div>
+
+    {% if status.env_token %}
+      <div class="note note--warn" style="margin-top:12px">
+        Claude Code получает ключ из переменной окружения
+        <span class="mono">{{ status.env_token }}</span> и берёт его вместо
+        данных входа. Повторный вход здесь на работу чатов не повлияет,
+        пока эта переменная задана.
+      </div>
+    {% endif %}
+
+    <div class="field__hint" style="margin-top:12px">
+      «Вход выполнен» означает только, что данные входа на сервере есть.
+      Приняты ли они, покажет кнопка «Проверить»: она отправляет Claude
+      короткий вопрос, это расходует немного лимита.
+    </div>
+    <form method="post" action="{{ root_path }}/settings/claude/check" style="margin-top:8px">
+      <button class="btn" type="submit">Проверить</button>
+    </form>
+  </div>
+</div>
+
+<div class="panel">
+  <div class="panel__head">Повторный вход</div>
+  <div class="panel__body">
+
+  {% if flow and flow.state == 'waiting_code' %}
+
+    <ol>
+      <li>
+        Откройте ссылку. Она ведёт на claude.com:
+        <div style="margin-top:6px">
+          <a class="btn btn--primary" href="{{ flow.url }}" target="_blank" rel="noopener noreferrer">Открыть страницу входа</a>
+        </div>
+      </li>
+      <li style="margin-top:8px">Войдите в аккаунт <b>{{ status.email or 'Claude' }}</b> и нажмите «Authorize».</li>
+      <li style="margin-top:8px">claude.com покажет код. Скопируйте его кнопкой «Copy Code» и вставьте ниже.</li>
+    </ol>
+
+    {# Кнопка гасится в onsubmit, а не в onclick: погашенная в onclick кнопка
+       плюс form.submit() дают вторую отправку, и второй ответ («вход не начат»)
+       перекрыл бы итог первого. #}
+    <form method="post" action="{{ root_path }}/settings/claude/code" style="max-width:520px"
+          onsubmit="var b=this.querySelector('button');b.disabled=true;b.textContent='Проверяю…'">
+      <div class="field">
+        <label class="field__label" for="claude-code">Код с claude.com</label>
+        <input class="input mono" id="claude-code" name="code" required autofocus
+               autocomplete="off" spellcheck="false">
+        <div class="field__hint">
+          Ссылка действует ещё около {{ flow.minutes_left }} мин. После кода
+          приложение проверит вход коротким вопросом к Claude, это занимает до
+          минуты.
+        </div>
+      </div>
+      <button class="btn btn--primary" type="submit">Подтвердить</button>
+    </form>
+    <form method="post" action="{{ root_path }}/settings/claude/cancel" style="margin-top:8px">
+      <button class="btn btn--plain" type="submit">Отменить</button>
+    </form>
+
+    <div class="note note--warn" style="margin-top:16px">
+      Код и ссылка дают вход в ваш аккаунт Claude. Не пересылайте их
+      и не показывайте другим.
+    </div>
+
+  {% else %}
+
+    {% if flow and flow.state == 'done' %}
+      <div class="note note--ok">{{ flow.message }}</div>
+    {% elif flow and flow.state == 'failed' %}
+      <div class="note note--err" style="white-space:pre-wrap">{{ flow.message }}</div>
+    {% endif %}
+
+    <p>
+      Приложение запустит на сервере <span class="mono">claude auth login</span>
+      и покажет ссылку на claude.com. Пока вход не завершён, прежние данные
+      входа остаются в силе.
+    </p>
+    <form method="post" action="{{ root_path }}/settings/claude/start"
+          onsubmit="var b=this.querySelector('button');b.disabled=true;b.textContent='Получаю ссылку…'">
+      <button class="btn btn--primary" type="submit">Войти заново</button>
+    </form>
+
+  {% endif %}
+  </div>
+</div>
+
+{% endblock %}

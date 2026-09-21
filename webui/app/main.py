@@ -7,7 +7,7 @@ from fastapi import FastAPI
 from fastapi.staticfiles import StaticFiles
 
 from . import config, db
-from .routers import auth, chats, dashboard, projects, security, settings, totp, vpn
+from .routers import auth, chats, claude_login, dashboard, projects, security, settings, totp, vpn
 
 
 async def _cleanup_loop() -> None:
@@ -63,6 +63,7 @@ app.include_router(vpn.router)
 app.include_router(security.router)
 app.include_router(settings.router)
 app.include_router(totp.router)
+app.include_router(claude_login.router)
 
 
 @app.get("/healthz", include_in_schema=False)

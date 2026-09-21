@@ -40,6 +40,15 @@
     <a class="nav__item {% if active == 'journal' %}nav__item--active{% endif %}" href="{{ url_for('journal') }}">Журнал</a>
     <a class="nav__item {% if active == 'search' %}nav__item--active{% endif %}" href="{{ url_for('search') }}">Поиск</a>
   </nav>
+  {# Вход Claude истёк — сказать сразу, на любой странице: иначе об этом
+     узнают только по ошибке в чате. Адрес собран вручную по той же причине,
+     что и у вкладок выше. #}
+  {% if claude_auth_problem is defined and claude_auth_problem %}
+  <div class="note note--err" role="alert" style="margin:0;border-radius:0">
+    {{ claude_auth_problem }}
+    <a href="{{ root_path }}/settings/claude">Войти заново</a>
+  </div>
+  {% endif %}
   {% endif %}
 
   {% block layout %}
