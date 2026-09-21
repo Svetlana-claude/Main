@@ -1,0 +1,560 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>SkyCenter — сертификат, конверт и книжка парашютиста: 3 варианта стиля</title>
+<link rel="stylesheet" href="fonts.css">
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+<!-- Общие графические элементы: знак-купол, фигура в свободном падении, фольга -->
+<svg width="0" height="0" style="position:absolute" aria-hidden="true" focusable="false">
+  <defs>
+    <linearGradient id="foil" x1="0" y1="0" x2="1" y2=".35">
+      <stop offset="0" stop-color="#7E8C99"/><stop offset=".3" stop-color="#F4F7FA"/>
+      <stop offset=".52" stop-color="#A7B3BF"/><stop offset=".72" stop-color="#EEF2F5"/>
+      <stop offset="1" stop-color="#8593A0"/>
+    </linearGradient>
+    <clipPath id="mark-clip"><path d="M4 25C9 8 55 8 60 25C49 20.5 15 20.5 4 25Z"/></clipPath>
+  </defs>
+  <!-- Знак SkyCenter: крыло-купол, стропы и парашютист-точка -->
+  <symbol id="mark" viewBox="0 0 64 64">
+    <path d="M4 25C9 8 55 8 60 25C49 20.5 15 20.5 4 25Z" style="fill:var(--mark-fill,currentColor)"/>
+    <g clip-path="url(#mark-clip)" style="stroke:var(--mark-cut,#fff)" stroke-width="1.4">
+      <path d="M13.5 4V30M22.8 4V30M32 4V30M41.2 4V30M50.5 4V30"/>
+    </g>
+    <g fill="none" stroke-width="1.1" style="stroke:var(--mark-line,currentColor)">
+      <path d="M5.5 25L32 48M17 22L32 48M32 21.2V48M47 22L32 48M58.5 25L32 48"/>
+    </g>
+    <circle cx="32" cy="52" r="4.2" style="fill:var(--mark-accent,currentColor)"/>
+  </symbol>
+  <!-- Парашютист в свободном падении, вид сбоку: животом к земле, руки вверх, голени согнуты -->
+  <symbol id="flyer" viewBox="0 0 100 60">
+    <g fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round">
+      <path d="M29 33L60 37" stroke-width="12"/>
+      <path d="M33 30L39 15L29 6" stroke-width="6"/>
+      <path d="M60 37L76 31L86 17M60 38L79 38L93 28" stroke-width="7"/>
+      <path d="M44 12V4M53 16V6M66 22V12" stroke-width="2.4" stroke-opacity=".55"/>
+    </g>
+    <circle cx="18" cy="33" r="7.5" fill="currentColor"/>
+  </symbol>
+</svg>
+
+<header class="page-head">
+  <div class="page-head-inner">
+    <div class="logo" aria-label="SkyCenter, дропзона Пущино">
+      <svg class="logo-mark" aria-hidden="true"><use href="#mark"/></svg>
+      <div class="logo-type"><b>SKYCENTER</b><span>DZ Пущино</span></div>
+    </div>
+    <h1>Сертификат, конверт и&nbsp;книжка парашютиста: 3&nbsp;варианта</h1>
+    <p>Все три варианта держатся на одной основе: голубой SkyCenter, глубокий тёмно-синий,
+      один оранжевый акцент цвета купола и новый знак (крыло-купол со стропами и
+      парашютистом-точкой). Отличаются характером: «билет на рейс», «премиум с высоты» и
+      «энергия свободного падения». Все изделия показаны в реальном формате, в миллиметрах.</p>
+    <nav class="page-nav" aria-label="Варианты">
+      <a href="#var-a">A · Рейс SC-4000</a>
+      <a href="#var-b">B · Высота</a>
+      <a href="#var-c">C · Свободное падение</a>
+      <a href="#compare">Сравнение</a>
+    </nav>
+  </div>
+</header>
+
+<main>
+
+<!-- ============================ ВАРИАНТ A ============================ -->
+<section class="variant" id="var-a" aria-labelledby="var-a-title">
+  <div class="variant-inner">
+    <div class="variant-head">
+      <div>
+        <div class="variant-label">Вариант A · от Virgin Galactic и Skydive Dubai</div>
+        <h2 id="var-a-title">«Рейс SC-4000»</h2>
+        <p>Сертификат оформлен как посадочный талон на рейс в небо: пассажир, рейс, высота,
+          выход на посадку, отрывной корешок. Конверт — «авиапочта» с маркой и штемпелем
+          Пущино, книжка — паспорт парашютиста.</p>
+        <ul>
+          <li>Понятен без слов: «билет» дарить приятно и легко объяснить.</li>
+          <li>Светлая бумага — дешёвая печать, легко вписать имя от руки.</li>
+          <li>Фон — вид сверху на Оку, поля и полосу аэродрома.</li>
+        </ul>
+      </div>
+      <div>
+        <div class="swatches">
+          <div class="swatch"><i style="background:#30CFFA"></i><b>Небо</b>#30CFFA</div>
+          <div class="swatch"><i style="background:#0B1B2B"></i><b>Высота</b>#0B1B2B</div>
+          <div class="swatch"><i style="background:#F2600C"></i><b>Купол</b>#F2600C</div>
+          <div class="swatch"><i style="background:#EAF9FE"></i><b>Воздух</b>#EAF9FE</div>
+        </div>
+        <p class="fonts-note"><b>Шрифты:</b> Oswald — заголовки (наследник Bebas Neue с сайта,
+          с кириллицей), JetBrains Mono — «билетные» данные, Manrope — текст.</p>
+      </div>
+    </div>
+
+    <h3 class="item-title">Подарочный сертификат</h3>
+    <p class="item-sub">Евроформат 210×99 мм, корешок 52 мм отрывается по перфорации и остаётся на стойке регистрации.</p>
+    <div class="stage" tabindex="0" role="region" aria-label="Вариант A, сертификат">
+      <figure>
+        <article class="a-cert shadow">
+          <div class="a-main">
+            <div class="a-bar">
+              <div class="logo"><svg class="logo-mark" aria-hidden="true"><use href="#mark"/></svg><div class="logo-type"><b>SKYCENTER</b><span>DZ Пущино</span></div></div>
+              <div class="a-bar-note">ПОСАДОЧНЫЙ ТАЛОН · BOARDING PASS</div>
+            </div>
+            <div class="a-body">
+              <div class="a-map" aria-hidden="true"></div>
+              <div class="a-kicker">Подарочный сертификат</div>
+              <div class="a-title">Прыжок в тандеме</div>
+              <div class="a-route">
+                <div class="a-code">ПЩН<small>Аэродром Пущино</small></div>
+                <svg class="a-path" viewBox="0 0 136 40" aria-hidden="true">
+                  <path d="M2 34C40 34 60 6 134 6" fill="none" stroke="currentColor" stroke-width="1.6" stroke-dasharray="4 4"/>
+                  <use href="#mark" x="52" y="0" width="30" height="30"/>
+                </svg>
+                <div class="a-code">4000<small>метров · небо</small></div>
+              </div>
+              <dl class="a-fields">
+                <div class="wide"><dt>Пассажир</dt><dd class="name">Анна Смирнова</dd></div>
+                <div class="wide"><dt>С любовью от</dt><dd>Сергея</dd></div>
+                <div><dt>Рейс</dt><dd>SC-4000</dd></div>
+                <div><dt>Свободное падение</dt><dd>≈ 50 секунд</dd></div>
+                <div><dt>Действует до</dt><dd>21.09.2027</dd></div>
+                <div><dt>Выход</dt><dd>Старт, ангар 1</dd></div>
+              </dl>
+            </div>
+          </div>
+          <aside class="a-stub">
+            <span class="a-tag">Тандем</span>
+            <div class="a-stub-flight">SC-4000</div>
+            <div class="a-stub-name">Анна Смирнова</div>
+            <div class="a-stub-row">
+              <div class="a-stub-num">№ 0421<br>до 21.09.2027<br>skycenter.su</div>
+              <img src="img/qr-navy.svg" alt="QR-код: запись на прыжок на skycenter.su">
+            </div>
+            <div class="a-barcode" aria-hidden="true"></div>
+          </aside>
+        </article>
+        <figcaption>Лицевая сторона. Тег «Тандем» меняется по услуге: AFF, спортивный прыжок, вингсьют.</figcaption>
+      </figure>
+    </div>
+
+    <h3 class="item-title">Подарочный конверт</h3>
+    <p class="item-sub">Формат DL-плюс 220×110 мм под сертификат-талон. Кант «авиапочта» из трёх фирменных цветов.</p>
+    <div class="stage" tabindex="0" role="region" aria-label="Вариант A, конверт">
+      <figure>
+        <div class="a-env shadow">
+          <div class="a-env-in">
+            <div class="logo"><svg class="logo-mark" aria-hidden="true"><use href="#mark"/></svg><div class="logo-type"><b>SKYCENTER</b><span>DZ Пущино</span></div></div>
+            <div class="a-env-title">Внутри — <span>билет</span><br>в небо</div>
+            <div class="a-env-sub">Посадочный талон на рейс SC-4000</div>
+            <svg class="a-postmark" viewBox="0 0 100 100" aria-hidden="true">
+              <circle cx="50" cy="50" r="30" fill="none" stroke="currentColor" stroke-width="2"/>
+              <circle cx="50" cy="50" r="23" fill="none" stroke="currentColor" stroke-width="1"/>
+              <text x="50" y="47" text-anchor="middle" font-family="Oswald" font-size="11" fill="currentColor">ПУЩИНО</text>
+              <text x="50" y="60" text-anchor="middle" font-family="JetBrains Mono" font-size="7" fill="currentColor">21·09·26</text>
+              <path d="M-40 38q7-5 14 0t14 0t14 0M-40 50q7-5 14 0t14 0t14 0M-40 62q7-5 14 0t14 0t14 0" fill="none" stroke="currentColor" stroke-width="1.6"/>
+            </svg>
+            <div class="a-stamp"><div class="a-stamp-in"><small>АВИА · SKY</small><svg aria-hidden="true"><use href="#mark"/></svg><b>4000 М</b></div></div>
+            <div class="a-env-to">
+              <div>КОМУ <span class="hand">Анне</span></div>
+              <div>ОТ КОГО <span class="hand">от Серёжи</span></div>
+            </div>
+          </div>
+        </div>
+        <figcaption>Лицевая сторона: марка, штемпель, строки «кому / от кого» для надписи от руки.</figcaption>
+      </figure>
+      <figure>
+        <div class="a-env a-env-back shadow">
+          <div class="a-env-in">
+            <div class="a-flap"></div>
+            <div class="a-seal"><svg aria-hidden="true"><use href="#mark"/></svg></div>
+            <div class="a-env-foot">SKYCENTER.SU · АЭРОДРОМ ПУЩИНО</div>
+          </div>
+        </div>
+        <figcaption>Оборот: клапан и круглая наклейка-печать со знаком.</figcaption>
+      </figure>
+    </div>
+
+    <h3 class="item-title">Книжка парашютиста</h3>
+    <p class="item-sub">Формат A6 105×148 мм, обложка как паспорт, внутри — данные владельца и учёт прыжков.</p>
+    <div class="stage" tabindex="0" role="region" aria-label="Вариант A, книжка парашютиста">
+      <figure>
+        <div class="a-book shadow">
+          <div class="a-book-kicker">SKYCENTER · DZ ПУЩИНО</div>
+          <svg class="a-book-mark" aria-hidden="true"><use href="#mark"/></svg>
+          <div class="a-book-title">Книжка<br>парашютиста</div>
+          <div class="a-book-sub">SKYDIVER LOGBOOK</div>
+          <div class="a-book-foot"><span>№ 000127</span><span>2026</span></div>
+        </div>
+        <figcaption>Обложка.</figcaption>
+      </figure>
+      <figure>
+        <div class="spread a-spread shadow">
+          <section>
+            <div class="pg-head"><h4>Владелец</h4><span>OWNER</span></div>
+            <div class="owner">
+              <div class="photo">ФОТО 3×4</div>
+              <div class="lines">
+                <div>Фамилия <span class="hand">Смирнова</span></div>
+                <div>Имя <span class="hand">Анна</span></div>
+                <div>Дата рождения <span class="hand">14.03.1994</span></div>
+                <div>Группа крови</div>
+                <div>Экстренный контакт</div>
+              </div>
+            </div>
+            <div class="stamp-row">
+              <div class="stamp-box">Допуск к прыжкам
+                <div class="stamp-ink">SKYCENTER<br>ДОПУЩЕНА<br>09·2026</div></div>
+              <div class="stamp-box">Лицензия / разряд</div>
+            </div>
+            <span class="pg-num">2</span>
+          </section>
+          <section>
+            <div class="pg-head"><h4>Учёт прыжков</h4><span>JUMP LOG</span></div>
+            <table class="log">
+              <thead><tr><th>№</th><th>Дата</th><th>ЛА</th><th>Высота</th><th>Задерж.</th><th>Купол</th><th>Задание</th><th>Подпись</th></tr></thead>
+              <tbody>
+                <tr><td class="hand">1</td><td class="hand">21.09</td><td class="hand">L-410</td><td class="hand">4000</td><td class="hand">50</td><td class="hand">тандем</td><td class="hand">первый!</td><td class="hand">Иванов</td></tr>
+                <tr><td class="hand">2</td><td class="hand">04.10</td><td class="hand">L-410</td><td class="hand">4000</td><td class="hand">50</td><td class="hand">Navig. 260</td><td class="hand">AFF-1</td><td class="hand">Петров</td></tr>
+                <tr><td class="hand">3</td><td class="hand">04.10</td><td class="hand">L-410</td><td class="hand">4000</td><td class="hand">48</td><td class="hand">Navig. 260</td><td class="hand">AFF-2</td><td class="hand">Петров</td></tr>
+                <tr><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td></tr>
+                <tr><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td></tr>
+                <tr><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td></tr>
+                <tr><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td></tr>
+                <tr><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td></tr>
+                <tr><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td></tr>
+                <tr><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td></tr>
+                <tr><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td></tr>
+                <tr><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td></tr>
+                <tr><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td></tr>
+              </tbody>
+            </table>
+            <span class="pg-num">3</span>
+          </section>
+        </div>
+        <figcaption>Разворот: данные владельца и учёт прыжков, графы по образцу книжки парашютиста.</figcaption>
+      </figure>
+    </div>
+  </div>
+</section>
+
+<!-- ============================ ВАРИАНТ B ============================ -->
+<section class="variant" id="var-b" aria-labelledby="var-b-title">
+  <div class="variant-inner">
+    <div class="variant-head">
+      <div>
+        <div class="variant-label">Вариант B · от Virgin Galactic</div>
+        <h2 id="var-b-title">«Высота»</h2>
+        <p>Премиум-версия: тёмное небо на высоте 4000 м, топографические горизонтали,
+          серебряная фольга и шкала высоты с отметкой «4000 — вы здесь». Сертификат
+          выглядит как дорогой подарок, который не стыдно вручить руководителю или на юбилей.</p>
+        <ul>
+          <li>Печать на тёмном дизайнерском картоне, тиснение фольгой: знак, имя, рамка.</li>
+          <li>Графический приём — шкала высоты, общая для всех изделий.</li>
+          <li>Оранжевый только точкой: «вы здесь» на шкале и парашютист в знаке.</li>
+        </ul>
+      </div>
+      <div>
+        <div class="swatches">
+          <div class="swatch"><i style="background:#0B1B2B"></i><b>Высота</b>#0B1B2B</div>
+          <div class="swatch"><i style="background:linear-gradient(100deg,#7E8C99,#F4F7FA 30%,#A7B3BF 52%,#EEF2F5 72%,#8593A0)"></i><b>Фольга</b>серебро</div>
+          <div class="swatch"><i style="background:#30CFFA"></i><b>Небо</b>#30CFFA</div>
+          <div class="swatch"><i style="background:#F2600C"></i><b>Купол</b>#F2600C</div>
+        </div>
+        <p class="fonts-note"><b>Шрифты:</b> Unbounded — заголовки и имя (широкий, «космический»,
+          с кириллицей), JetBrains Mono — шкалы и номера, Manrope — текст.</p>
+      </div>
+    </div>
+
+    <h3 class="item-title">Подарочный сертификат</h3>
+    <p class="item-sub">A5 210×148 мм, горизонтальный. Фольга: знак, имя, рамка; горизонтали — лаком или конгревом.</p>
+    <div class="stage" tabindex="0" role="region" aria-label="Вариант B, сертификат">
+      <figure>
+        <article class="b-cert b-dark shadow">
+          <div class="b-frame" aria-hidden="true"></div>
+          <div class="b-scale" aria-hidden="true">
+            <div class="b-scale-line"></div>
+            <span class="b-here" style="top:0">4000</span>
+            <span style="top:25%">3000</span><span style="top:50%">2000</span>
+            <span style="top:75%">1000</span><span style="top:100%">0 м</span>
+          </div>
+          <div class="b-big" aria-hidden="true">4000</div>
+          <div class="b-top">
+            <div class="logo"><svg class="logo-mark b-mark" aria-hidden="true"><use href="#mark"/></svg><div class="logo-type"><b class="foil-text">SKYCENTER</b><span>DZ Пущино</span></div></div>
+            <div class="b-top-note">ПОДАРОЧНЫЙ<br>СЕРТИФИКАТ</div>
+          </div>
+          <div class="b-kicker">Небо ждёт</div>
+          <div class="b-name foil-text">Анна Смирнова</div>
+          <p class="b-lead"><b>Прыжок в тандеме с инструктором с высоты 4000 метров.</b>
+            Пятьдесят секунд свободного падения, полёт под куполом над Окой, видео и фото прыжка.</p>
+          <div class="b-foot">
+            <dl>
+              <div><dt>Номер</dt><dd>SC-0421</dd></div>
+              <div><dt>Действует до</dt><dd>21.09.2027</dd></div>
+              <div><dt>Запись</dt><dd>skycenter.su</dd></div>
+            </dl>
+            <img src="img/qr-silver.svg" alt="QR-код: запись на прыжок на skycenter.su">
+          </div>
+        </article>
+        <figcaption>Лицевая сторона. Шкала слева — сквозной элемент стиля.</figcaption>
+      </figure>
+    </div>
+
+    <h3 class="item-title">Подарочный конверт</h3>
+    <p class="item-sub">C5 229×162 мм под сертификат A5. Тёмный картон, знак — фольгой.</p>
+    <div class="stage" tabindex="0" role="region" aria-label="Вариант B, конверт">
+      <figure>
+        <div class="b-env b-dark shadow">
+          <div class="b-env-center">
+            <svg class="b-mark" aria-hidden="true"><use href="#mark"/></svg>
+            <div class="b-env-word foil-text">SKYCENTER</div>
+            <div class="b-env-line">ДЛЯ ТЕХ, КТО ГОТОВ К ВЫСОТЕ</div>
+          </div>
+          <div class="b-env-corner" style="left:10mm;bottom:9mm">N 54°49′ · E 37°37′</div>
+          <div class="b-env-corner" style="right:10mm;bottom:9mm">4000 M</div>
+        </div>
+        <figcaption>Лицевая сторона.</figcaption>
+      </figure>
+      <figure>
+        <div class="b-env b-env-back b-dark shadow">
+          <div class="b-flap"></div>
+          <svg class="b-flap-line" viewBox="0 0 229 162" preserveAspectRatio="none" aria-hidden="true">
+            <path d="M0 0L114.5 94L229 0" fill="none" stroke="#C9D3DC" stroke-opacity=".6" stroke-width=".5"/>
+          </svg>
+          <div class="b-seal"><svg aria-hidden="true"><use href="#mark"/></svg></div>
+        </div>
+        <figcaption>Оборот: клапан и печать из фольги.</figcaption>
+      </figure>
+    </div>
+
+    <h3 class="item-title">Книжка парашютиста</h3>
+    <p class="item-sub">A6 105×148 мм. Обложка из тёмного картона с фольгой, внутренний блок — тёплая бумага, пишется ручкой.</p>
+    <div class="stage" tabindex="0" role="region" aria-label="Вариант B, книжка парашютиста">
+      <figure>
+        <div class="b-book b-dark shadow">
+          <div class="logo"><svg class="logo-mark b-mark" aria-hidden="true"><use href="#mark"/></svg><div class="logo-type"><b class="foil-text">SKYCENTER</b><span>DZ Пущино</span></div></div>
+          <svg class="b-book-mark b-mark" aria-hidden="true"><use href="#mark"/></svg>
+          <div class="b-book-title foil-text">Книжка<br>парашютиста</div>
+          <div class="b-book-sub">SKYDIVER LOGBOOK</div>
+          <div class="b-book-no"><span>№ 000127</span><span>0 — 4000 M</span></div>
+        </div>
+        <figcaption>Обложка.</figcaption>
+      </figure>
+      <figure>
+        <div class="spread b-spread shadow">
+          <section>
+            <div class="pg-head"><h4>Владелец</h4><span>OWNER</span></div>
+            <div class="owner">
+              <div class="photo">ФОТО 3×4</div>
+              <div class="lines">
+                <div>Фамилия <span class="hand">Смирнова</span></div>
+                <div>Имя <span class="hand">Анна</span></div>
+                <div>Дата рождения <span class="hand">14.03.1994</span></div>
+                <div>Группа крови</div>
+                <div>Экстренный контакт</div>
+              </div>
+            </div>
+            <div class="stamp-row">
+              <div class="stamp-box">Допуск к прыжкам
+                <div class="stamp-ink">SKYCENTER<br>ДОПУЩЕНА<br>09·2026</div></div>
+              <div class="stamp-box">Лицензия / разряд</div>
+            </div>
+            <div class="b-alt-strip" aria-hidden="true"></div>
+            <span class="pg-num">2</span>
+          </section>
+          <section>
+            <div class="pg-head"><h4>Учёт прыжков</h4><span>JUMP LOG</span></div>
+            <table class="log">
+              <thead><tr><th>№</th><th>Дата</th><th>ЛА</th><th>Высота</th><th>Задерж.</th><th>Купол</th><th>Задание</th><th>Подпись</th></tr></thead>
+              <tbody>
+                <tr><td>001</td><td class="hand">21.09</td><td class="hand">L-410</td><td class="hand">4000</td><td class="hand">50</td><td class="hand">тандем</td><td class="hand">первый!</td><td class="hand">Иванов</td></tr>
+                <tr><td>002</td><td class="hand">04.10</td><td class="hand">L-410</td><td class="hand">4000</td><td class="hand">50</td><td class="hand">Navig. 260</td><td class="hand">AFF-1</td><td class="hand">Петров</td></tr>
+                <tr><td>003</td><td class="hand">04.10</td><td class="hand">L-410</td><td class="hand">4000</td><td class="hand">48</td><td class="hand">Navig. 260</td><td class="hand">AFF-2</td><td class="hand">Петров</td></tr>
+                <tr><td>004</td><td></td><td></td><td></td><td></td><td></td><td></td><td></td></tr>
+                <tr><td>005</td><td></td><td></td><td></td><td></td><td></td><td></td><td></td></tr>
+                <tr><td>006</td><td></td><td></td><td></td><td></td><td></td><td></td><td></td></tr>
+                <tr><td>007</td><td></td><td></td><td></td><td></td><td></td><td></td><td></td></tr>
+                <tr><td>008</td><td></td><td></td><td></td><td></td><td></td><td></td><td></td></tr>
+                <tr><td>009</td><td></td><td></td><td></td><td></td><td></td><td></td><td></td></tr>
+                <tr><td>010</td><td></td><td></td><td></td><td></td><td></td><td></td><td></td></tr>
+                <tr><td>011</td><td></td><td></td><td></td><td></td><td></td><td></td><td></td></tr>
+                <tr><td>012</td><td></td><td></td><td></td><td></td><td></td><td></td><td></td></tr>
+              </tbody>
+            </table>
+            <div class="b-alt-strip" aria-hidden="true"></div>
+            <span class="pg-num">3</span>
+          </section>
+        </div>
+        <figcaption>Разворот: номера прыжков предпечатаны, внизу полоса-шкала с отметкой.</figcaption>
+      </figure>
+    </div>
+  </div>
+</section>
+
+<!-- ============================ ВАРИАНТ C ============================ -->
+<section class="variant" id="var-c" aria-labelledby="var-c-title">
+  <div class="variant-inner">
+    <div class="variant-head">
+      <div>
+        <div class="variant-label">Вариант C · от Red Bull и GoPro</div>
+        <h2 id="var-c-title">«Свободное падение»</h2>
+        <p>Яркий и молодой: взгляд вниз с высоты на поля и Оку, фигура парашютиста,
+          крупный наклонный шрифт и оранжевая лента-«стоп-кадр». Герой — получатель подарка,
+          его имя крупно. Лучше всего работает в соцсетях и на витрине.</p>
+        <ul>
+          <li>Цвет-метка дисциплины: тандем — оранжевый, AFF — голубой, фрифлай — синий, вингсьют — тёмный.</li>
+          <li>В книжке — шкала прогресса до лицензии: хочется прыгать дальше.</li>
+          <li>Иллюстрация легко заменяется настоящим фото с высоты.</li>
+        </ul>
+      </div>
+      <div>
+        <div class="swatches">
+          <div class="swatch"><i style="background:#30CFFA"></i><b>Небо</b>#30CFFA</div>
+          <div class="swatch"><i style="background:#F2600C"></i><b>Купол</b>#F2600C</div>
+          <div class="swatch"><i style="background:#0075FF"></i><b>Синева</b>#0075FF</div>
+          <div class="swatch"><i style="background:#0B1B2B"></i><b>Высота</b>#0B1B2B</div>
+        </div>
+        <p class="fonts-note"><b>Шрифты:</b> Rubik Black Italic — лозунги и имя (движение),
+          Oswald — логотип, Manrope — текст.</p>
+      </div>
+    </div>
+
+    <h3 class="item-title">Подарочный сертификат</h3>
+    <p class="item-sub">A5 210×148 мм. Фон — вид сверху; в серийном тираже вместо иллюстрации фото с высоты над Пущино.</p>
+    <div class="stage" tabindex="0" role="region" aria-label="Вариант C, сертификат">
+      <figure>
+        <article class="c-cert c-ground shadow">
+          <div class="c-head">
+            <div class="logo"><svg class="logo-mark" aria-hidden="true"><use href="#mark"/></svg><div class="logo-type"><b>SKYCENTER</b><span>DZ Пущино</span></div></div>
+            <span class="c-chip">Подарочный сертификат</span>
+          </div>
+          <div class="c-shout">Ты<br><span>летишь!</span></div>
+          <svg class="c-flyer" aria-hidden="true"><use href="#flyer"/></svg>
+          <div class="c-band">Тандем <i>·</i> 4000 м <i>·</i> 50 секунд полёта</div>
+          <dl class="c-card">
+            <div><dt>Для</dt><dd class="name">Анна Смирнова</dd></div>
+            <div><dt>№</dt><dd>SC-0421</dd></div>
+            <div><dt>До</dt><dd>21.09.2027</dd></div>
+          </dl>
+          <div class="c-qr"><img src="img/qr-navy.svg" alt="QR-код: запись на прыжок на skycenter.su"><span>Записаться</span></div>
+        </article>
+        <figcaption>Лицевая сторона. Лента и чип перекрашиваются по дисциплине.</figcaption>
+      </figure>
+    </div>
+
+    <h3 class="item-title">Подарочный конверт</h3>
+    <p class="item-sub">220×110 мм, оранжевый — заметен в руках и на фото.</p>
+    <div class="stage" tabindex="0" role="region" aria-label="Вариант C, конверт">
+      <figure>
+        <div class="c-env shadow">
+          <div class="logo"><svg class="logo-mark" aria-hidden="true"><use href="#mark"/></svg><div class="logo-type"><b>SKYCENTER</b><span>DZ Пущино</span></div></div>
+          <div class="c-env-shout">Открывай.<br><span>Ты летишь!</span></div>
+          <svg class="c-flyer" aria-hidden="true"><use href="#flyer"/></svg>
+          <div class="c-env-foot">SKYCENTER.SU · 4000 М</div>
+          <div class="c-env-stripe" aria-hidden="true"></div>
+        </div>
+        <figcaption>Лицевая сторона.</figcaption>
+      </figure>
+      <figure>
+        <div class="c-env c-env-back shadow">
+          <div class="c-flap"></div>
+          <div class="c-sticker">Не открывать до&nbsp;взлёта</div>
+        </div>
+        <figcaption>Оборот: голубой, клапан оранжевый, наклейка-шутка.</figcaption>
+      </figure>
+    </div>
+
+    <h3 class="item-title">Книжка парашютиста</h3>
+    <p class="item-sub">A6 105×148 мм. Цветные закладки-вырубки по дисциплинам, в начале — шкала прогресса.</p>
+    <div class="stage" tabindex="0" role="region" aria-label="Вариант C, книжка парашютиста">
+      <figure>
+        <div class="c-book c-ground shadow">
+          <div class="c-book-title">Мои<br><span>прыжки</span></div>
+          <svg class="c-flyer" aria-hidden="true"><use href="#flyer"/></svg>
+          <div class="c-book-band">Книжка парашютиста</div>
+          <div class="logo"><svg class="logo-mark" aria-hidden="true"><use href="#mark"/></svg><div class="logo-type"><b>SKYCENTER</b><span>DZ Пущино</span></div></div>
+        </div>
+        <figcaption>Обложка.</figcaption>
+      </figure>
+      <figure>
+        <div class="spread c-spread shadow">
+          <section>
+            <div class="pg-head"><h4>Владелец</h4><span>OWNER</span></div>
+            <div class="owner">
+              <div class="photo">ФОТО 3×4</div>
+              <div class="lines">
+                <div>Фамилия <span class="hand">Смирнова</span></div>
+                <div>Имя <span class="hand">Анна</span></div>
+                <div>Дата рождения <span class="hand">14.03.1994</span></div>
+                <div>Группа крови</div>
+                <div>Экстренный контакт</div>
+              </div>
+            </div>
+            <div class="c-progress">
+              <b>До лицензии A — 3 из 25</b>
+              <p>Каждый прыжок приближает к самостоятельным полётам.</p>
+              <div class="c-bar"><i></i></div>
+              <div class="c-steps"><span>AFF</span><span>10</span><span>15</span><span>20</span><span>25 · A</span></div>
+            </div>
+            <span class="pg-num">2</span>
+          </section>
+          <section>
+            <div class="pg-head"><h4>Учёт прыжков</h4><span>JUMP LOG</span></div>
+            <table class="log">
+              <thead><tr><th>№</th><th>Дата</th><th>Вид</th><th>Высота</th><th>Задерж.</th><th>Купол</th><th>Задание</th><th>Подпись</th></tr></thead>
+              <tbody>
+                <tr><td class="hand">1</td><td class="hand">21.09</td><td><span class="dot dot-tandem" title="Тандем"></span></td><td class="hand">4000</td><td class="hand">50</td><td class="hand">тандем</td><td class="hand">первый!</td><td class="hand">Иванов</td></tr>
+                <tr><td class="hand">2</td><td class="hand">04.10</td><td><span class="dot dot-aff" title="AFF"></span></td><td class="hand">4000</td><td class="hand">50</td><td class="hand">Navig. 260</td><td class="hand">AFF-1</td><td class="hand">Петров</td></tr>
+                <tr><td class="hand">3</td><td class="hand">04.10</td><td><span class="dot dot-aff" title="AFF"></span></td><td class="hand">4000</td><td class="hand">48</td><td class="hand">Navig. 260</td><td class="hand">AFF-2</td><td class="hand">Петров</td></tr>
+                <tr><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td></tr>
+                <tr><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td></tr>
+                <tr><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td></tr>
+                <tr><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td></tr>
+                <tr><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td></tr>
+                <tr><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td></tr>
+                <tr><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td></tr>
+                <tr><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td></tr>
+              </tbody>
+            </table>
+            <div class="c-legend">
+              <span><i class="dot dot-tandem"></i>Тандем</span><span><i class="dot dot-aff"></i>AFF</span>
+              <span><i class="dot dot-free"></i>Фрифлай</span><span><i class="dot dot-wing"></i>Вингсьют</span>
+            </div>
+            <div class="c-tabs" aria-hidden="true">
+              <span style="background:var(--orange)">Тандем</span>
+              <span style="background:var(--sky);color:var(--navy)">AFF</span>
+              <span style="background:var(--blue)">Фрифлай</span>
+              <span style="background:var(--navy)">Вингсьют</span>
+            </div>
+            <span class="pg-num">3</span>
+          </section>
+        </div>
+        <figcaption>Разворот: прогресс до лицензии, в журнале — цветная метка вида прыжка.</figcaption>
+      </figure>
+    </div>
+  </div>
+</section>
+
+<section class="compare" id="compare" aria-labelledby="compare-title">
+  <h2 id="compare-title">Сравнение вариантов</h2>
+  <div class="table-wrap" tabindex="0" role="region" aria-label="Таблица сравнения">
+    <table>
+      <thead><tr><th></th><th>A · Рейс SC-4000</th><th>B · Высота</th><th>C · Свободное падение</th></tr></thead>
+      <tbody>
+        <tr><th>Характер</th><td>Дружелюбный, понятный, «билет в небо»</td><td>Премиальный, сдержанный, дорогой</td><td>Яркий, молодой, энергичный</td></tr>
+        <tr><th>Кому дарят</th><td>Всем: самый универсальный</td><td>Руководителю, на юбилей, корпоративный подарок</td><td>Друзьям, на день рождения, молодёжи</td></tr>
+        <tr><th>Печать</th><td>Самая простая: 4 краски на светлой бумаге, перфорация корешка</td><td>Дороже: тёмный картон, фольга, конгрев</td><td>4 краски, но нужна плотная запечатка и фото с высоты</td></tr>
+        <tr><th>Сайт и соцсети</th><td>Хорошо: талон легко сделать электронным</td><td>Спокойно, для премиальной линейки</td><td>Лучше всех: заметно в ленте</td></tr>
+        <tr><th>Риск</th><td>Метафора «билета» у конкурентов тоже встречается</td><td>Тёмное плохо копируется и читается при слабом свете</td><td>Быстрее устаревает, требует хорошей фотографии</td></tr>
+      </tbody>
+    </table>
+  </div>
+  <p style="margin-top:20px;max-width:820px">Рекомендация: <b>A — основной стиль</b> для всей линейки сертификатов,
+    <b>B — премиальная серия</b> (дорогие пакеты, корпоративные заказы) на той же основе.
+    Из C стоит забрать шкалу прогресса в книжку и цветные метки дисциплин.</p>
+</section>
+
+</main>
+</body>
+</html>
