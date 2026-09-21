@@ -157,7 +157,7 @@ webui/
 │   ├── timefmt.py          часовой пояс: показ UTC в поясе из настроек
 │   ├── schema.sql          схема, применяется идемпотентно при старте
 │   ├── routers/            auth, totp, dashboard, chats, projects, vpn,
-│   │                       security, settings
+│   │                       security, settings, claude_login
 │   ├── services/
 │   │   ├── claude_driver.py драйвер Claude Code, потолок контекста, сжатие
 │   │   ├── runs.py          фоновые запуски и SSE
@@ -166,11 +166,12 @@ webui/
 │   │   ├── restart.py       отложенный перезапуск
 │   │   ├── metrics.py       метрики сервера
 │   │   ├── totp.py          коды второго фактора, QR через qrencode
+│   │   ├── claude_auth.py   вход Claude: состояние, `claude auth login` в псевдотерминале
 │   │   ├── vpn.py           вызов обёртки webui-vpn и разбор вывода
 │   │   └── security.py      состояние аудита, отчёты, ручной прогон
 │   ├── templates/          base, login, login_totp, password, dashboard, chats,
 │   │                       projects, vpn, security, security_report, settings,
-│   │                       settings_totp, journal, search, time-macros
+│   │                       settings_totp, settings_claude, journal, search, time-macros
 │   └── static/css/app.css, static/js/app.js
 ├── deploy/                 копии конфигов nginx и systemd
 ├── tests/                  пробники check_*.py, запускаются вручную
@@ -260,6 +261,7 @@ nginx срезает префикс (`proxy_pass` со слешем), прило
 | `/settings`, `/settings/save`, `/settings/file`, `/settings/sessions/{id}/close` | настройки |
 | `/settings/restart`, `/settings/restart/state` | перезапуск и его состояние |
 | `/settings/totp`, `/start`, `/enable`, `/cancel`, `/disable` | второй фактор |
+| `/settings/claude`, `/start`, `/code`, `/cancel`, `/check` | вход Claude: срок, повторный вход, проверка |
 | `/export/{id}`, `/journal`, `/search`, `/healthz` | выгрузка, журнал, поиск, живость |
 
 ## 6. База
