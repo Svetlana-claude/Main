@@ -508,4 +508,8 @@ nginx срезает префикс (`proxy_pass` со слешем), прило
 - `prezentaciya-dlya-investorov.md` — что нужно для презентации инвесторам: примеры
   (Candela, Navier, Arc, Vision Marine, X Shore), что готовить заранее, комплект
   материалов, питч-дек по слайдам, трудные вопросы, чек-лист.
-- `downloads/` (не версионируется) — копии для «Файлов проекта».
+- `make_pdf.py` — собирает из свода PDF: Markdown → HTML с печатными стилями →
+  headless Chromium. Запуск: `webui/.venv/bin/python lodka/make_pdf.py`
+  (нужны `markdown` и `playwright` из `webui/.venv`). Шрифт DejaVu Sans с кириллицей.
+- `downloads/` (не версионируется) — копия свода и собранный PDF для «Файлов
+  проекта». PDF — производный файл: после правки `.md` пересобирается скриптом.
