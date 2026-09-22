@@ -37,6 +37,13 @@ Navier, Arc, Vision Marine) и провал X Shore, перечислено, ч�
 себестоимость. Есть и в PDF (9 страниц A4) — `lodka/downloads/prezentaciya-dlya-investorov.pdf`,
 собирается `lodka/make_pdf.py`.
 
+**22.09.2026. Документы по проектам выдаются в PDF.** Markdown заказчик не читает,
+поэтому в `downloads/` теперь лежит PDF. Собирает общий `tools/md2pdf.py`
+(Markdown → печатные стили → headless Chromium). Переведены все выдачи:
+`sc-parashyuty` (в фирменном оформлении — шрифты и цвета макета, `pdf.css`),
+`bezopasnost`, `webui`. Правило записано в `CLAUDE.md` пунктом 16: поправил
+документ — пересобери PDF.
+
 **22.09.2026. SkyCenter: выгрузка макетов в Illustrator.** Три варианта выгружены
 в `sc-parashyuty/downloads/ai/*.ai` — по 15 слоёв в файле (пять изделий × фон,
 графика, текст), слои гасятся по одному. Собирает `maket/export_ai.py` прямо из
