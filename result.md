@@ -37,6 +37,12 @@ Navier, Arc, Vision Marine) и провал X Shore, перечислено, ч�
 себестоимость. Есть и в PDF (9 страниц A4) — `lodka/downloads/prezentaciya-dlya-investorov.pdf`,
 собирается `lodka/make_pdf.py`.
 
+**22.09.2026. Шрифты макетов отданы в TTF.** В `sc-parashyuty/downloads/ai/fonts/`
+— 13 статических начертаний (те же, что в вёрстке), лицензии OFL, образец
+`shrifty-obrazec.pdf` и архив `downloads/shrifty-skycenter.zip`. Собирает
+`maket/fetch_fonts.py` из вариативных исходников google/fonts, образец печатает
+`maket/fonts_sample.py` — он же служит проверкой установки.
+
 **22.09.2026. Выгрузка `.ai` проверена векторным редактором.** На сервер поставлен
 Inkscape (Adobe Illustrator поставить нельзя — проприетарная программа для
 Windows/macOS). Файлы открываются, текст редактируемый, имена слоёв кириллицей

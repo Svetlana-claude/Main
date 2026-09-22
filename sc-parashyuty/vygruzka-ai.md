@@ -11,9 +11,33 @@
 | `variant-b-vysota.ai` | 752 × 388 мм | 15 |
 | `variant-c-svobodnoe-padenie.ai` | 734 × 374 мм | 15 |
 
-Рядом — папка `fonts/` с шрифтами (Manrope, Oswald, JetBrains Mono, Caveat,
-Unbounded, Rubik). Все под лицензией SIL Open Font License, текст лицензии лежит
-в папке каждого семейства. Шрифты ставятся в систему до открытия макета.
+Рядом — папка `fonts/` со шрифтами и образец `shrifty-obrazec.pdf`: все
+начертания в один разворот, с пометкой, где что применяется.
+
+## Шрифты
+
+В папке `fonts/` лежат 13 файлов TTF — ровно те начертания, что стоят в макетах,
+без лишнего:
+
+| Семейство | Начертания | Для чего в макете |
+|---|---|---|
+| Oswald | Medium 500, Bold 700 | заголовки, крупные числа, имя получателя |
+| Manrope | Regular 400, SemiBold 600, ExtraBold 800 | основной текст, подписи полей |
+| JetBrains Mono | Regular 400, Bold 700 | «билетные» данные: коды, даты, номера |
+| Caveat | Medium 500 | рукописные пометки в книжке парашютиста |
+| Unbounded | Regular 400, SemiBold 600, ExtraBold 800 | вариант B, контурные цифры |
+| Rubik | Black 900, Black Italic 900 | крупные выкрики варианта C |
+
+Одним файлом они же лежат в `shrifty-skycenter.zip` в корне папки выдачи.
+
+Все — SIL Open Font License: бесплатны, в том числе для коммерческой печати;
+текст лицензии по каждому семейству в файлах `OFL-*.txt`. Шрифты ставятся в
+систему **до** открытия макета, иначе Illustrator подставит чужие и строки
+разъедутся. На Windows: выделить все `.ttf` → правая кнопка → «Установить».
+На macOS: выделить все → двойной щелчок → «Установить шрифт».
+
+Проверить, что встало: откройте `shrifty-obrazec.pdf` и сравните с тем, что
+показывает Illustrator в списке шрифтов — названия совпадают дословно.
 
 ## Чем открывать
 
@@ -60,6 +84,7 @@ Unbounded, Rubik). Все под лицензией SIL Open Font License, те�
 собирается из него заново:
 
 ```
-.venv/bin/python maket/export_ai.py      # сами файлы .ai
-.venv/bin/python maket/fetch_fonts.py    # шрифты для установки
+.venv/bin/python maket/export_ai.py       # сами файлы .ai
+.venv/bin/python maket/fetch_fonts.py     # шрифты TTF для установки
+.venv/bin/python maket/fonts_sample.py    # образец начертаний
 ```
