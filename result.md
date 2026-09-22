@@ -37,6 +37,16 @@ Navier, Arc, Vision Marine) и провал X Shore, перечислено, ч�
 себестоимость. Есть и в PDF (9 страниц A4) — `lodka/downloads/prezentaciya-dlya-investorov.pdf`,
 собирается `lodka/make_pdf.py`.
 
+**22.09.2026. SkyCenter: выгрузка макетов в Illustrator.** Три варианта выгружены
+в `sc-parashyuty/downloads/ai/*.ai` — по 15 слоёв в файле (пять изделий × фон,
+графика, текст), слои гасятся по одному. Собирает `maket/export_ai.py` прямо из
+`index.html`: печатает лист по слою за проход и складывает страницы в PDF с
+группами необязательного содержимого. Текст — настоящий текст: шрифты переведены
+в статические начертания (`maket/static_fonts.py`), иначе Chromium встраивал их
+как Type 3 и править буквы было нельзя. Рядом лежат шрифты для установки
+(`maket/fetch_fonts.py`) и записка `sc-parashyuty/vygruzka-ai.md` с оговорками:
+вылетов нет, цвет RGB, контурные цифры варианта B и серебро — вручную.
+
 **21.09.2026. SkyCenter (`sc-parashyuty/`): гайдлайн и сертификаты.** Собраны
 4 референса (Skydive Dubai, Red Bull, Virgin Galactic, GoPro) и разобран текущий
 стиль сайта; предложена основа гайдлайна — `sc-parashyuty/referensy-firmennogo-stilya.md`.
