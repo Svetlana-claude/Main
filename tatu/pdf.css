@@ -1,0 +1,38 @@
+/* Оформление PDF для проекта «Тату» — иллюстрации и подписи к ним */
+
+img {
+  max-width: 100%;
+  height: auto;
+  border-radius: 3px;
+}
+
+/* Одиночная иллюстрация — по центру, не во всю ширину листа */
+p > img:only-child {
+  display: block;
+  max-width: 62%;
+  margin: 10px auto 4px;
+}
+
+/* Пара иллюстраций в одном абзаце — рядом, каждая в половину полосы */
+p > img:first-child:nth-last-child(2),
+p > img:first-child:nth-last-child(2) ~ img {
+  display: inline-block;
+  width: 48.5%;
+  vertical-align: top;
+  margin: 10px 0 4px;
+}
+p > img:first-child:nth-last-child(2) { margin-right: 2%; }
+
+/* Подпись под иллюстрацией — курсивный абзац сразу после картинки */
+p > em:only-child {
+  display: block;
+  font-size: 9.5pt;
+  color: #5f6b76;
+  text-align: center;
+  margin: 0 auto 14px;
+  max-width: 82%;
+}
+
+/* Иллюстрация с подписью не должна разрываться между страницами */
+p:has(> img) { break-inside: avoid; break-after: avoid; }
+p:has(> em:only-child) { break-inside: avoid; }
