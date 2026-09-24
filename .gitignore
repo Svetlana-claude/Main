@@ -35,6 +35,9 @@ __pycache__/
 # Папка выдачи проекта: файлы для скачивания через интерфейс, не версионируется
 downloads/
 
+# Фотографии к письму SkyCenter: качаются с Викисклада sc-parashyuty/foto/skachat.py
+sc-parashyuty/foto/*.jpg
+
 # Руководство пользователя: собирается скриптами webui/manual/, в git — только скрипты
 webui/manual/shots/
 webui/*.docx

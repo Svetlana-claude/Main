@@ -73,3 +73,41 @@ blockquote {
   background: #FFF1E8;
   border-left-color: #F2600C;
 }
+
+/* Фотографии: снимок с подписью не разрывается между страницами.
+   Высота ограничена, ширина считается от неё — иначе вертикальный кадр
+   занимает пол-листа. */
+figure {
+  margin: 4mm 0 5mm;
+  break-inside: avoid;
+}
+
+figure.shirokaya { width: 100%; }
+
+figure img {
+  display: block;
+  margin: 0 auto;
+  max-width: 100%;
+  max-height: 72mm;
+  width: auto;
+  border-radius: 1.5mm;
+}
+
+figure.shirokaya img {
+  width: 100%;
+  height: 52mm;
+  max-height: none;
+  object-fit: cover;
+}
+
+/* Подпись — во всю ширину полосы и по центру: под вертикальным кадром
+   узкая колонка подписи выглядела бы обрывком. */
+figcaption {
+  margin-top: 1.5mm;
+  text-align: center;
+  font-size: 8.5pt;
+  line-height: 1.35;
+  color: #55636F;
+}
+
+figcaption b { color: #0B1B2B; }
