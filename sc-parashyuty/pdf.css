@@ -111,3 +111,12 @@ figcaption {
 }
 
 figcaption b { color: #0B1B2B; }
+
+/* Макет целиком: кадрировать нельзя — смотрят именно композицию листа,
+   поэтому во всю ширину полосы и без ограничения по высоте. */
+figure.maket img {
+  width: 100%;
+  height: auto;
+  max-height: none;
+  border: .2mm solid #DCE3E8;
+}

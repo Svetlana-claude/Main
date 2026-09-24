@@ -1,0 +1,438 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>SkyCenter — подарочный сертификат: ещё 3 варианта и подбор шрифтов</title>
+<link rel="stylesheet" href="fonts.css">
+<link rel="stylesheet" href="fonts-varianty.css">
+<link rel="stylesheet" href="style.css">
+<link rel="stylesheet" href="sertifikat-varianty.css">
+</head>
+<body>
+
+<!-- Знак и градиенты. «Фольга» дана дважды: светлая для тёмного фона
+     и тёмная для печати по бумаге. -->
+<svg width="0" height="0" style="position:absolute" aria-hidden="true" focusable="false">
+  <defs>
+    <linearGradient id="foil" x1="0" y1="0" x2="1" y2=".35">
+      <stop offset="0" stop-color="#7E8C99"/><stop offset=".3" stop-color="#F4F7FA"/>
+      <stop offset=".52" stop-color="#A7B3BF"/><stop offset=".72" stop-color="#EEF2F5"/>
+      <stop offset="1" stop-color="#8593A0"/>
+    </linearGradient>
+    <linearGradient id="foil-print" x1="0" y1="0" x2="1" y2=".35">
+      <stop offset="0" stop-color="#46586A"/><stop offset=".28" stop-color="#92A2B0"/>
+      <stop offset=".52" stop-color="#5B6C7C"/><stop offset=".74" stop-color="#A3B2BE"/>
+      <stop offset="1" stop-color="#4C5E6D"/>
+    </linearGradient>
+    <clipPath id="mark-clip"><path d="M4 25C9 8 55 8 60 25C49 20.5 15 20.5 4 25Z"/></clipPath>
+  </defs>
+  <symbol id="mark" viewBox="0 0 64 64">
+    <path d="M4 25C9 8 55 8 60 25C49 20.5 15 20.5 4 25Z" style="fill:var(--mark-fill,currentColor)"/>
+    <g clip-path="url(#mark-clip)" style="stroke:var(--mark-cut,#fff)" stroke-width="1.4">
+      <path d="M13.5 4V30M22.8 4V30M32 4V30M41.2 4V30M50.5 4V30"/>
+    </g>
+    <g fill="none" stroke-width="1.1" style="stroke:var(--mark-line,currentColor)">
+      <path d="M5.5 25L32 48M17 22L32 48M32 21.2V48M47 22L32 48M58.5 25L32 48"/>
+    </g>
+    <circle cx="32" cy="52" r="4.2" style="fill:var(--mark-accent,currentColor)"/>
+  </symbol>
+</svg>
+
+<header class="page-head">
+  <div class="page-head-inner">
+    <div class="logo" aria-label="SkyCenter, дропзона Пущино">
+      <svg class="logo-mark" aria-hidden="true"><use href="#mark"/></svg>
+      <div class="logo-type"><b>SKYCENTER</b><span>DZ Пущино</span></div>
+    </div>
+    <h1>Подарочный сертификат: ещё 3&nbsp;варианта</h1>
+    <p>За основу взят вариант B «Высота» — он выбран по стилю. Первый из новых, D, —
+      тот же макет и те же приёмы, но печатью по светлой бумаге. Два других
+      поворачивают стиль в сторону серьёзности: E — инженерный бланк допуска,
+      F — приборная панель борта. Ниже — подбор шрифтов: одна и та же строка
+      в шести наборах, с разбором, что каждый обещает читателю.</p>
+    <nav class="page-nav" aria-label="Варианты">
+      <a href="#var-d">D · Высота. День</a>
+      <a href="#var-e">E · Допуск</a>
+      <a href="#var-f">F · Борт</a>
+      <a href="#fonts">Шрифты</a>
+      <a href="index.html">← первые три варианта</a>
+    </nav>
+  </div>
+</header>
+
+<main>
+
+<!-- ============================ ВАРИАНТ D ============================ -->
+<section class="variant" id="var-d" aria-labelledby="var-d-title">
+  <div class="variant-inner">
+    <div class="variant-head">
+      <div>
+        <div class="variant-label">Вариант D · светлый близнец варианта B</div>
+        <h2 id="var-d-title">«Высота. День»</h2>
+        <p>Тот же макет, та же сетка, те же приёмы — шкала высоты, горизонтали,
+          контурная «4000», — но небо дневное. Тёмный картон меняется на плотную
+          светлую бумагу, серебряная фольга остаётся фольгой: на белом она читается
+          тиснением, а не свечением.</p>
+        <ul>
+          <li>Печать дешевле: одна краска плюс фольга вместо сплошной заливки тёмным.</li>
+          <li>Имя вписывается от руки — по светлому это видно, по тёмному нет.</li>
+          <li>Сканируется и копируется без потерь: тёмный картон на копире «залипает».</li>
+        </ul>
+      </div>
+      <div>
+        <div class="swatches">
+          <div class="swatch"><i style="background:linear-gradient(115deg,#fff,#E8EFF5)"></i><b>Бумага</b>#F4F7FA</div>
+          <div class="swatch"><i style="background:linear-gradient(100deg,#46586A,#92A2B0 28%,#5B6C7C 52%,#A3B2BE 74%,#4C5E6D)"></i><b>Фольга</b>серебро</div>
+          <div class="swatch"><i style="background:#0075FF"></i><b>Небо</b>#0075FF</div>
+          <div class="swatch"><i style="background:#F2600C"></i><b>Купол</b>#F2600C</div>
+        </div>
+        <p class="fonts-note"><b>Шрифты:</b> те же, что в B — Unbounded, JetBrains Mono,
+          Manrope. Смысл варианта в том, что меняется только материал.</p>
+      </div>
+    </div>
+
+    <h3 class="item-title">Подарочный сертификат</h3>
+    <p class="item-sub">A5 210×148 мм, горизонтальный. Фольга: знак, имя; горизонтали — блинтовым тиснением или матовым лаком.</p>
+    <div class="stage" tabindex="0" role="region" aria-label="Вариант D, сертификат">
+      <figure>
+        <article class="b-cert b-light shadow">
+          <div class="b-frame" aria-hidden="true"></div>
+          <div class="b-scale" aria-hidden="true">
+            <div class="b-scale-line"></div>
+            <span class="b-here" style="top:0">4000</span>
+            <span style="top:25%">3000</span><span style="top:50%">2000</span>
+            <span style="top:75%">1000</span><span style="top:100%">0 м</span>
+          </div>
+          <div class="b-big" aria-hidden="true">4000</div>
+          <div class="b-top">
+            <div class="logo"><svg class="logo-mark b-mark" aria-hidden="true"><use href="#mark"/></svg><div class="logo-type"><b class="foil-text">SKYCENTER</b><span>DZ Пущино</span></div></div>
+            <div class="b-top-note">ПОДАРОЧНЫЙ<br>СЕРТИФИКАТ</div>
+          </div>
+          <div class="b-kicker">Небо ждёт</div>
+          <div class="b-name foil-text">Анна Смирнова</div>
+          <p class="b-lead"><b>Прыжок в тандеме с инструктором с высоты 4000 метров.</b>
+            Пятьдесят секунд свободного падения, полёт под куполом над Окой, видео и фото прыжка.</p>
+          <div class="b-foot">
+            <dl>
+              <div><dt>Номер</dt><dd>SC-0421</dd></div>
+              <div><dt>Действует до</dt><dd>21.09.2027</dd></div>
+              <div><dt>Запись</dt><dd>skycenter.su</dd></div>
+            </dl>
+            <img src="img/qr-navy.svg" alt="QR-код: запись на прыжок на skycenter.su">
+          </div>
+        </article>
+        <figcaption>Лицевая сторона. Всё, что в B было серебром по тёмному, здесь — тиснение по бумаге.</figcaption>
+      </figure>
+    </div>
+  </div>
+</section>
+
+<!-- ============================ ВАРИАНТ E ============================ -->
+<section class="variant" id="var-e" aria-labelledby="var-e-title">
+  <div class="variant-inner">
+    <div class="variant-head">
+      <div>
+        <div class="variant-label">Вариант E · от лётных и сертификационных документов</div>
+        <h2 id="var-e-title">«Допуск»</h2>
+        <p>Сертификат выглядит как документ о допуске: номер бланка, таблица данных,
+          строка подписи инструктора, печать. Подарок здесь читается не как открытка,
+          а как приглашение в область, где всё посчитано и записано. Для темы, где
+          покупают прежде всего безопасность, это самый честный тон.</p>
+        <ul>
+          <li>Наземная подготовка вынесена в отдельную строку — она видна до прыжка.</li>
+          <li>Печатается в две краски на обычной плотной бумаге, без фольги.</li>
+          <li>Поля для подписи и даты заполняются на стойке — бланк работает как документ.</li>
+        </ul>
+      </div>
+      <div>
+        <div class="swatches">
+          <div class="swatch"><i style="background:#FFFFFF"></i><b>Бланк</b>#FFFFFF</div>
+          <div class="swatch"><i style="background:#0B1B2B"></i><b>Высота</b>#0B1B2B</div>
+          <div class="swatch"><i style="background:#0075FF"></i><b>Штамп</b>#0075FF</div>
+          <div class="swatch"><i style="background:#F2600C"></i><b>Купол</b>#F2600C</div>
+        </div>
+        <p class="fonts-note"><b>Шрифты:</b> IBM Plex Sans и IBM Plex Mono — семейство,
+          нарисованное для технической документации; в нём строгость без сухости
+          и отличная кириллица.</p>
+      </div>
+    </div>
+
+    <h3 class="item-title">Подарочный сертификат</h3>
+    <p class="item-sub">A5 210×148 мм. Корешок слева — единственная заливка; остальное печатается по белому.</p>
+    <div class="stage" tabindex="0" role="region" aria-label="Вариант E, сертификат">
+      <figure>
+        <article class="e-cert shadow">
+          <div class="e-spine"><span>SkyCenter · DZ Пущино</span></div>
+          <div class="e-body">
+            <div class="e-head">
+              <div class="logo"><svg class="logo-mark" aria-hidden="true"><use href="#mark"/></svg><div class="logo-type"><b>SKYCENTER</b><span>DZ Пущино</span></div></div>
+              <div class="e-doc"><div>Подарочный сертификат</div><b>№ SC-0421</b></div>
+            </div>
+            <div class="e-kicker">Прыжок с парашютом в тандеме</div>
+            <div class="e-name">Анна Смирнова</div>
+            <p class="e-lead">Предъявителю сертификата предоставляется прыжок с высоты
+              4000 метров в паре с инструктором-тандемистом — после инструктажа,
+              наземной подготовки и допуска.</p>
+            <table class="e-specs">
+              <tr><th>Программа</th><td>Тандем с инструктором</td><th>Высота</th><td>4000 м</td></tr>
+              <tr><th>Подготовка</th><td>Теория и тренажёр</td><th>Свободное падение</th><td>≈ 50 секунд</td></tr>
+              <tr><th>Действует до</th><td>21.09.2027</td><th>Аэродром</th><td>Большое Грызлово</td></tr>
+            </table>
+            <div class="e-foot">
+              <div class="e-check">
+                <b>Допуск к прыжку</b>
+                <span>выдаётся после инструктажа и наземной отработки на тренажёре</span>
+              </div>
+              <div class="e-sign">
+                <div class="e-sign-line"><span>Инструктор</span></div>
+                <div class="e-sign-line"><span>Дата</span></div>
+              </div>
+              <div class="e-stamp"><b>SKYCENTER<i>DZ Пущино</i></b></div>
+              <img class="e-qr" src="img/qr-navy.svg" alt="QR-код: запись на прыжок на skycenter.su">
+            </div>
+          </div>
+        </article>
+        <figcaption>Лицевая сторона. Оранжевая метка на корешке — единственный «подарочный» жест.</figcaption>
+      </figure>
+    </div>
+  </div>
+</section>
+
+<!-- ============================ ВАРИАНТ F ============================ -->
+<section class="variant" id="var-f" aria-labelledby="var-f-title">
+  <div class="variant-inner">
+    <div class="variant-head">
+      <div>
+        <div class="variant-label">Вариант F · от приборных панелей и бортовой графики</div>
+        <h2 id="var-f-title">«Борт»</h2>
+        <p>Лист устроен как авиагоризонт: небо сверху, земля снизу, между ними линия
+          горизонта с делениями. Справа — лента высоты с оранжевым указателем на
+          отметке 4000. Всё крупное набрано узким гротеском, все числа — моноширинным:
+          так выглядит графика, которой доверяют в кабине.</p>
+        <ul>
+          <li>Тёмный, как B, но по другой причине: это не ночь, а приборная панель.</li>
+          <li>Узкий шрифт держит длинные русские слова без переносов.</li>
+          <li>Тот же приём переносится на конверт и книжку: лента высоты вместо рамки.</li>
+        </ul>
+      </div>
+      <div>
+        <div class="swatches">
+          <div class="swatch"><i style="background:linear-gradient(180deg,#0C4C7A,#1E86C6)"></i><b>Небо</b>#10659E</div>
+          <div class="swatch"><i style="background:#0B1B2B"></i><b>Земля</b>#0B1B2B</div>
+          <div class="swatch"><i style="background:#FFFFFF"></i><b>Горизонт</b>#FFFFFF</div>
+          <div class="swatch"><i style="background:#F2600C"></i><b>Указатель</b>#F2600C</div>
+        </div>
+        <p class="fonts-note"><b>Шрифты:</b> Fira Sans Condensed для заголовков и имени,
+          Fira Mono для чисел и шкал, Fira Sans для текста. Семейство сделано для
+          интерфейсов — читается мелким и не разваливается в узком начертании.</p>
+      </div>
+    </div>
+
+    <h3 class="item-title">Подарочный сертификат</h3>
+    <p class="item-sub">A5 210×148 мм. Печать по плотному картону, горизонт — белым по сплошной заливке.</p>
+    <div class="stage" tabindex="0" role="region" aria-label="Вариант F, сертификат">
+      <figure>
+        <article class="f-cert shadow">
+          <div class="f-sky" aria-hidden="true"></div>
+          <div class="f-ground" aria-hidden="true"></div>
+          <div class="f-ticks" aria-hidden="true"></div>
+          <div class="f-horizon" aria-hidden="true"></div>
+          <div class="f-plane" aria-hidden="true"><i></i><b></b><i></i></div>
+          <div class="f-note">N 54°49′ · E 37°37′ · аэродром Большое Грызлово · выброска с Ан-28</div>
+          <div class="f-ladder" aria-hidden="true">
+            <span class="now" style="top:0">4000</span>
+            <span style="top:25%">3000</span><span style="top:50%">2000</span>
+            <span style="top:75%">1000</span><span style="top:100%">0</span>
+          </div>
+          <div class="f-top">
+            <div class="logo"><svg class="logo-mark" aria-hidden="true"><use href="#mark"/></svg><div class="logo-type"><b>SKYCENTER</b><span>DZ Пущино</span></div></div>
+            <div class="f-tag">Подарочный<br>сертификат</div>
+          </div>
+          <div class="f-kicker">Прыжок в тандеме</div>
+          <div class="f-name">Анна Смирнова</div>
+          <p class="f-lead"><b>Высота отделения — 4000 метров.</b> Пятьдесят секунд свободного
+            падения, полёт под куполом над Окой, видео и фото прыжка. Подготовка на тренажёре
+            и инструктаж — в тот же день, до вылета.</p>
+          <div class="f-foot">
+            <dl>
+              <div><dt>Номер</dt><dd>SC-0421</dd></div>
+              <div><dt>Действует до</dt><dd>21.09.2027</dd></div>
+              <div><dt>Запись</dt><dd>skycenter.su</dd></div>
+            </dl>
+            <img src="img/qr-white.svg" alt="QR-код: запись на прыжок на skycenter.su">
+          </div>
+        </article>
+        <figcaption>Лицевая сторона. Указатель на ленте стоит там же, где в B «вы здесь» на шкале.</figcaption>
+      </figure>
+    </div>
+  </div>
+</section>
+
+<!-- ============================ ШРИФТЫ ============================ -->
+<section class="variant" id="fonts" aria-labelledby="fonts-title">
+  <div class="variant-inner">
+    <div class="variant-head">
+      <div>
+        <div class="variant-label">Подбор шрифтов</div>
+        <h2 id="fonts-title">Шесть наборов на одной строке</h2>
+        <p>Тема — обучение прыжкам, то есть безопасность. Шрифт здесь работает
+          обещанием: «мы серьёзные» или «мы развлечение». Ниже одна и та же строка
+          сертификата набрана шестью наборами. Все — Google Fonts, лицензия OFL,
+          с кириллицей, бесплатны в коммерческой печати.</p>
+        <ul>
+          <li>Заголовок и имя — то, что видно с двух метров.</li>
+          <li>Моноширинный для чисел: номер, дата, высота выстраиваются в столбик.</li>
+          <li>Текстовый — то, что читают вблизи и мелким.</li>
+        </ul>
+      </div>
+      <div>
+        <p class="fonts-note"><b>Что считать серьёзностью.</b> Узкое и техническое
+          читается как «инженерия и допуски». Антиква — как «документ и традиция».
+          Широкий геометрический гротеск — как «космос и премиум»: красиво, но про
+          впечатление, а не про безопасность.</p>
+      </div>
+    </div>
+
+    <div class="fonts-grid">
+
+      <article class="font-card set-unbounded">
+        <h4>1. Космический</h4>
+        <p class="stack">Unbounded · JetBrains Mono · Manrope — сейчас в вариантах B и D</p>
+        <div class="sample">
+          <div class="s-kicker">Небо ждёт</div>
+          <div class="s-name">Анна Смирнова</div>
+          <div class="s-data">SC-0421 · 4000 М · ДО 21.09.2027</div>
+          <p class="s-text">Прыжок в тандеме с инструктором с высоты 4000 метров.</p>
+        </div>
+        <p class="verdict"><b>Обещает впечатление.</b> Широкие буквы и большие
+          межбуквенные просветы — язык премиальных подарков и космического туризма.
+          Хорош для сертификата, слаб для документов обучения: рядом со словом
+          «инструктаж» выглядит рекламой.</p>
+      </article>
+
+      <article class="font-card set-plex pick">
+        <h4>2. Инженерный</h4>
+        <p class="stack">IBM Plex Sans · IBM Plex Mono — вариант E</p>
+        <div class="sample">
+          <div class="s-kicker">Небо ждёт</div>
+          <div class="s-name">Анна Смирнова</div>
+          <div class="s-data">SC-0421 · 4000 М · ДО 21.09.2027</div>
+          <p class="s-text">Прыжок в тандеме с инструктором с высоты 4000 метров.</p>
+        </div>
+        <p class="verdict"><b>Обещает порядок.</b> Семейство нарисовано для технической
+          документации: одна логика у текста, чисел и подписей, кириллица без
+          самодеятельности. Читается как «здесь всё проверено» — ровно то, что нужно
+          обучению. <b>Рекомендуемый набор.</b></p>
+      </article>
+
+      <article class="font-card set-fira">
+        <h4>3. Приборный</h4>
+        <p class="stack">Fira Sans Condensed · Fira Mono · Fira Sans — вариант F</p>
+        <div class="sample">
+          <div class="s-kicker">Небо ждёт</div>
+          <div class="s-name">Анна Смирнова</div>
+          <div class="s-data">SC-0421 · 4000 М · ДО 21.09.2027</div>
+          <p class="s-text">Прыжок в тандеме с инструктором с высоты 4000 метров.</p>
+        </div>
+        <p class="verdict"><b>Обещает управляемость.</b> Узкое начертание — язык шкал,
+          табло и бортовой графики; длинные русские слова помещаются в строку целиком.
+          Минус: на мелком кегле в узком гротеске теряется воздух, поэтому текстовый
+          блок набирается обычным Fira Sans.</p>
+      </article>
+
+      <article class="font-card set-pt">
+        <h4>4. Документальный</h4>
+        <p class="stack">PT Serif · PT Sans — антиква ParaType</p>
+        <div class="sample">
+          <div class="s-kicker">Небо ждёт</div>
+          <div class="s-name">Анна Смирнова</div>
+          <div class="s-data">SC-0421 · 4000 М · ДО 21.09.2027</div>
+          <p class="s-text">Прыжок в тандеме с инструктором с высоты 4000 метров.</p>
+        </div>
+        <p class="verdict"><b>Обещает законность.</b> Антиква из семейства, сделанного
+          для русского государственного документа: сертификат мгновенно читается как
+          диплом или свидетельство. Риск — выглядеть казённо и старше, чем есть дропзона.</p>
+      </article>
+
+      <article class="font-card set-golos">
+        <h4>5. Деловой</h4>
+        <p class="stack">Golos Text · Oswald для заголовков</p>
+        <div class="sample">
+          <div class="s-kicker">Небо ждёт</div>
+          <div class="s-name">Анна Смирнова</div>
+          <div class="s-data">SC-0421 · 4000 М · ДО 21.09.2027</div>
+          <p class="s-text">Прыжок в тандеме с инструктором с высоты 4000 метров.</p>
+        </div>
+        <p class="verdict"><b>Обещает нейтральность.</b> Golos рисовался под российские
+          интерфейсы: спокойный, без характера, не спорит ни с чем. Пара с Oswald
+          сохраняет связь с сайтом. Безопасный выбор, если стиль должен прожить
+          много лет и много рук.</p>
+      </article>
+
+      <article class="font-card set-inter">
+        <h4>6. Интерфейсный</h4>
+        <p class="stack">Inter · JetBrains Mono</p>
+        <div class="sample">
+          <div class="s-kicker">Небо ждёт</div>
+          <div class="s-name">Анна Смирнова</div>
+          <div class="s-data">SC-0421 · 4000 М · ДО 21.09.2027</div>
+          <p class="s-text">Прыжок в тандеме с инструктором с высоты 4000 метров.</p>
+        </div>
+        <p class="verdict"><b>Обещает современность.</b> Самый нейтральный из всех:
+          одинаково хорош на сайте, в приложении и в печати, кириллица безупречна.
+          Обратная сторона нейтральности — сертификат перестаёт отличаться от чека.</p>
+      </article>
+
+    </div>
+  </div>
+</section>
+
+<section class="compare" id="compare" aria-labelledby="compare-title">
+  <h2 id="compare-title">Что выбрать</h2>
+  <div class="table-wrap">
+    <table>
+      <thead>
+        <tr><th>Вариант</th><th>Тон</th><th>Шрифты</th><th>Печать</th><th>Кому дарить</th></tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td><b>B · Высота</b> (выбран)</td>
+          <td>Премиальное ночное небо</td>
+          <td>Unbounded, JetBrains Mono, Manrope</td>
+          <td>Тёмный картон, фольга</td>
+          <td>Руководителю, на юбилей</td>
+        </tr>
+        <tr>
+          <td><b>D · Высота. День</b></td>
+          <td>То же, но светлее и дешевле</td>
+          <td>Те же</td>
+          <td>Светлая бумага, фольга</td>
+          <td>Массовая продажа, тираж</td>
+        </tr>
+        <tr>
+          <td><b>E · Допуск</b></td>
+          <td>Документ, порядок, проверка</td>
+          <td>IBM Plex Sans и Mono</td>
+          <td>Две краски по белому</td>
+          <td>Сертификаты на обучение и AFF</td>
+        </tr>
+        <tr>
+          <td><b>F · Борт</b></td>
+          <td>Приборная панель, управление</td>
+          <td>Fira Sans Condensed и Mono</td>
+          <td>Сплошная заливка, белый горизонт</td>
+          <td>Молодой аудитории, спортсменам</td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+  <p class="fonts-note" style="margin-top:18px;max-width:760px">Наборы можно и смешивать:
+    оставить B и D как подарочную линию на Unbounded, а на обучение — «Арбалет», AFF,
+    книжку парашютиста — перевести на IBM Plex. Тогда по одному взгляду видно,
+    где подарок, а где документ.</p>
+</section>
+
+</main>
+</body>
+</html>

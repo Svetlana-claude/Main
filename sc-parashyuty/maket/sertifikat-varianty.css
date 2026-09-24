@@ -1,0 +1,235 @@
+/* Три новых варианта подарочного сертификата и подбор шрифтов.
+   Поверх style.css: обвязка страницы, знак и сцены берутся оттуда. */
+
+:root {
+  /* «Фольга» для печати по светлой бумаге: на белом серебро читается только
+     тёмной частью градиента, иначе надпись пропадает */
+  --foil-print: linear-gradient(100deg, #46586A 0%, #92A2B0 28%, #5B6C7C 52%, #A3B2BE 74%, #4C5E6D 100%);
+  --ink: #12283C;        /* типографская краска инженерного бланка */
+  --blueprint: #0075FF;
+}
+
+/* =================================================================
+   ВАРИАНТ D — «Высота. День»: тот же макет B, печать по бумаге
+   ================================================================= */
+
+.b-light {
+  background: url(img/contours-navy.svg) center / cover,
+              linear-gradient(115deg, #FFFFFF 0%, #F4F7FA 45%, #E8EFF5 100%);
+  color: #44586A;
+}
+.b-light .b-frame { border-color: rgba(0, 117, 255, .45); }
+.b-light .b-scale-line {
+  background: repeating-linear-gradient(180deg, #8FA0AE 0 .2mm, transparent .2mm 4.8mm) left / 1.6mm 100% no-repeat,
+              repeating-linear-gradient(180deg, #8FA0AE 0 .3mm, transparent .3mm 24mm) left / 3mm 100% no-repeat;
+  border-left: .25mm solid #8FA0AE;
+}
+.b-light .b-top-note { opacity: 1; color: #6B7C8B; }
+.b-light .b-kicker { color: var(--blue); }
+/* только image: короткая запись `background` сбросила бы background-clip: text,
+   и «фольга» легла бы плашкой поверх надписи */
+.b-light .foil-text { background-image: var(--foil-print); }
+/* знак тиснёный: заливка — тёмное серебро, прорези купола цвета бумаги */
+.b-light .b-mark { --mark-fill: url(#foil-print); --mark-cut: #FFFFFF; --mark-line: #8494A2; }
+.b-light .b-lead { color: #44586A; }
+.b-light .b-lead b { color: var(--navy); }
+.b-light .b-big { -webkit-text-stroke-color: rgba(11, 27, 43, .22); }
+.b-light .b-foot dt { color: #6B7C8B; opacity: 1; }
+.b-light .b-foot dd { color: var(--navy); }
+
+/* =================================================================
+   ВАРИАНТ E — «Допуск»: инженерный бланк, IBM Plex
+   ================================================================= */
+
+.e-cert {
+  width: 210mm; height: 148mm; position: relative; display: flex;
+  background: #FFFFFF; color: var(--ink);
+  font-family: "IBM Plex Sans", sans-serif;
+}
+/* корешок слева — единственное тёмное пятно бланка */
+.e-spine {
+  width: 14mm; flex: none; background: var(--navy); color: #FFFFFF;
+  display: flex; align-items: center; justify-content: center; position: relative;
+}
+.e-spine span {
+  font-family: "IBM Plex Mono", monospace; font-size: 2.4mm; letter-spacing: .34em;
+  writing-mode: vertical-rl; transform: rotate(180deg); text-transform: uppercase;
+}
+.e-spine::after {
+  content: ""; position: absolute; left: 0; right: 0; top: 14mm; height: 1.2mm;
+  background: var(--orange);
+}
+.e-body { flex: 1; padding: 10mm 12mm 9mm; display: flex; flex-direction: column; position: relative; }
+.e-head { display: flex; justify-content: space-between; align-items: flex-start; padding-bottom: 4mm; border-bottom: .4mm solid var(--navy); }
+.e-head .logo { font-size: 3.4mm; color: var(--navy); --mark-accent: var(--orange); --mark-cut: #fff; }
+.e-head .logo-type b { color: var(--navy); }
+.e-doc { text-align: right; font-family: "IBM Plex Mono", monospace; }
+.e-doc div { font-size: 2.3mm; letter-spacing: .26em; color: #6B7C8B; }
+.e-doc b { display: block; font-size: 4.2mm; letter-spacing: .06em; margin-top: 1.2mm; }
+.e-kicker {
+  margin-top: 8mm; font-family: "IBM Plex Mono", monospace; font-size: 2.6mm;
+  letter-spacing: .22em; text-transform: uppercase; color: var(--blueprint);
+}
+.e-name { font-size: 15mm; font-weight: 600; line-height: 1; letter-spacing: -.01em; margin-top: 3mm; }
+.e-lead { font-size: 3.6mm; line-height: 1.45; margin-top: 3mm; max-width: 120mm; color: #3B4F60; }
+
+.e-specs { margin-top: 6mm; border-collapse: collapse; width: 100%; }
+.e-specs th, .e-specs td { text-align: left; padding: 2mm 3mm 2mm 0; border-bottom: .2mm solid #C8D3DC; vertical-align: baseline; }
+.e-specs th {
+  width: 26mm; font-family: "IBM Plex Mono", monospace; font-weight: 400;
+  font-size: 2.2mm; letter-spacing: .14em; text-transform: uppercase; color: #6B7C8B;
+}
+.e-specs td { font-size: 3.6mm; font-weight: 500; }
+
+.e-foot { margin-top: auto; display: flex; align-items: flex-end; gap: 8mm; }
+.e-check { flex: 1; border-left: 1mm solid var(--blueprint); padding-left: 3mm; }
+.e-check b { display: block; font-size: 3.2mm; }
+.e-check span { display: block; font-size: 2.7mm; line-height: 1.4; color: #5C6E7D; margin-top: .8mm; }
+.e-sign { display: flex; gap: 6mm; }
+.e-sign-line { width: 32mm; border-bottom: .3mm solid var(--navy); padding-bottom: 6mm; }
+.e-sign-line span {
+  position: absolute; margin-top: 6.6mm; font-family: "IBM Plex Mono", monospace;
+  font-size: 2.1mm; letter-spacing: .14em; text-transform: uppercase; color: #6B7C8B;
+}
+.e-stamp {
+  width: 24mm; height: 24mm; flex: none; border-radius: 50%;
+  border: .4mm solid rgba(0, 117, 255, .65); color: var(--blueprint);
+  display: grid; place-items: center; text-align: center; transform: rotate(-7deg);
+  position: relative;
+}
+.e-stamp::before { content: ""; position: absolute; inset: 1.4mm; border-radius: 50%; border: .2mm solid rgba(0, 117, 255, .5); }
+.e-stamp b { font-family: "IBM Plex Mono", monospace; font-size: 2.1mm; letter-spacing: .12em; line-height: 1.5; }
+.e-stamp i { display: block; font-style: normal; font-size: 1.7mm; letter-spacing: .2em; opacity: .8; }
+.e-cert .e-qr { width: 16mm; height: 16mm; }
+
+/* =================================================================
+   ВАРИАНТ F — «Борт»: авиагоризонт, узкий гротеск Fira
+   ================================================================= */
+
+.f-cert {
+  width: 210mm; height: 148mm; position: relative; overflow: hidden;
+  background: #071019; color: #E3EBF1;
+  font-family: "Fira Sans", sans-serif; padding: 11mm 13mm;
+  display: flex; flex-direction: column;
+}
+/* небо и земля прибора: линия горизонта проходит через весь лист */
+.f-sky { position: absolute; left: 0; right: 0; top: 0; height: 62%;
+  background: linear-gradient(180deg, #0C4C7A 0%, #10659E 55%, #1E86C6 100%); }
+.f-ground { position: absolute; left: 0; right: 0; top: 62%; bottom: 0;
+  background: linear-gradient(180deg, #0B1B2B 0%, #050D16 100%); }
+.f-horizon { position: absolute; left: 0; right: 0; top: 62%; height: 0; }
+.f-horizon::before {
+  content: ""; position: absolute; left: 0; right: 0; top: -.35mm; height: .7mm;
+  background: linear-gradient(90deg, transparent, #FFFFFF 12%, #FFFFFF 88%, transparent);
+  opacity: .85;
+}
+/* деления крена по горизонту */
+.f-ticks { position: absolute; left: 0; right: 0; top: 62%; height: 6mm;
+  background: repeating-linear-gradient(90deg, rgba(255,255,255,.55) 0 .25mm, transparent .25mm 7mm);
+  -webkit-mask-image: linear-gradient(180deg, #000 0 2.4mm, transparent 2.4mm);
+          mask-image: linear-gradient(180deg, #000 0 2.4mm, transparent 2.4mm); }
+/* поднимаем над фоном только содержимое: общее правило `.f-cert > *`
+   перебило бы position:absolute у самих слоёв неба и земли */
+.f-top, .f-kicker, .f-name, .f-lead, .f-foot { position: relative; z-index: 1; }
+
+.f-top { display: flex; justify-content: space-between; align-items: flex-start; }
+.f-top .logo { font-size: 3.3mm; color: #FFFFFF; --mark-fill: #FFFFFF; --mark-cut: #10659E; --mark-line: #CFE2F0; --mark-accent: var(--orange); }
+.f-top .logo-type b { color: #FFFFFF; }
+.f-tag {
+  font-family: "Fira Mono", monospace; font-size: 2.3mm; letter-spacing: .24em;
+  text-align: right; line-height: 1.7; text-transform: uppercase;
+  border: .25mm solid rgba(255,255,255,.55); padding: 1.6mm 2.4mm;
+}
+.f-kicker {
+  margin-top: 13mm; font-family: "Fira Sans Condensed", sans-serif; font-weight: 500;
+  font-size: 3.4mm; letter-spacing: .28em; text-transform: uppercase; color: #BFE4FF;
+}
+.f-name {
+  font-family: "Fira Sans Condensed", sans-serif; font-weight: 700; font-size: 17mm;
+  line-height: .98; letter-spacing: .005em; margin-top: 2mm; color: #FFFFFF;
+  text-transform: uppercase;
+}
+.f-lead { font-size: 3.6mm; line-height: 1.45; margin-top: 3mm; max-width: 112mm; color: #D6E6F2; }
+.f-lead b { color: #FFFFFF; font-weight: 500; }
+
+/* символ самолёта на горизонте — тот самый неподвижный знак авиагоризонта */
+.f-plane {
+  position: absolute; left: 50%; top: 62%; transform: translate(-50%, -50%);
+  display: flex; align-items: center; gap: 2.6mm; z-index: 1;
+}
+.f-plane i { display: block; width: 15mm; height: 1.1mm; background: var(--orange); }
+.f-plane b { display: block; width: 2.4mm; height: 2.4mm; background: var(--orange); transform: rotate(45deg); }
+
+/* строка земли: то, что в кабине писали бы на табло */
+.f-note {
+  position: absolute; left: 13mm; top: 62%; margin-top: 12mm;
+  font-family: "Fira Mono", monospace; font-size: 2.2mm; letter-spacing: .2em;
+  text-transform: uppercase; color: rgba(255, 255, 255, .45); z-index: 1;
+}
+
+/* шкала высоты справа — лента прибора с указателем «вы здесь» */
+.f-ladder {
+  position: absolute; right: 13mm; top: 30mm; width: 22mm; height: 78mm;
+  border-left: .25mm solid rgba(255,255,255,.45);
+  font-family: "Fira Mono", monospace; font-size: 2.1mm; color: rgba(255,255,255,.8);
+}
+.f-ladder span { position: absolute; left: 3mm; transform: translateY(-50%); letter-spacing: .1em; }
+.f-ladder span::before { content: ""; position: absolute; left: -3mm; top: 50%; width: 2mm; height: .25mm; background: rgba(255,255,255,.55); }
+.f-ladder .now { color: #FFFFFF; font-weight: 500; }
+.f-ladder .now::after {
+  content: ""; position: absolute; left: -4.6mm; top: 50%; transform: translateY(-50%);
+  border: 1.4mm solid transparent; border-left-color: var(--orange);
+}
+
+.f-foot { margin-top: auto; display: flex; align-items: flex-end; gap: 8mm; }
+.f-foot dl { display: grid; grid-template-columns: repeat(3, auto); gap: 1.2mm 8mm; }
+.f-foot dt { font-family: "Fira Mono", monospace; font-size: 1.9mm; letter-spacing: .18em; text-transform: uppercase; color: #9FC0D8; }
+.f-foot dd { font-family: "Fira Sans Condensed", sans-serif; font-weight: 500; font-size: 3.6mm; color: #FFFFFF; }
+.f-foot img { width: 16mm; height: 16mm; margin-left: auto; }
+
+/* =================================================================
+   Подбор шрифтов: одна и та же строка в разных наборах
+   ================================================================= */
+
+.fonts-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(330px, 1fr)); gap: 20px; }
+.font-card { border: 1px solid #DCE3E8; border-radius: 14px; padding: 22px 24px 20px; background: #fff; }
+.font-card.pick { border-color: var(--blue); box-shadow: 0 0 0 3px rgba(0,117,255,.12); }
+.font-card h4 { font-family: "Oswald", sans-serif; font-weight: 500; font-size: 19px; text-transform: uppercase; }
+.font-card .stack { font-size: 13px; color: #5A6B7A; margin: 2px 0 16px; }
+.font-card .sample { border-top: 1px solid #ECF1F4; padding-top: 14px; }
+.font-card .s-kicker { font-size: 11px; letter-spacing: .24em; text-transform: uppercase; color: var(--blue); }
+.font-card .s-name { font-size: 34px; line-height: 1.05; margin: 6px 0 8px; color: var(--navy); }
+.font-card .s-data { font-size: 12px; letter-spacing: .1em; color: #5A6B7A; }
+.font-card .s-text { font-size: 14px; line-height: 1.5; margin-top: 10px; color: #3C4E5E; }
+.font-card .verdict { font-size: 14px; line-height: 1.5; margin-top: 16px; padding-top: 14px; border-top: 1px solid #ECF1F4; }
+.font-card .verdict b { color: var(--navy); }
+
+/* наборы: имена семейств ровно те, что скачивает fetch_web_fonts.py */
+.set-unbounded .s-kicker, .set-unbounded .s-name { font-family: "Unbounded", sans-serif; font-weight: 600; }
+.set-unbounded .s-data { font-family: "JetBrains Mono", monospace; }
+.set-unbounded .s-text { font-family: "Manrope", sans-serif; }
+
+.set-plex .s-kicker { font-family: "IBM Plex Mono", monospace; }
+.set-plex .s-name { font-family: "IBM Plex Sans", sans-serif; font-weight: 600; }
+.set-plex .s-data { font-family: "IBM Plex Mono", monospace; }
+.set-plex .s-text { font-family: "IBM Plex Sans", sans-serif; }
+
+.set-fira .s-kicker { font-family: "Fira Mono", monospace; }
+.set-fira .s-name { font-family: "Fira Sans Condensed", sans-serif; font-weight: 700; text-transform: uppercase; }
+.set-fira .s-data { font-family: "Fira Mono", monospace; }
+.set-fira .s-text { font-family: "Fira Sans", sans-serif; }
+
+.set-pt .s-kicker { font-family: "PT Sans", sans-serif; }
+.set-pt .s-name { font-family: "PT Serif", serif; font-weight: 700; }
+.set-pt .s-data { font-family: "PT Sans", sans-serif; }
+.set-pt .s-text { font-family: "PT Serif", serif; }
+
+.set-golos .s-kicker { font-family: "Golos Text", sans-serif; font-weight: 600; }
+.set-golos .s-name { font-family: "Oswald", sans-serif; font-weight: 700; text-transform: uppercase; }
+.set-golos .s-data { font-family: "Golos Text", sans-serif; }
+.set-golos .s-text { font-family: "Golos Text", sans-serif; }
+
+.set-inter .s-kicker { font-family: "JetBrains Mono", monospace; }
+.set-inter .s-name { font-family: "Inter", sans-serif; font-weight: 600; letter-spacing: -.02em; }
+.set-inter .s-data { font-family: "JetBrains Mono", monospace; }
+.set-inter .s-text { font-family: "Inter", sans-serif; }

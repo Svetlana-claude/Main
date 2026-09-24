@@ -125,6 +125,8 @@ if __name__ == "__main__":
     os.makedirs(IMG, exist_ok=True)
     Contours("#C9D3DC", ".22", "contours-silver.svg")
     Contours("#30CFFA", ".35", "contours-cyan.svg")
+    # светлый близнец варианта B: те же горизонтали, но печатью по бумаге
+    Contours("#0B1B2B", ".16", "contours-navy.svg")
     # вариант A — светлая «карта»: небесные тинты
     Landscape(["#E4F7FE", "#CFF1FD", "#F4FBFE", "#BDEBFB", "#DDF3F9"],
               "#FFFFFF", "#30CFFA", "#FFFFFF", "#A9E3F5", "oka-light.svg")
