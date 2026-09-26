@@ -135,6 +135,39 @@ figure.vstup img { max-height: 62mm; }
    разворот про обучение, а не фотогалерея. */
 figure.portret img { max-height: 42mm; }
 
+/* Истории: кадр слева, текст справа — одним блоком. Отдельными снимками
+   во всю полосу раздел занимал три страницы, и рядом с вертикальными
+   кадрами оставались пустые поля. Ширина кадра 40 мм оставляет колонке
+   текста около 120 мм — строка остаётся читаемой. Ряд не разрывается
+   между полосами. */
+.istoriya {
+  display: flex;
+  gap: 5mm;
+  margin: 0 0 5mm;
+  break-inside: avoid;
+  page-break-inside: avoid;
+}
+
+.istoriya .kadr { flex: 0 0 40mm; }
+
+.istoriya .kadr img { width: 100%; height: auto; display: block; }
+
+/* Подпись под кадром — мельче основного текста, как у `figcaption`,
+   но по левому краю: колонка узкая, центрирование рвало бы строки. */
+.istoriya .kadr span {
+  display: block;
+  margin-top: 1.5mm;
+  font-size: 8pt;
+  line-height: 1.3;
+  color: #55636F;
+}
+
+.istoriya .tekst { flex: 1; }
+
+.istoriya .tekst p { margin: 0 0 2.5mm; }
+
+.istoriya .tekst p:last-child { margin-bottom: 0; }
+
 /* Таблица не разрывается между полосами. В базовых стилях от разрыва
    защищена только строка (`tr`), и таблица про самостоятельный прыжок
    уезжала шапкой на одну полосу, а половиной строк на другую — читать её
