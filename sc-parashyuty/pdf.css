@@ -135,26 +135,31 @@ figure.vstup img { max-height: 62mm; }
    разворот про обучение, а не фотогалерея. */
 figure.portret img { max-height: 42mm; }
 
-/* Истории: кадр слева, текст справа — одним блоком. Отдельными снимками
-   во всю полосу раздел занимал три страницы, и рядом с вертикальными
-   кадрами оставались пустые поля. Ширина кадра 40 мм оставляет колонке
-   текста около 120 мм — строка остаётся читаемой. Ряд не разрывается
-   между полосами. */
-.istoriya {
+/* Ряд «кадр слева — текст справа»: основная раскладка снимков в письме.
+   Снимками во всю полосу документ разъезжался, а рядом с вертикальными
+   кадрами оставались пустые поля. Ряд не разрывается между полосами. */
+.ryad-foto {
   display: flex;
   gap: 5mm;
-  margin: 0 0 5mm;
+  margin: 3mm 0 5mm;
   break-inside: avoid;
   page-break-inside: avoid;
 }
 
-.istoriya .kadr { flex: 0 0 40mm; }
+/* Три ширины кадра под три пропорции. Полоса набора — 178 мм, поэтому
+   узкий кадр оставляет тексту 139 мм, средний 129 мм, широкий 111 мм —
+   строка везде остаётся читаемой. Ширина выбирается так, чтобы высота
+   снимка сошлась с высотой текста: вертикальному кадру хватает узкой
+   колонки, горизонтальному нужна широкая, иначе он выходит маркой. */
+.ryad-foto .kadr { flex: 0 0 44mm; }
+.ryad-foto.uzkiy .kadr { flex: 0 0 34mm; }
+.ryad-foto.shirokiy .kadr { flex: 0 0 62mm; }
 
-.istoriya .kadr img { width: 100%; height: auto; display: block; }
+.ryad-foto .kadr img { width: 100%; height: auto; display: block; }
 
 /* Подпись под кадром — мельче основного текста, как у `figcaption`,
    но по левому краю: колонка узкая, центрирование рвало бы строки. */
-.istoriya .kadr span {
+.ryad-foto .kadr span {
   display: block;
   margin-top: 1.5mm;
   font-size: 8pt;
@@ -162,11 +167,20 @@ figure.portret img { max-height: 42mm; }
   color: #55636F;
 }
 
-.istoriya .tekst { flex: 1; }
+.ryad-foto .tekst { flex: 1; }
 
-.istoriya .tekst p { margin: 0 0 2.5mm; }
+.ryad-foto .tekst p { margin: 0 0 2.5mm; }
 
-.istoriya .tekst p:last-child { margin-bottom: 0; }
+.ryad-foto .tekst p:last-child { margin-bottom: 0; }
+
+.ryad-foto .tekst ul { margin: 0; }
+
+.ryad-foto .tekst blockquote { margin: 3mm 0; }
+
+/* Принудительный переход на новую полосу. Пустой блок перед разделом,
+   который должен читаться целиком: соглашение сторон подписывают,
+   а не листают, поэтому оно начинается с чистой полосы. */
+.razryv { break-after: page; page-break-after: always; }
 
 /* Таблица не разрывается между полосами. В базовых стилях от разрыва
    защищена только строка (`tr`), и таблица про самостоятельный прыжок
