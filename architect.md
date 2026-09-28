@@ -749,8 +749,11 @@ fontTools ругается на противоречие. Итог кладёт�
 - `prezentaciya-dlya-investorov.md` — что нужно для презентации инвесторам: примеры
   (Candela, Navier, Arc, Vision Marine, X Shore), что готовить заранее, комплект
   материалов, питч-дек по слайдам, трудные вопросы, чек-лист.
-- `make_pdf.py` — собирает из свода PDF: Markdown → HTML с печатными стилями →
-  headless Chromium. Запуск: `webui/.venv/bin/python lodka/make_pdf.py`
-  (нужны `markdown` и `playwright` из `webui/.venv`). Шрифт DejaVu Sans с кириллицей.
+- `indoneziya-perevozka-lyudey.md` — разбор рынка Индонезии: госпрограммы
+  перевозок между островами, боли перевозчиков, ниши для экономичной лодки
+  8–12 м, барьеры (каботаж, NCVS).
+- `make_pdf.py` — первый вариант сборки PDF, сделан до появления общего
+  `tools/md2pdf.py`. Дублирует его; PDF теперь собирается общим инструментом:
+  `webui/.venv/bin/python tools/md2pdf.py lodka/<файл>.md`.
 - `downloads/` (не версионируется) — копия свода и собранный PDF для «Файлов
   проекта». PDF — производный файл: после правки `.md` пересобирается скриптом.
