@@ -1,0 +1,110 @@
+/* Оформление страницы-заглушки «Главпрыг».
+   Своих шрифтов нет намеренно: страница временная и должна открываться
+   мгновенно, в том числе без интернета. */
+
+:root {
+    --fon: #0f1720;
+    --fon-karta: #18222e;
+    --tekst: #e7edf3;
+    --tekst-tihiy: #9fb0c0;
+    --akcent: #ff7a1a;
+    --granica: #26333f;
+    --polosa: 60rem;
+}
+
+* { box-sizing: border-box; }
+
+body {
+    margin: 0;
+    padding: 2rem 1.25rem 3rem;
+    background: var(--fon);
+    color: var(--tekst);
+    font: 400 1rem/1.6 system-ui, "Segoe UI", Roboto, Arial, sans-serif;
+}
+
+/* Шапка */
+
+.shapka {
+    max-width: var(--polosa);
+    margin: 0 auto 2.5rem;
+    text-align: center;
+}
+
+.znak {
+    margin: 0 0 .75rem;
+    color: var(--akcent);
+    font-size: 2.5rem;
+    line-height: 1;
+}
+
+.shapka h1 {
+    margin: 0;
+    font-size: clamp(2rem, 7vw, 3.25rem);
+    letter-spacing: .04em;
+    text-transform: uppercase;
+}
+
+.podzagolovok {
+    margin: .5rem 0 0;
+    color: var(--tekst-tihiy);
+}
+
+/* Содержимое */
+
+.soderzhimoe {
+    max-width: var(--polosa);
+    margin: 0 auto;
+    display: grid;
+    gap: 1.25rem;
+    grid-template-columns: repeat(auto-fit, minmax(17rem, 1fr));
+}
+
+.karta {
+    padding: 1.5rem;
+    background: var(--fon-karta);
+    border: 1px solid var(--granica);
+    border-radius: .75rem;
+}
+
+.karta h2 {
+    margin: 0 0 .75rem;
+    font-size: 1.1rem;
+    color: var(--akcent);
+}
+
+.karta p { margin: 0; }
+
+.shagi {
+    margin: 0;
+    padding-left: 1.2rem;
+}
+
+.shagi li + li { margin-top: .4rem; }
+
+code {
+    padding: .1em .35em;
+    background: #0b1219;
+    border-radius: .25rem;
+    font-family: ui-monospace, "Cascadia Mono", Consolas, monospace;
+    font-size: .95em;
+    /* Длинный адрес не должен растягивать страницу по горизонтали */
+    overflow-wrap: anywhere;
+}
+
+/* Подвал */
+
+.podval {
+    max-width: var(--polosa);
+    margin: 2.5rem auto 0;
+    color: var(--tekst-tihiy);
+    font-size: .875rem;
+    text-align: center;
+}
+
+.podval p { margin: 0; }
+
+/* Фокус с клавиатуры виден на любом фоне */
+:focus-visible {
+    outline: 2px solid var(--akcent);
+    outline-offset: 2px;
+}
