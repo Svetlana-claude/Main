@@ -1025,3 +1025,516 @@ function initSecPanel(opts) {
     setInterval(tick, Math.max(5, opts.intervalSec || 10) * 1000);
     tick();
 }
+
+/* ── Картинки: сетка превью и просмотрщик ─────────────────────────── */
+
+/* Раздел устроен как файловый просмотрщик: слева дерево «проект → папка»,
+   справа сетка превью, по нажатию — кадр во весь экран со стрелками,
+   масштабом и лентой внизу.
+
+   Список кадров строится один раз на весь каталог и дальше только
+   отбирается и сортируется на месте: сотня превью — это сотня запросов
+   за картинками, и гонять за ними ещё и разметку незачем. */
+
+const PIC_SIZES = [120, 170, 240, 330];    /* ползунок «размер», px */
+const PIC_ZOOM_MIN = 0.05;
+const PIC_ZOOM_MAX = 8;
+const PIC_ZOOM_STEP = 1.25;
+
+function picRemember(key, value) {
+    try { localStorage.setItem('pictures:' + key, value); } catch (err) { /* хранилище закрыто */ }
+}
+
+function picRecall(key, fallback) {
+    try {
+        const saved = localStorage.getItem('pictures:' + key);
+        return saved === null ? fallback : saved;
+    } catch (err) {
+        return fallback;
+    }
+}
+
+function initPictures(opts) {
+    const tree = document.getElementById('pic-tree');
+    const grid = document.getElementById('pic-grid');
+    if (!tree || !grid) return;
+
+    const title = document.getElementById('pic-title');
+    const count = document.getElementById('pic-count');
+    const where = document.getElementById('pic-where');
+    const note = document.getElementById('pic-note');
+    const search = document.getElementById('pic-search');
+    const sortBox = document.getElementById('pic-sort');
+    const sizeBox = document.getElementById('pic-size');
+
+    let groups = [];          // каталог как пришёл с сервера
+    let shown = [];           // что сейчас в сетке — по нему же ходит просмотрщик
+    let pick = picRecall('pick', '');          // «ключ группы\tпапка», пусто — всё
+    const folded = new Set((picRecall('folded', '') || '').split('\t').filter(Boolean));
+
+    function say(text) {
+        note.textContent = text || '';
+        note.hidden = !text;
+    }
+
+    /* ── Отбор и порядок ──────────────────────────────────────────── */
+
+    function everything() {
+        const all = [];
+        for (const group of groups) {
+            for (const folder of group.folders) {
+                for (const image of folder.images) all.push(image);
+            }
+        }
+        return all;
+    }
+
+    function selected() {
+        if (!pick) return { items: everything(), title: 'Все картинки', dir: '' };
+        const [groupKey, folderPath] = pick.split('\t');
+        const group = groups.find(g => g.key === groupKey);
+        if (!group) return { items: everything(), title: 'Все картинки', dir: '' };
+        if (folderPath === undefined || folderPath === null || folderPath === '*') {
+            const items = [];
+            group.folders.forEach(f => items.push(...f.images));
+            return { items: items, title: group.name, dir: group.dir };
+        }
+        const folder = group.folders.find(f => f.path === folderPath);
+        if (!folder) return { items: [], title: group.name, dir: group.dir };
+        return {
+            items: folder.images.slice(),
+            title: group.name + ' · ' + folder.title,
+            dir: folder.path && folder.path[0] !== ':' ? group.dir + '/' + folder.path : group.dir
+        };
+    }
+
+    function ordered(items) {
+        const how = sortBox.value;
+        const list = items.slice();
+        if (how === 'name') {
+            list.sort((a, b) => a.name.localeCompare(b.name, 'ru'));
+        } else if (how === 'old') {
+            list.sort((a, b) => a.mtime.localeCompare(b.mtime));
+        } else if (how === 'big') {
+            list.sort((a, b) => b.size - a.size);
+        } else {
+            list.sort((a, b) => b.mtime.localeCompare(a.mtime));
+        }
+        return list;
+    }
+
+    /* ── Дерево слева ─────────────────────────────────────────────── */
+
+    function node(kind, label, badge, key, current) {
+        const row = document.createElement('button');
+        row.type = 'button';
+        row.className = 'pic-node pic-node--' + kind + (current ? ' is-current' : '');
+        const name = document.createElement('span');
+        name.textContent = label;                  // имя с диска — только текстом
+        const num = document.createElement('span');
+        num.className = 'pic-node__count';
+        num.textContent = badge;
+        row.append(name, num);
+        row.addEventListener('click', function () {
+            pick = key;
+            picRemember('pick', key);
+            drawTree();
+            draw();
+            grid.scrollTop = 0;
+        });
+        return row;
+    }
+
+    function drawTree() {
+        tree.replaceChildren();
+        let total = 0;
+        groups.forEach(g => { total += g.count; });
+        tree.append(node('all', 'Все картинки', String(total), '', !pick));
+
+        for (const group of groups) {
+            const key = group.key + '\t*';
+            const row = node('group', group.name, String(group.count), key, pick === key);
+
+            // Треугольник свёртки — своей кнопкой внутри строки: у проекта
+            // бывает десяток папок, и развёрнутыми все они прячут остальные
+            const fold = document.createElement('button');
+            fold.type = 'button';
+            fold.className = 'pic-node__fold';
+            fold.textContent = folded.has(group.key) ? '▸' : '▾';
+            fold.title = folded.has(group.key) ? 'Развернуть' : 'Свернуть';
+            fold.addEventListener('click', function (e) {
+                e.stopPropagation();               // свёртка — не выбор папки
+                if (folded.has(group.key)) folded.delete(group.key); else folded.add(group.key);
+                picRemember('folded', Array.from(folded).join('\t'));
+                drawTree();
+            });
+            row.prepend(fold);
+            tree.append(row);
+
+            if (folded.has(group.key)) continue;
+            for (const folder of group.folders) {
+                const fkey = group.key + '\t' + folder.path;
+                tree.append(node('folder', folder.title, String(folder.count), fkey, pick === fkey));
+            }
+        }
+    }
+
+    /* ── Сетка ────────────────────────────────────────────────────── */
+
+    function tile(image, withPath) {
+        const cell = document.createElement('button');
+        cell.type = 'button';
+        cell.className = 'pic-tile';
+        cell.title = image.name;
+
+        const frame = document.createElement('div');
+        frame.className = 'pic-tile__frame';
+        const img = document.createElement('img');
+        img.loading = 'lazy';                      // сотня кадров разом не грузится
+        img.decoding = 'async';
+        img.alt = image.name;
+        img.src = opts.thumbUrl + '?src=' + encodeURIComponent(image.src);
+        img.addEventListener('error', function () {
+            // Битый файл или формат не по зубам: пустая плитка выглядела бы
+            // как ещё не загруженная
+            const stub = document.createElement('span');
+            stub.className = 'faint';
+            stub.textContent = 'превью нет';
+            frame.replaceChildren(stub);
+        });
+        frame.append(img);
+
+        if (withPath) {
+            const place = document.createElement('div');
+            place.className = 'pic-tile__where';
+            place.textContent = picPlace(image.src);
+            cell.append(frame, place);
+        } else {
+            cell.append(frame);
+        }
+
+        const name = document.createElement('div');
+        name.className = 'pic-tile__name';
+        name.textContent = image.name;
+
+        const meta = document.createElement('div');
+        meta.className = 'pic-tile__meta';
+        meta.textContent = (image.w ? image.w + '×' + image.h + ' · ' : '') +
+            fmtBytes(image.size) + ' · ' +
+            fmtDate(new Date(image.mtime), { day: '2-digit', month: '2-digit', year: '2-digit' });
+
+        cell.append(name, meta);
+        cell.addEventListener('click', function () { open(shown.indexOf(image)); });
+        return cell;
+    }
+
+    /* Где лежит кадр — «проект · папка». В общем списке без этого непонятно,
+       откуда картинка. Считается один раз на каталог: перебором по всем
+       папкам на каждую плитку сетка из тысячи кадров заметно тормозила бы. */
+    const places = new Map();
+
+    function mapPlaces() {
+        places.clear();
+        for (const group of groups) {
+            for (const folder of group.folders) {
+                const place = group.name + (folder.path ? ' · ' + folder.title : '');
+                for (const image of folder.images) places.set(image.src, place);
+            }
+        }
+    }
+
+    function picPlace(src) {
+        return places.get(src) || '';
+    }
+
+    function draw() {
+        const chosen = selected();
+        const needle = search.value.trim().toLowerCase();
+        let items = chosen.items;
+        if (needle) items = items.filter(i => i.name.toLowerCase().indexOf(needle) !== -1);
+        shown = ordered(items);
+
+        title.textContent = chosen.title;
+        where.textContent = chosen.dir || '';
+        count.textContent = needle
+            ? shown.length + ' из ' + chosen.items.length
+            : shown.length + ' шт.';
+
+        const withPath = !pick || pick.endsWith('\t*');
+        grid.replaceChildren();
+        for (const image of shown) grid.append(tile(image, withPath));
+
+        if (!shown.length) {
+            const empty = document.createElement('div');
+            empty.className = 'empty';
+            empty.style.gridColumn = '1 / -1';
+            empty.textContent = needle
+                ? 'Под поиск ничего не подошло'
+                : 'Картинок тут нет';
+            grid.append(empty);
+        }
+    }
+
+    /* ── Просмотрщик ──────────────────────────────────────────────── */
+
+    const viewer = document.getElementById('pic-viewer');
+    const stage = document.getElementById('v-stage');
+    const canvas = document.getElementById('v-canvas');
+    const big = document.getElementById('v-img');
+    const strip = document.getElementById('v-strip');
+    const vName = document.getElementById('v-name');
+    const vWhere = document.getElementById('v-where');
+    const vInfo = document.getElementById('v-info');
+    const vZoom = document.getElementById('v-zoom');
+    const vFit = document.getElementById('v-fit');
+    const vDownload = document.getElementById('v-download');
+    const prevBtn = document.getElementById('v-prev');
+    const nextBtn = document.getElementById('v-next');
+
+    let at = -1;            // место в `shown`
+    let scale = 1;          // 0 — вписать в окно
+    let fit = true;
+
+    function zoomText() {
+        if (fit) {
+            const real = big.naturalWidth ? big.clientWidth / big.naturalWidth : 1;
+            vZoom.textContent = Math.round(real * 100) + ' %';
+        } else {
+            vZoom.textContent = Math.round(scale * 100) + ' %';
+        }
+        vFit.textContent = fit ? '1:1' : 'Вписать';
+        vFit.title = fit ? 'Показать 1:1 (1)' : 'Вписать в окно (0)';
+    }
+
+    function applyZoom() {
+        if (fit) {
+            // Вписать: размер отдан браузеру, полотно ровно в окно —
+            // иначе `max-height` картинки считался бы от растущего полотна
+            big.style.width = '';
+            big.style.height = '';
+            big.style.maxWidth = '100%';
+            big.style.maxHeight = '100%';
+            canvas.classList.remove('viewer__canvas--zoom');
+            stage.classList.remove('viewer__stage--grab');
+        } else {
+            big.style.maxWidth = 'none';
+            big.style.maxHeight = 'none';
+            big.style.width = Math.round(big.naturalWidth * scale) + 'px';
+            big.style.height = 'auto';
+            canvas.classList.add('viewer__canvas--zoom');
+            stage.classList.add('viewer__stage--grab');
+        }
+        zoomText();
+    }
+
+    function setScale(next, keepCentre) {
+        const before = { x: stage.scrollLeft + stage.clientWidth / 2,
+                         y: stage.scrollTop + stage.clientHeight / 2 };
+        const was = fit ? (big.clientWidth / (big.naturalWidth || 1)) : scale;
+        scale = Math.min(PIC_ZOOM_MAX, Math.max(PIC_ZOOM_MIN, next));
+        fit = false;
+        applyZoom();
+        if (keepCentre && was) {
+            // Середина кадра остаётся серединой: иначе после «+» смотришь
+            // в левый верхний угол вместо того места, куда смотрела
+            const k = scale / was;
+            stage.scrollLeft = before.x * k - stage.clientWidth / 2;
+            stage.scrollTop = before.y * k - stage.clientHeight / 2;
+        }
+    }
+
+    function fitAll() {
+        fit = true;
+        applyZoom();
+    }
+
+    function drawStrip() {
+        strip.replaceChildren();
+        shown.forEach(function (image, i) {
+            const thumb = document.createElement('img');
+            thumb.loading = 'lazy';
+            thumb.alt = image.name;
+            thumb.title = image.name;
+            thumb.src = opts.thumbUrl + '?src=' + encodeURIComponent(image.src);
+            if (i === at) thumb.className = 'is-current';
+            thumb.addEventListener('click', function () { go(i); });
+            strip.append(thumb);
+        });
+    }
+
+    function markStrip() {
+        Array.from(strip.children).forEach(function (el, i) {
+            el.classList.toggle('is-current', i === at);
+            if (i === at) el.scrollIntoView({ block: 'nearest', inline: 'nearest' });
+        });
+    }
+
+    /* Соседние кадры подгружаются заранее: со стрелкой в руке пауза на
+       загрузку заметнее всего */
+    function preload(i) {
+        [i - 1, i + 1].forEach(function (j) {
+            const image = shown[j];
+            if (!image) return;
+            const ghost = new Image();
+            ghost.src = opts.viewUrl + '?src=' + encodeURIComponent(image.src);
+        });
+    }
+
+    function go(i) {
+        if (i < 0 || i >= shown.length) return;
+        at = i;
+        const image = shown[i];
+        big.src = opts.viewUrl + '?src=' + encodeURIComponent(image.src);
+        big.alt = image.name;
+        vName.textContent = image.name;
+        vWhere.textContent = picPlace(image.src);
+        vInfo.textContent = (i + 1) + ' из ' + shown.length + ' · ' +
+            (image.w ? image.w + '×' + image.h + ' · ' : '') + fmtBytes(image.size) + ' · ' +
+            fmtDate(new Date(image.mtime), { day: '2-digit', month: '2-digit', year: 'numeric',
+                                             hour: '2-digit', minute: '2-digit' });
+        vDownload.href = opts.fileUrl + '?src=' + encodeURIComponent(image.src);
+        prevBtn.disabled = i === 0;
+        nextBtn.disabled = i === shown.length - 1;
+        fitAll();
+        markStrip();
+        preload(i);
+    }
+
+    function open(i) {
+        if (i < 0 || !shown.length) return;
+        at = i;
+        drawStrip();
+        if (!viewer.open) viewer.showModal();
+        go(i);
+    }
+
+    big.addEventListener('load', zoomText);
+
+    prevBtn.addEventListener('click', function () { go(at - 1); });
+    nextBtn.addEventListener('click', function () { go(at + 1); });
+    document.getElementById('v-close').addEventListener('click', function () { viewer.close(); });
+    document.getElementById('v-zoom-in').addEventListener('click', function () {
+        setScale((fit ? big.clientWidth / (big.naturalWidth || 1) : scale) * PIC_ZOOM_STEP, true);
+    });
+    document.getElementById('v-zoom-out').addEventListener('click', function () {
+        setScale((fit ? big.clientWidth / (big.naturalWidth || 1) : scale) / PIC_ZOOM_STEP, true);
+    });
+    vFit.addEventListener('click', function () { if (fit) setScale(1, false); else fitAll(); });
+
+    document.getElementById('v-full').addEventListener('click', function () {
+        if (document.fullscreenElement) document.exitFullscreen();
+        else if (viewer.requestFullscreen) viewer.requestFullscreen();
+    });
+
+    /* Колесо: кадр вписан — листаем, как в ACDSee; увеличен — крутим полотно */
+    stage.addEventListener('wheel', function (e) {
+        if (e.ctrlKey) {
+            e.preventDefault();
+            setScale((fit ? big.clientWidth / (big.naturalWidth || 1) : scale) *
+                (e.deltaY < 0 ? PIC_ZOOM_STEP : 1 / PIC_ZOOM_STEP), true);
+            return;
+        }
+        if (fit) {
+            e.preventDefault();
+            go(at + (e.deltaY > 0 ? 1 : -1));
+        }
+    }, { passive: false });
+
+    /* Перетаскивание увеличенного кадра */
+    let drag = null;
+    stage.addEventListener('pointerdown', function (e) {
+        if (fit || e.button !== 0) return;
+        drag = { x: e.clientX, y: e.clientY, left: stage.scrollLeft, top: stage.scrollTop };
+        stage.setPointerCapture(e.pointerId);
+        stage.classList.add('viewer__stage--grabbing');
+    });
+    stage.addEventListener('pointermove', function (e) {
+        if (!drag) return;
+        stage.scrollLeft = drag.left - (e.clientX - drag.x);
+        stage.scrollTop = drag.top - (e.clientY - drag.y);
+    });
+    ['pointerup', 'pointercancel'].forEach(function (name) {
+        stage.addEventListener(name, function () {
+            drag = null;
+            stage.classList.remove('viewer__stage--grabbing');
+        });
+    });
+
+    /* Клавиши как в просмотрщике: стрелки листают, Esc закрывает (это делает
+       сам <dialog>), 0 вписывает, 1 даёт 1:1, +/− меняют масштаб */
+    viewer.addEventListener('keydown', function (e) {
+        if (e.key === 'ArrowRight' || e.key === ' ' || e.key === 'PageDown') {
+            e.preventDefault(); go(at + 1);
+        } else if (e.key === 'ArrowLeft' || e.key === 'PageUp') {
+            e.preventDefault(); go(at - 1);
+        } else if (e.key === 'Home') {
+            e.preventDefault(); go(0);
+        } else if (e.key === 'End') {
+            e.preventDefault(); go(shown.length - 1);
+        } else if (e.key === '+' || e.key === '=') {
+            e.preventDefault();
+            setScale((fit ? big.clientWidth / (big.naturalWidth || 1) : scale) * PIC_ZOOM_STEP, true);
+        } else if (e.key === '-') {
+            e.preventDefault();
+            setScale((fit ? big.clientWidth / (big.naturalWidth || 1) : scale) / PIC_ZOOM_STEP, true);
+        } else if (e.key === '0') {
+            e.preventDefault(); fitAll();
+        } else if (e.key === '1') {
+            e.preventDefault(); setScale(1, false);
+        } else if (e.key === 'f' || e.key === 'F' || e.key === 'а' || e.key === 'А') {
+            e.preventDefault();
+            if (document.fullscreenElement) document.exitFullscreen();
+            else if (viewer.requestFullscreen) viewer.requestFullscreen();
+        }
+    });
+
+    viewer.addEventListener('close', function () {
+        big.removeAttribute('src');      // крупный кадр в памяти держать незачем
+        if (document.fullscreenElement) document.exitFullscreen();
+    });
+
+    /* ── Загрузка каталога ────────────────────────────────────────── */
+
+    async function load() {
+        say('');
+        try {
+            const res = await fetch(opts.listUrl, { cache: 'no-store' });
+            const payload = await res.json().catch(() => ({}));
+            if (!res.ok) throw new Error(payload.error || 'сервер ответил ' + res.status);
+            groups = payload.groups || [];
+            mapPlaces();
+            if (payload.truncated) {
+                say('Показаны первые ' + payload.limit + ' картинок — дальше список обрезан.');
+            }
+            drawTree();
+            draw();
+        } catch (err) {
+            tree.replaceChildren();
+            grid.replaceChildren();
+            say('Не удалось получить список картинок: ' + err.message);
+        }
+    }
+
+    /* ── Панель управления ────────────────────────────────────────── */
+
+    function setSize(step) {
+        const px = PIC_SIZES[Math.min(PIC_SIZES.length - 1, Math.max(0, Number(step)))];
+        grid.style.setProperty('--thumb', px + 'px');
+        picRemember('size', step);
+    }
+
+    sizeBox.value = picRecall('size', '1');
+    setSize(sizeBox.value);
+    sizeBox.addEventListener('input', function () { setSize(sizeBox.value); });
+
+    sortBox.value = picRecall('sort', 'new');
+    sortBox.addEventListener('change', function () {
+        picRemember('sort', sortBox.value);
+        draw();
+    });
+
+    search.addEventListener('input', draw);
+    document.getElementById('pic-reload').addEventListener('click', load);
+
+    load();
+}

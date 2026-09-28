@@ -29,6 +29,8 @@ desktop.ini
 webui/.venv/
 webui/.env
 webui/uploads/
+# Склад превью раздела «Картинки» — делается из самих картинок, восстановим
+webui/.thumbs/
 __pycache__/
 *.pyc
 

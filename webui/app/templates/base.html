@@ -37,6 +37,8 @@
     <a class="nav__item {% if active == 'sec' %}nav__item--active{% endif %}" href="{{ root_path }}/sec">Безопасность</a>
     <a class="nav__item {% if active == 'settings' %}nav__item--active{% endif %}" href="{{ url_for('settings_page') }}">Настройки</a>
     <span class="titlebar__spacer"></span>
+    {# Адрес собран вручную по той же причине, что у «VPN» и «Безопасности» #}
+    <a class="nav__item {% if active == 'pictures' %}nav__item--active{% endif %}" href="{{ root_path }}/pictures">Картинки</a>
     <a class="nav__item {% if active == 'journal' %}nav__item--active{% endif %}" href="{{ url_for('journal') }}">Журнал</a>
     <a class="nav__item {% if active == 'search' %}nav__item--active{% endif %}" href="{{ url_for('search') }}">Поиск</a>
   </nav>

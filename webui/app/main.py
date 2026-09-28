@@ -7,7 +7,9 @@ from fastapi import FastAPI
 from fastapi.staticfiles import StaticFiles
 
 from . import config, db
-from .routers import auth, chats, claude_login, dashboard, projects, security, settings, totp, vpn
+from .routers import (
+    auth, chats, claude_login, dashboard, pictures, projects, security, settings, totp, vpn,
+)
 
 
 async def _cleanup_loop() -> None:
@@ -22,6 +24,9 @@ async def _cleanup_loop() -> None:
             )
             db.execute("DELETE FROM sessions WHERE expires_at < now()")
             db.execute("DELETE FROM login_attempts WHERE at < now() - interval '7 days'")
+            # Превью картинок: имя считается от времени изменения исходника,
+            # поэтому после правки картинки старое превью никто не спросит
+            pictures.purge_thumbs()
         except asyncio.CancelledError:
             raise
         except Exception:                              # noqa: BLE001
@@ -59,6 +64,7 @@ app.include_router(auth.router)
 app.include_router(dashboard.router)
 app.include_router(chats.router)
 app.include_router(projects.router)
+app.include_router(pictures.router)
 app.include_router(vpn.router)
 app.include_router(security.router)
 app.include_router(settings.router)

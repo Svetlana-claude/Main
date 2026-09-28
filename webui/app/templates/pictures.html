@@ -1,0 +1,95 @@
+{% extends "base.html" %}
+{% block title %}Картинки{% endblock %}
+{# Галерея занимает ровно окно: дерево слева, сетка прокручивается сама #}
+{% block shell_mod %}shell--fixed{% endblock %}
+{% block layout %}
+<main class="main main--flush">
+<div class="workspace">
+
+  <aside class="sidebar">
+    <div class="cmdbar">
+      <input class="input" id="pic-search" type="search" placeholder="Поиск по имени"
+             aria-label="Поиск картинки по имени">
+    </div>
+    <div class="sidebar__list" id="pic-tree">
+      <div class="empty">Загрузка…</div>
+    </div>
+  </aside>
+
+  <section class="chat">
+    <div class="cmdbar">
+      <strong id="pic-title">Все картинки</strong>
+      <span class="tag" id="pic-count">—</span>
+      <span class="cmdbar__sep"></span>
+      <span class="mono faint breakable" id="pic-where" style="font-size:12px"></span>
+      <span class="spacer"></span>
+      <label class="check">порядок
+        <select class="select" id="pic-sort" style="width:auto" aria-label="Порядок картинок">
+          <option value="new">сначала новые</option>
+          <option value="old">сначала старые</option>
+          <option value="name">по имени</option>
+          <option value="big">сначала крупные</option>
+        </select>
+      </label>
+      <span class="cmdbar__sep"></span>
+      <label class="check">размер
+        <input type="range" id="pic-size" min="0" max="3" step="1" value="1"
+               style="width:90px" aria-label="Размер превью">
+      </label>
+      <span class="cmdbar__sep"></span>
+      <button class="btn" id="pic-reload" type="button">Обновить</button>
+    </div>
+
+    <div class="note note--warn" id="pic-note" hidden style="margin:8px"></div>
+    <div class="gallery" id="pic-grid"></div>
+  </section>
+
+</div>
+</main>
+
+{# Просмотрщик: одна картинка во весь экран, стрелки, масштаб, лента кадров.
+   Нативный <dialog> сам держит фокус и закрывается по Esc. #}
+<dialog class="viewer" id="pic-viewer" aria-label="Просмотр картинки">
+  <div class="viewer__bar">
+    <b id="v-name">—</b>
+    <span class="faint mono" id="v-where" style="font-size:12px"></span>
+    <span class="spacer"></span>
+    <span class="faint" id="v-info"></span>
+    <span class="cmdbar__sep"></span>
+    <button class="btn btn--plain" id="v-zoom-out" type="button" title="Уменьшить (−)">−</button>
+    <span id="v-zoom" style="min-width:52px;text-align:center">100 %</span>
+    <button class="btn btn--plain" id="v-zoom-in" type="button" title="Увеличить (+)">+</button>
+    <button class="btn btn--plain" id="v-fit" type="button" title="Вписать в окно (0) или 1:1 (1)">Вписать</button>
+    <a class="btn btn--plain" id="v-download" download href="#">Скачать</a>
+    <button class="btn btn--plain" id="v-full" type="button" title="Во весь экран (F)">Экран</button>
+    <button class="btn btn--plain" id="v-close" type="button" title="Закрыть (Esc)">✕</button>
+  </div>
+
+  <div class="viewer__stage" id="v-stage">
+    <div class="viewer__canvas" id="v-canvas">
+      <img id="v-img" alt="">
+    </div>
+    <button class="viewer__nav viewer__nav--prev" id="v-prev" type="button"
+            aria-label="Предыдущая картинка">‹</button>
+    <button class="viewer__nav viewer__nav--next" id="v-next" type="button"
+            aria-label="Следующая картинка">›</button>
+  </div>
+
+  <div class="viewer__strip" id="v-strip"></div>
+</dialog>
+
+{% endblock %}
+
+{% block scripts %}
+<script>
+{# Адреса собраны вручную, а не через url_for: шаблон подхватывается сразу,
+   а маршруты появляются только после перезапуска службы — до него url_for
+   уронил бы страницу целиком. #}
+initPictures({
+  listUrl:  "{{ root_path }}/pictures/list",
+  thumbUrl: "{{ root_path }}/pictures/thumb",
+  viewUrl:  "{{ root_path }}/pictures/view",
+  fileUrl:  "{{ root_path }}/pictures/file"
+});
+</script>
+{% endblock %}
