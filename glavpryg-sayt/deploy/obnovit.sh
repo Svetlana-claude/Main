@@ -125,6 +125,28 @@ cp -a "$SAYT/.env" "$NOVOE/.env"
 rm -rf "$NOVOE/storage"
 cp -a "$SAYT/storage" "$NOVOE/storage"
 
+# ⚠️ Наши правки в чужом коде. Подмена каталога уносит их без следа, поэтому
+# они хранятся патчами в pravki/ и накладываются здесь, по порядку имён.
+# Не лёг патч — останавливаемся до подмены каталога: сайт продолжает работать
+# на прежней версии, и разбираться можно спокойно.
+PRAVKI="$PROEKT/pravki"
+if [ -d "$PRAVKI" ]; then
+    for zaplata in "$PRAVKI"/*.patch; do
+        [ -e "$zaplata" ] || break
+        if ! (cd "$NOVOE" && patch -p1 --forward --dry-run < "$zaplata" >/dev/null 2>&1); then
+            echo >&2
+            echo "патч не ложится на новую поставку: $(basename "$zaplata")" >&2
+            echo "Разработчик переписал то же место. Разобрать вручную:" >&2
+            echo "    cd $NOVOE && patch -p1 < $zaplata" >&2
+            echo "Сайт работает на прежней версии, ничего не подменено." >&2
+            rm -rf "$NOVOE"
+            exit 1
+        fi
+        (cd "$NOVOE" && patch -p1 --forward < "$zaplata" >/dev/null)
+        echo "правка наложена: $(basename "$zaplata")"
+    done
+fi
+
 chown -R "$VLADELETS":www-data "$NOVOE"
 find "$NOVOE" -type d -exec chmod 2750 {} +
 find "$NOVOE" -type f -exec chmod 0640 {} +
