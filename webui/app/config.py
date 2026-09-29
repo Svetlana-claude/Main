@@ -53,6 +53,13 @@ TEMPLATES_DIR = BASE_DIR / "templates"
 STATIC_DIR = BASE_DIR / "static"
 UPLOADS_DIR = PROJECT_DIR / "uploads"
 
+# Предел на один загружаемый файл. Лежит здесь, а не в разделе проектов: то же
+# число выводится в надписях формы (`max_upload_mb` в контексте страницы), и
+# расходиться им нельзя. В nginx `client_max_body_size` держится чуть выше —
+# тогда превышение отбивает приложение понятным сообщением, а не сам nginx
+# сухой ошибкой 413.
+MAX_UPLOAD_BYTES = 512 * 1024 * 1024     # 512 МБ на файл
+
 COOKIE_NAME = "webui_session"
 SESSION_DAYS = 30
 

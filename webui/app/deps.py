@@ -72,6 +72,9 @@ def render(request: Request, template: str, ctx: dict | None = None):
         "settings": settings,
         "theme": settings.get("theme", "light"),
         "root_path": config.ROOT_PATH,
+        # Предел загрузки — одним числом из настроек приложения: надписи формы
+        # не должны расходиться с тем, что на самом деле принимается
+        "max_upload_mb": config.MAX_UPLOAD_BYTES // (1024 * 1024),
         "tz_name": timefmt.zone_name(settings),
         # Время в поясе из настроек: `{{ time.when(m.created_at) }}` через
         # time-macros.html. Пояс читается здесь один раз на страницу, а не на

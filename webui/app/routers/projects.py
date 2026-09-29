@@ -24,8 +24,6 @@ from .chats import _save_answer
 
 router = APIRouter()
 
-MAX_UPLOAD_BYTES = 64 * 1024 * 1024      # 64 МБ на файл
-
 # ── Размер контекста ────────────────────────────────────────────────────
 #
 # Каждый шаг агента перечитывает весь контекст сессии, а кэш с ним живёт час.
@@ -734,7 +732,7 @@ async def project_upload(
     with target.open("wb") as sink:
         while chunk := await upload.read(1024 * 256):
             size += len(chunk)
-            if size > MAX_UPLOAD_BYTES:
+            if size > config.MAX_UPLOAD_BYTES:
                 sink.close()
                 target.unlink(missing_ok=True)
                 return RedirectResponse(

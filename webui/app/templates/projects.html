@@ -53,7 +53,9 @@
       </div>
 
       {% if request.query_params.get('err') == 'big' %}
-        <div class="note note--err" style="margin:8px">Файл больше 64 МБ — не принят</div>
+        {# Пока приложение не перезапущено, предел в нём прежний — 64 МБ #}
+        <div class="note note--err" style="margin:8px">Файл больше
+          {{ max_upload_mb if max_upload_mb is defined else 64 }} МБ — не принят</div>
       {% endif %}
 
       <div style="display:flex;flex:1;min-height:0">
@@ -150,7 +152,7 @@
                     enctype="multipart/form-data" style="padding:8px">
                 <input class="input" type="file" name="upload" required style="margin-bottom:6px">
                 <button class="btn" type="submit" style="width:100%;justify-content:center">Загрузить</button>
-                <div class="field__hint">До 64 МБ</div>
+                <div class="field__hint">До {{ max_upload_mb if max_upload_mb is defined else 64 }} МБ</div>
               </form>
               {% for f in files %}
                 <div style="padding:5px 8px;border-top:1px solid var(--line-soft)">
