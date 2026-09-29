@@ -43,3 +43,6 @@ sc-parashyuty/foto/*.jpg
 # Руководство пользователя: собирается скриптами webui/manual/, в git — только скрипты
 webui/manual/shots/
 webui/*.docx
+
+# Снимки страниц сайта «Главпрыг»: делаются прогоном tests/snimki.py, вес мегабайты
+glavpryg-sayt/snimki/
