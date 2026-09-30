@@ -8,7 +8,7 @@
 +                    {{-- Карточка-стекло: заливка 30 %, фон за ней размыт. Размытие даёт
 +                         читаемость вместо плотной заливки — текст лежит на ровном
 +                         пятне, а не на пёстрой картинке. --}}
-+                    <div class="w-full max-w-[600px] rounded-2xl border border-white/50 bg-white/30 p-6 shadow-[0_8px_32px_rgba(0,0,0,0.18)] backdrop-blur-2xl backdrop-saturate-[1.4] backdrop-contrast-[.55] backdrop-brightness-[1.35] sm:p-8">
++                    <div class="w-full max-w-[600px] rounded-2xl bg-white/30 p-6 shadow-[0_8px_32px_rgba(0,0,0,0.18)] backdrop-blur-2xl backdrop-saturate-[1.4] backdrop-contrast-[.55] backdrop-brightness-[1.35] sm:p-8">
                          <h2 class="h-title text-xl font-bold leading-tight text-ink sm:text-[28px]">{{ $cardTitle }}</h2>
                          <p class="mt-3 max-w-[440px] text-xs leading-relaxed text-ink/80">{{ $cardText }}</p>
                          <a href="{{ $s->hero_button_url ?: '#certificate' }}"
@@ -17,7 +17,7 @@
                          <div class="flex items-center gap-3">
                              <button type="button" data-hero-prev aria-label="Предыдущий слайд"
 -                                    class="grid h-11 w-11 place-items-center rounded-full border border-white/50 bg-white/20 text-white backdrop-blur transition hover:bg-white/40">
-+                                    class="grid h-11 w-11 place-items-center rounded-full border border-white/50 bg-white/20 text-white shadow-[0_6px_20px_rgba(0,0,0,0.20)] backdrop-blur-2xl backdrop-saturate-150 transition hover:bg-white/40">
++                                    class="grid h-11 w-11 place-items-center rounded-full bg-white/20 text-white shadow-[0_6px_20px_rgba(0,0,0,0.20)] backdrop-blur-2xl backdrop-saturate-150 transition hover:bg-white/40">
                                  <svg class="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M15 18l-6-6 6-6"/></svg>
                              </button>
                              <div class="flex items-center gap-2">
@@ -26,7 +26,7 @@
                              </div>
                              <button type="button" data-hero-next aria-label="Следующий слайд"
 -                                    class="grid h-11 w-11 place-items-center rounded-full border border-white/50 bg-white/20 text-white backdrop-blur transition hover:bg-white/40">
-+                                    class="grid h-11 w-11 place-items-center rounded-full border border-white/50 bg-white/20 text-white shadow-[0_6px_20px_rgba(0,0,0,0.20)] backdrop-blur-2xl backdrop-saturate-150 transition hover:bg-white/40">
++                                    class="grid h-11 w-11 place-items-center rounded-full bg-white/20 text-white shadow-[0_6px_20px_rgba(0,0,0,0.20)] backdrop-blur-2xl backdrop-saturate-150 transition hover:bg-white/40">
                                  <svg class="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M9 6l6 6-6 6"/></svg>
                              </button>
                          </div>
