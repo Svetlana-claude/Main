@@ -25,7 +25,8 @@ from pathlib import Path
 from playwright.sync_api import sync_playwright
 
 SAYT = Path("/var/www/glavpryg")
-ARKHIV = SAYT / "storage/app/public/fotoarkhiv"
+HRANILISHCHE = SAYT / "storage/app/public"
+ARKHIV = HRANILISHCHE / "fotoarkhiv"
 PHP = "/usr/bin/php8.4"
 METKA = "samoproverka"
 POSEV = {"tandem": 3, "sportivnyy": 2}
@@ -53,6 +54,15 @@ def kadr(put: Path, podpis: str) -> None:
     risunok.rectangle([40, 40, 1160, 760], outline=(255, 255, 255), width=6)
     risunok.text((80, 360), podpis, fill=(255, 255, 255))
     im.save(put, quality=85)
+
+
+def mimo_arkhiva() -> set[str]:
+    """Файлы хранилища вне архива — датированные папки, куда Orchid кладёт загруженное."""
+    return {
+        str(f.relative_to(HRANILISHCHE))
+        for f in HRANILISHCHE.rglob("*")
+        if f.is_file() and not f.is_relative_to(ARKHIV)
+    }
 
 
 def posev() -> None:
@@ -115,6 +125,7 @@ def main() -> int:
                      f"метка dashboard-prefix знает о подпути: «{prefiks}»")
 
             # --- Загрузка снимка кнопкой ---
+            bylo_mimo = mimo_arkhiva()
             with tempfile.TemporaryDirectory() as vremenno:
                 fayl = Path(vremenno) / f"{METKA}-zagruzka.jpg"
                 kadr(fayl, "загрузка через админку")
@@ -131,6 +142,11 @@ def main() -> int:
             v_papke = sorted(f.name for f in (ARKHIV / "sportivnyy").glob("*.jpg"))
             proverit(f"{METKA}-zagruzka.jpg" in v_papke,
                      f"снимок лёг в папку архива под своим именем: {v_papke}")
+
+            # Снимок лежит в архиве — значит в датированной папке Orchid его
+            # больше быть не должно: иначе хранилище копит по дублю на загрузку.
+            lishnee = sorted(mimo_arkhiva() - bylo_mimo)
+            proverit(not lishnee, f"исходник не остался мимо архива (лишних файлов {len(lishnee)}): {lishnee}")
 
             # --- Список слайдов: колонка и отбор ---
             st.goto(f"{osnova}/admin/gallery", wait_until="networkidle", timeout=60000)

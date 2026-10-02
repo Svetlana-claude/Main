@@ -707,7 +707,7 @@
 +}
 --- /dev/null
 +++ b/app/Orchid/Screens/FotoArkhiv/FotoArkhivScreen.php
-@@ -0,0 +1,184 @@
+@@ -0,0 +1,212 @@
 +<?php
 +
 +declare(strict_types=1);
@@ -851,10 +851,12 @@
 +            // указывают на него же. Перенос такой файл уводил, и у прежних
 +            // вложений оставалась ссылка в пустоту.
 +            $bylo = $vlozhenie->physicalPath();
++            $byloNa = $vlozhenie->disk;
 +            if ($bylo !== null && $vlozhenie->path !== $papka && $disk->exists($bylo)) {
 +                $imya = $this->svobodnoeImya($vlozhenie->original_name, $papka, $vlozhenie->extension);
 +                $disk->copy($bylo, $papka . $imya . '.' . $vlozhenie->extension);
 +                $vlozhenie->forceFill(['path' => $papka, 'name' => $imya, 'disk' => 'public'])->save();
++                $this->ubratIskhodnik($byloNa, $bylo);
 +            }
 +
 +            if ($data['v_galereyu'] ?? false) {
@@ -873,6 +875,32 @@
 +        Toast::info($polozheno . ' — положено в архив «' . GalleryItem::razdely()[$razdel] . '»');
 +
 +        return redirect()->route('platform.fotoarkhiv');
++    }
++
++    /**
++     * Снести исходник из датированной папки Orchid после того, как снимок лёг
++     * в архив — но только если на него больше никто не ссылается.
++     *
++     * ⚠️ Проверка обязательна. Одинаковые по содержимому снимки Orchid держит
++     * одним файлом на диске: вложения разных загрузок указывают на тот же
++     * путь. Снести файл, на который смотрит чужое вложение, — оставить ему
++     * ссылку в пустоту. Поэтому сначала спрашиваем базу, а не диск.
++     */
++    private function ubratIskhodnik(string $disk, string $put): void
++    {
++        $papka = dirname($put);
++        $imya = pathinfo($put, PATHINFO_FILENAME);
++        $rasshirenie = pathinfo($put, PATHINFO_EXTENSION);
++
++        $est = Attachment::where('disk', $disk)
++            ->where('path', $papka === '.' ? '' : $papka . '/')
++            ->where('name', $imya)
++            ->where('extension', $rasshirenie)
++            ->exists();
++
++        if (! $est) {
++            Storage::disk($disk)->delete($put);
++        }
 +    }
 +
 +    /**
