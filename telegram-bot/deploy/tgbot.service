@@ -1,0 +1,44 @@
+# Служба бота. Копия того, что ставится в /etc/systemd/system/tgbot.service.
+#
+#   sudo cp deploy/tgbot.service /etc/systemd/system/tgbot.service
+#   sudo systemctl daemon-reload && sudo systemctl enable --now tgbot
+#   journalctl -u tgbot -f
+#
+# Бот запускается ПОСЛЕ webui и postgresql, но не требует их: падение панели его
+# не гасит — база общая, а веб-сервер боту не нужен вовсе (опрос, не webhook).
+
+[Unit]
+Description=Телеграм-бот рабочего места
+After=network-online.target postgresql.service
+Wants=network-online.target
+
+# Предел перезапусков живёт именно здесь, в [Unit], а не в [Service]: там
+# systemd его молча отбрасывает («Unknown key name … ignoring»), и служба
+# крутилась бы в бесконечном перезапуске. Проверено systemd-analyze verify.
+StartLimitBurst=5
+StartLimitIntervalSec=120
+
+[Service]
+Type=simple
+User=mokeeva
+Group=mokeeva
+WorkingDirectory=/home/mokeeva/main/telegram-bot
+
+# Токен бота в юните НЕ прописывается: он живёт в файле с правами 600, и бот
+# читает его так, чтобы значение не попало в окружение процесса, — иначе его
+# унаследовал бы запущенный нами `claude`. Подробности — bot/config.py.
+Environment=PYTHONUNBUFFERED=1
+
+ExecStart=/home/mokeeva/main/telegram-bot/.venv/bin/python -m bot.main
+
+# Телеграм не принял токен — перезапуск не поможет; предел попыток задан
+# в [Unit], после него служба встанет и это будет видно в статусе
+Restart=always
+RestartSec=5
+
+# Ответ движка бывает долгим; при останове даём дописать и закрыть пул
+KillSignal=SIGTERM
+TimeoutStopSec=60
+
+[Install]
+WantedBy=multi-user.target
