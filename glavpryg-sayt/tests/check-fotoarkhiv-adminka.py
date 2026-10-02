@@ -30,6 +30,8 @@ ARKHIV = HRANILISHCHE / "fotoarkhiv"
 PHP = "/usr/bin/php8.4"
 METKA = "samoproverka"
 POSEV = {"tandem": 3, "sportivnyy": 2}
+# Экран списка отдаёт постранично — см. paginate() в GalleryItemListScreen.
+NA_STRANICE = 50
 
 besedy: list[str] = []
 bedy: list[str] = []
@@ -54,6 +56,39 @@ def kadr(put: Path, podpis: str) -> None:
     risunok.rectangle([40, 40, 1160, 760], outline=(255, 255, 255), width=6)
     risunok.text((80, 360), podpis, fill=(255, 255, 255))
     im.save(put, quality=85)
+
+
+def slaydov_v_baze() -> dict[str, int]:
+    """Сколько слайдов уже заведено: всего (ключ «») и по подразделам.
+
+    ⚠️ Проверка идёт по боевому сайту с настоящими снимками заказчика. Считать
+    можно только прибавку от своего посева: иначе каждая новая фотография в
+    галерее красит проверку ни за что.
+    """
+    vyvod = artisan("tinker", "--execute", """
+        echo 'SVOD:=' . App\\Models\\GalleryItem::count();
+        foreach (App\\Models\\GalleryItem::whereNotNull('razdel')
+                 ->selectRaw('razdel, count(*) n')->groupBy('razdel')->get() as $r) {
+            echo ',' . $r->razdel . '=' . $r->n;
+        }
+        echo PHP_EOL;
+    """)
+    stroka = next(s for s in vyvod.splitlines() if s.startswith("SVOD:"))
+    bylo = {}
+    for kusok in stroka[len("SVOD:"):].split(","):
+        imya, _, skolko = kusok.partition("=")
+        bylo[imya] = int(skolko)
+    return bylo
+
+
+def poseyannyy_slayd(razdel: str) -> int:
+    """Номер своего посеянного слайда: править настоящий снимок заказчика нельзя."""
+    vyvod = artisan("tinker", "--execute", f"""
+        $vl = Orchid\\Attachment\\Models\\Attachment::where('name', 'like', '{METKA}-%')->pluck('id');
+        echo 'SLAYD:' . App\\Models\\GalleryItem::whereIn('image_id', $vl)
+            ->where('razdel', '{razdel}')->value('id') . PHP_EOL;
+    """)
+    return int(next(s for s in vyvod.splitlines() if s.startswith("SLAYD:"))[len("SLAYD:"):])
 
 
 def mimo_arkhiva() -> set[str]:
@@ -93,6 +128,7 @@ def main() -> int:
     dovody = razbor.parse_args()
     osnova = dovody.adres.rstrip("/")
 
+    bylo = slaydov_v_baze()          # мерка снимается до посева
     posev()
     try:
         with sync_playwright() as p:
@@ -149,20 +185,26 @@ def main() -> int:
             proverit(not lishnee, f"исходник не остался мимо архива (лишних файлов {len(lishnee)}): {lishnee}")
 
             # --- Список слайдов: колонка и отбор ---
+            # Посев добавил свои слайды плюс один загруженный кнопкой — ждём
+            # прибавку к тому, что лежало. Экран отдаёт по 50 строк на страницу.
             st.goto(f"{osnova}/admin/gallery", wait_until="networkidle", timeout=60000)
             vsego = st.locator("table tbody tr").count()
-            ozhidaem = sum(POSEV.values()) + 1
+            ozhidaem = min(bylo.get("", 0) + sum(POSEV.values()) + 1, NA_STRANICE)
             proverit(vsego == ozhidaem, f"в списке {vsego} слайдов, ждали {ozhidaem}")
             proverit("Подраздел" in st.inner_text("table thead"), "в списке есть колонка «Подраздел»")
 
             st.goto(f"{osnova}/admin/gallery?razdel=tandem", wait_until="networkidle", timeout=60000)
             otobrano = st.locator("table tbody tr").count()
-            proverit(otobrano == POSEV["tandem"],
-                     f"отбор «Тандем» дал {otobrano} строк, ждали {POSEV['tandem']}")
+            zhdyom_tandem = min(bylo.get("tandem", 0) + POSEV["tandem"], NA_STRANICE)
+            proverit(otobrano == zhdyom_tandem,
+                     f"отбор «Тандем» дал {otobrano} строк, ждали {zhdyom_tandem}")
 
             # --- Правка подраздела: сохранить и вернуть обратно ---
-            st.locator("table tbody tr a").first.click()
-            st.wait_for_load_state("networkidle", timeout=60000)
+            # Правим свой посеянный слайд: настоящие снимки заказчика трогать
+            # нельзя, а оборвись проверка посередине — слайд остался бы не в
+            # своём подразделе.
+            svoy = poseyannyy_slayd("tandem")
+            st.goto(f"{osnova}/admin/gallery/{svoy}/edit", wait_until="networkidle", timeout=60000)
             vybor = st.locator('select[name="item[razdel]"]')
             proverit(vybor.count() == 1, "в карточке слайда есть поле «Подраздел»")
             proverit(vybor.input_value() == "tandem", f"в поле стоит подраздел слайда ({vybor.input_value()})")
@@ -173,18 +215,18 @@ def main() -> int:
 
             st.goto(f"{osnova}/admin/gallery?razdel=vr", wait_until="networkidle", timeout=60000)
             stalo = st.locator("table tbody tr").count()
-            proverit(stalo == 1, f"после правки в «VR» {stalo} строк, ждали 1")
+            zhdyom_vr = min(bylo.get("vr", 0) + 1, NA_STRANICE)
+            proverit(stalo == zhdyom_vr, f"после правки в «VR» {stalo} строк, ждали {zhdyom_vr}")
 
-            st.locator("table tbody tr a").first.click()
-            st.wait_for_load_state("networkidle", timeout=60000)
+            st.goto(f"{osnova}/admin/gallery/{svoy}/edit", wait_until="networkidle", timeout=60000)
             st.locator('select[name="item[razdel]"]').select_option("tandem")
             st.get_by_role("button", name="Сохранить").first.click()
             st.wait_for_load_state("networkidle", timeout=60000)
 
             st.goto(f"{osnova}/admin/gallery?razdel=tandem", wait_until="networkidle", timeout=60000)
             vernulos = st.locator("table tbody tr").count()
-            proverit(vernulos == POSEV["tandem"],
-                     f"после возврата в «Тандеме» {vernulos} строк, ждали {POSEV['tandem']}")
+            proverit(vernulos == zhdyom_tandem,
+                     f"после возврата в «Тандеме» {vernulos} строк, ждали {zhdyom_tandem}")
 
             proverit(not nedano, f"ни один запрос админки не отказал (отказов {len(nedano)}): {nedano[:3]}")
             br.close()

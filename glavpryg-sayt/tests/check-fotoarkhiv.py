@@ -44,6 +44,30 @@ def artisan(*dovody: str) -> str:
     return gotovo.stdout
 
 
+def slaydov_v_baze() -> dict[str, int]:
+    """Сколько слайдов уже показано на сайте: всего (ключ «») и по подразделам.
+
+    ⚠️ Проверка идёт по боевому сайту, где лежат настоящие снимки заказчика.
+    Сравнивать можно только прибавку от своего посева, не абсолютные числа:
+    иначе каждая новая фотография в галерее красит проверку.
+    """
+    vyvod = artisan("tinker", "--execute", """
+        $vsego = App\\Models\\GalleryItem::where('is_active', true)->count();
+        echo 'SVOD:=' . $vsego;
+        foreach (App\\Models\\GalleryItem::where('is_active', true)->whereNotNull('razdel')
+                 ->selectRaw('razdel, count(*) n')->groupBy('razdel')->get() as $r) {
+            echo ',' . $r->razdel . '=' . $r->n;
+        }
+        echo PHP_EOL;
+    """)
+    stroka = next(s for s in vyvod.splitlines() if s.startswith("SVOD:"))
+    bylo = {}
+    for kusok in stroka[len("SVOD:"):].split(","):
+        imya, _, skolko = kusok.partition("=")
+        bylo[imya] = int(skolko)
+    return bylo
+
+
 def posev() -> None:
     from PIL import Image, ImageDraw
 
@@ -71,8 +95,10 @@ def ubrat() -> None:
         subprocess.run(["sudo", "rm", "-f", str(fayl)], check=True)
 
 
-def proverka_v_brauzere(adres: str) -> None:
-    vsego = sum(POSEV.values())
+def proverka_v_brauzere(adres: str, bylo: dict[str, int]) -> None:
+    # Ждём ровно столько, сколько было до посева, плюс посеянное.
+    zhdyom = {razdel: bylo.get(razdel, 0) + skolko for razdel, skolko in POSEV.items()}
+    vsego = bylo.get("", 0) + sum(POSEV.values())
 
     with sync_playwright() as p:
         br = p.chromium.launch()
@@ -89,7 +115,7 @@ def proverka_v_brauzere(adres: str) -> None:
         proverit(vkladki.count() == len(POSEV) + 1,
                  f"вкладок {vkladki.count()}, ждали {len(POSEV) + 1} (Все и четыре подраздела)")
 
-        for razdel, skolko in [("", vsego)] + list(POSEV.items()):
+        for razdel, skolko in [("", vsego)] + list(zhdyom.items()):
             st.locator(f'[data-photo-tab="{razdel}"]').click()
             st.wait_for_timeout(1200)
             imya = razdel or "Все"
@@ -132,9 +158,10 @@ def main() -> int:
     razbor.add_argument("adres", nargs="?", default="https://mokeevasky.ru/glavpryg/")
     dovody = razbor.parse_args()
 
+    bylo = slaydov_v_baze()          # снять мерку до посева, а не после
     posev()
     try:
-        proverka_v_brauzere(dovody.adres)
+        proverka_v_brauzere(dovody.adres, bylo)
     finally:
         ubrat()
 
