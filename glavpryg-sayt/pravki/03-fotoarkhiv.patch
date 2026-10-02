@@ -1,0 +1,1100 @@
+--- a/app/Models/GalleryItem.php
++++ b/app/Models/GalleryItem.php
+@@ -15,6 +15,19 @@
+     public const TYPE_PHOTO = 'photo';
+     public const TYPE_VIDEO = 'video';
+ 
++    /**
++     * Подразделы блока «Наши фотографии». Значение совпадает с именем папки
++     * в фотоархиве (storage/app/public/fotoarkhiv/<подраздел>) — снимки
++     * раскладываются по вкладкам по месту хранения.
++     */
++    public const RAZDEL_TANDEM = 'tandem';
++    public const RAZDEL_SAM = 'samostoyatelnyy';
++    public const RAZDEL_SPORT = 'sportivnyy';
++    public const RAZDEL_VR = 'vr';
++
++    /** Корень фотоархива на диске `public` — путь внутри storage/app/public. */
++    public const ARKHIV = 'fotoarkhiv';
++
+     protected $guarded = [];
+ 
+     protected $casts = ['is_active' => 'bool'];
+@@ -29,6 +42,28 @@
+         ];
+     }
+ 
++    /** Подразделы в порядке показа вкладок на сайте. */
++    public static function razdely(): array
++    {
++        return [
++            self::RAZDEL_TANDEM => 'Тандем',
++            self::RAZDEL_SAM    => 'Самостоятельный',
++            self::RAZDEL_SPORT  => 'Спортивный',
++            self::RAZDEL_VR     => 'VR',
++        ];
++    }
++
++    public function razdelName(): string
++    {
++        return self::razdely()[$this->razdel] ?? '—';
++    }
++
++    /** Папка подраздела в фотоархиве: `fotoarkhiv/tandem/` и т. п. */
++    public static function papkaArkhiva(string $razdel): string
++    {
++        return self::ARKHIV . '/' . $razdel . '/';
++    }
++
+     public function image(): BelongsTo
+     {
+         return $this->belongsTo(Attachment::class, 'image_id');
+--- a/app/Orchid/Screens/GalleryItem/GalleryItemEditScreen.php
++++ b/app/Orchid/Screens/GalleryItem/GalleryItemEditScreen.php
+@@ -58,6 +58,13 @@
+                     ->options(GalleryItem::types())
+                     ->value($this->item?->type ?? GalleryItem::TYPE_PHOTO),
+ 
++                Select::make('item.razdel')
++                    ->title('Подраздел')
++                    ->empty('Без подраздела')
++                    ->options(GalleryItem::razdely())
++                    ->value($this->item?->razdel)
++                    ->help('Вкладка в блоке «Наши фотографии». Без подраздела слайд попадает только во вкладку «Все».'),
++
+                 Picture::make('item.image_id')
+                     ->title('Фото / обложка видео')
+                     ->help('Для фото — обязательно. Для видео — обложка до запуска (для YouTube подставится автоматически).'),
+@@ -95,6 +102,7 @@
+     {
+         $data = $request->validate([
+             'item.type'      => ['required', Rule::in(array_keys(GalleryItem::types()))],
++            'item.razdel'    => ['nullable', Rule::in(array_keys(GalleryItem::razdely()))],
+             'item.image_id'  => ['nullable', 'integer', 'required_if:item.type,' . GalleryItem::TYPE_PHOTO],
+             'item.video_id'  => ['nullable', 'array'],
+             'item.video_id.*'=> ['integer'],
+@@ -116,6 +124,7 @@
+ 
+         $item->fill([
+             'type'      => $data['type'],
++            'razdel'    => ($data['razdel'] ?? null) ?: null,
+             'image_id'  => $data['image_id'] ?? null,
+             'video_id'  => $isVideo ? $videoId : null,
+             'video_url' => $isVideo ? ($data['video_url'] ?? null) : null,
+--- a/app/Orchid/Screens/GalleryItem/GalleryItemListScreen.php
++++ b/app/Orchid/Screens/GalleryItem/GalleryItemListScreen.php
+@@ -5,9 +5,11 @@
+ namespace App\Orchid\Screens\GalleryItem;
+ 
+ use App\Models\GalleryItem;
++use App\Orchid\Filters\RazdelGaleriiFilter;
+ use App\Orchid\Layouts\GalleryItem\GalleryItemListLayout;
+ use Orchid\Screen\Actions\Link;
+ use Orchid\Screen\Screen;
++use Orchid\Support\Facades\Layout;
+ 
+ class GalleryItemListScreen extends Screen
+ {
+@@ -18,14 +20,14 @@
+ 
+     public function description(): ?string
+     {
+-        return 'Фото и видео блока «Наши фотографии». Первый по порядку — активный слайд, следующие три — превью.';
++        return 'Фото и видео блока «Наши фотографии». Слайды разложены по подразделам — тандем, самостоятельный, спортивный, VR; на сайте подразделы показаны вкладками.';
+     }
+ 
+     public function query(): iterable
+     {
+         return [
+             'items' => GalleryItem::with('image')
+-                ->filters()
++                ->filters([RazdelGaleriiFilter::class])
+                 ->defaultSort('sort')
+                 ->paginate(50),
+         ];
+@@ -34,6 +36,10 @@
+     public function commandBar(): iterable
+     {
+         return [
++            Link::make('Пополнить фотоархив')
++                ->icon('bs.images')
++                ->route('platform.fotoarkhiv'),
++
+             Link::make('Добавить фото или видео')
+                 ->icon('bs.plus-circle')
+                 ->route('platform.gallery.create'),
+@@ -42,6 +48,9 @@
+ 
+     public function layout(): iterable
+     {
+-        return [GalleryItemListLayout::class];
++        return [
++            Layout::selection([RazdelGaleriiFilter::class]),
++            GalleryItemListLayout::class,
++        ];
+     }
+ }
+--- a/app/Orchid/Layouts/GalleryItem/GalleryItemListLayout.php
++++ b/app/Orchid/Layouts/GalleryItem/GalleryItemListLayout.php
+@@ -26,6 +26,9 @@
+             TD::make('type', 'Тип')
+                 ->render(fn (GalleryItem $i) => GalleryItem::types()[$i->type] ?? $i->type),
+ 
++            TD::make('razdel', 'Подраздел')
++                ->render(fn (GalleryItem $i) => $i->razdelName()),
++
+             TD::make('caption', 'Подпись')
+                 ->cantHide()
+                 ->render(fn (GalleryItem $i) => Link::make($i->caption ?: '#'.$i->id)
+--- a/app/Orchid/PlatformProvider.php
++++ b/app/Orchid/PlatformProvider.php
+@@ -15,6 +15,11 @@
+     public function boot(Dashboard $dashboard): void
+     {
+         parent::boot($dashboard);
++
++        // Сайт выложен в подпуть (/glavpryg), а Orchid собирает адреса загрузки
++        // файлов от корня домена и подпуть теряет. Скрипт возвращает его на место —
++        // подробности в самом файле.
++        $dashboard->registerResource('scripts', asset('js/adminka-podput.js'));
+     }
+ 
+     public function menu(): array
+@@ -57,6 +62,9 @@
+             Menu::make('Наши фотографии')
+                 ->icon('bs.images')
+                 ->route('platform.gallery'),
++            Menu::make('Фотоархив')
++                ->icon('bs.folder')
++                ->route('platform.fotoarkhiv'),
+             Menu::make('«Идеальный день»')
+                 ->icon('bs.calendar-heart')
+                 ->route('platform.perfect-day')
+--- a/routes/platform.php
++++ b/routes/platform.php
+@@ -25,6 +25,7 @@
+ use App\Orchid\Screens\FlightBooking\FlightBookingListScreen;
+ use App\Orchid\Screens\FlightSlot\FlightSlotEditScreen;
+ use App\Orchid\Screens\FlightSlot\FlightSlotListScreen;
++use App\Orchid\Screens\FotoArkhiv\FotoArkhivScreen;
+ use App\Orchid\Screens\GalleryItem\GalleryItemEditScreen;
+ use App\Orchid\Screens\GalleryItem\GalleryItemListScreen;
+ use App\Orchid\Screens\Lead\LeadEditScreen;
+@@ -252,6 +253,13 @@
+         ->parent('platform.aircraft')
+         ->push($aircraft->title, route('platform.aircraft.edit', $aircraft)));
+ 
++// Blocks > Gallery > Фотоархив
++Route::screen('fotoarkhiv', FotoArkhivScreen::class)
++    ->name('platform.fotoarkhiv')
++    ->breadcrumbs(fn (Trail $trail) => $trail
++        ->parent('platform.gallery')
++        ->push('Фотоархив', route('platform.fotoarkhiv')));
++
+ // Blocks > Gallery
+ Route::screen('gallery', GalleryItemListScreen::class)
+     ->name('platform.gallery')
+--- a/resources/views/partials/home/photos.blade.php
++++ b/resources/views/partials/home/photos.blade.php
+@@ -1,28 +1,38 @@
+-{{-- Наши фотографии: активный слайд справа, следующие три — превью слева. Контент — админка «Наши фотографии». --}}
++{{-- Наши фотографии: активный слайд справа, следующие три — превью слева.
++     Подразделы (тандем, самостоятельный, спортивный, VR) показаны вкладками.
++     Контент — админка «Наши фотографии» и «Фотоархив». --}}
+ @php
+-    $slides = \App\Models\GalleryItem::query()
++    use App\Models\GalleryItem;
++
++    $slides = GalleryItem::query()
+         ->with(['image', 'video'])
+         ->where('is_active', true)
+         ->orderBy('sort')
+         ->orderBy('id')
+         ->get()
+-        ->map(fn (\App\Models\GalleryItem $i) => [
++        ->map(fn (GalleryItem $i) => [
+             'kind'    => $i->videoFileUrl() ? 'file' : ($i->embedUrl() ? 'embed' : 'image'),
+             'src'     => $i->videoFileUrl() ?? $i->embedUrl() ?? $i->posterUrl(),
+             'poster'  => $i->posterUrl(),
+             'caption' => (string) $i->caption,
++            'razdel'  => (string) $i->razdel,
+         ])
+         ->filter(fn ($s) => $s['src'])
+         ->values();
+ 
+     if ($slides->isEmpty()) {
+         $slides = collect(['video-thumb', 'photo-1', 'photo-2', 'photo-3'])->map(fn ($f) => [
+-            'kind' => 'image', 'src' => "/images/home/{$f}.png", 'poster' => "/images/home/{$f}.png", 'caption' => '',
++            'kind' => 'image', 'src' => "/images/home/{$f}.png", 'poster' => "/images/home/{$f}.png",
++            'caption' => '', 'razdel' => '',
+         ]);
+     }
+     $count = $slides->count();
+-    // Лента превью в режиме loop требует запаса слайдов — при малом числе повторяем её.
+-    $thumbReps = $count >= 4 ? (int) ceil(8 / $count) : 1;
++
++    // Вкладка показывается только у непустого подраздела: пустых корешков не бывает.
++    $tabs = collect(GalleryItem::razdely())
++        ->filter(fn ($nazvanie, $razdel) => $slides->contains(fn ($s) => $s['razdel'] === $razdel));
++    // Одна вкладка делить нечего — показываем всё сразу, как было.
++    $showTabs = $tabs->count() > 1;
+ @endphp
+ 
+ {{-- Swiper: стили/скрипт с CDN (как и Tailwind). Стили здесь, а не в @push('styles'): партиал подключается layout'ом после <head>. --}}
+@@ -40,6 +50,23 @@
+ <section id="photos" class="mt-20 lg:mt-28" data-photos data-count="{{ $count }}">
+     <h2 class="h-title text-2xl font-bold text-navy sm:text-3xl lg:text-[35px]">Наши фотографии</h2>
+ 
++    @if ($showTabs)
++        {{-- Вкладки подразделов. Без JS остаётся выбранной «Все» — виден весь набор. --}}
++        <div role="tablist" aria-label="Подразделы фотографий" data-photo-tabs
++             class="mt-6 flex flex-wrap gap-2 overflow-x-auto">
++            <button type="button" role="tab" data-photo-tab="" aria-selected="true"
++                    class="rounded-full border border-navy/15 px-4 py-2 text-sm font-semibold text-ink transition hover:border-accent hover:text-accent aria-selected:border-accent aria-selected:bg-accent aria-selected:text-white">
++                Все
++            </button>
++            @foreach ($tabs as $razdel => $nazvanie)
++                <button type="button" role="tab" data-photo-tab="{{ $razdel }}" aria-selected="false"
++                        class="rounded-full border border-navy/15 px-4 py-2 text-sm font-semibold text-ink transition hover:border-accent hover:text-accent aria-selected:border-accent aria-selected:bg-accent aria-selected:text-white">
++                    {{ $nazvanie }}
++                </button>
++            @endforeach
++        </div>
++    @endif
++
+     <div class="mt-8 grid gap-8 lg:grid-cols-2">
+         <div class="min-w-0">
+             <div class="space-y-5 text-[15px] leading-relaxed text-ink/90">
+@@ -48,34 +75,31 @@
+                 <p>🎥&nbsp; <b>Съёмка, которую захочется пересматривать</b>&nbsp;— твой прыжок снимут с нескольких камер. Получишь не просто фото, а крутой клип на память.</p>
+             </div>
+ 
+-            @if ($count > 1)
+-                {{-- Левый слайдер: превью. При 4+ слайдах — лента «три следующих за активным» --}}
+-                <div class="photo-thumbs swiper mt-6 {{ $count < 4 ? 'is-static' : '' }}">
+-                    <div class="swiper-wrapper">
+-                        @for ($r = 0; $r < $thumbReps; $r++)
+-                            @foreach ($slides as $i => $s)
+-                                <div class="swiper-slide" data-index="{{ $i }}">
+-                                    <div class="group relative aspect-square overflow-hidden rounded-2xl {{ $s['kind'] === 'image' ? 'bg-navy/10' : 'bg-navy' }}">
+-                                        @if ($s['poster'])
+-                                            <img src="{{ $s['poster'] }}" alt="{{ $s['caption'] }}" loading="lazy"
+-                                                 class="h-full w-full object-cover transition duration-500 group-hover:scale-105">
+-                                        @elseif ($s['kind'] === 'file')
+-                                            <video src="{{ $s['src'] }}#t=0.5" preload="metadata" muted playsinline class="h-full w-full object-cover"></video>
+-                                        @endif
+-                                        @if ($s['kind'] !== 'image')
+-                                            <span class="absolute inset-0 grid place-items-center">
+-                                                <span class="grid h-10 w-10 place-items-center rounded-full bg-white/90 shadow-lg">
+-                                                    <svg class="ml-0.5 h-4 w-4 text-accent" viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg>
+-                                                </span>
+-                                            </span>
+-                                        @endif
+-                                    </div>
+-                                </div>
+-                            @endforeach
+-                        @endfor
+-                    </div>
++            {{-- Левый слайдер: превью. Ленту собирает скрипт — при 4+ слайдах она едет
++                 «три следующих за активным», при меньшем числе просто подсвечивает активный. --}}
++            <div class="photo-thumbs swiper mt-6 {{ $count > 1 ? '' : 'hidden' }}">
++                <div class="swiper-wrapper">
++                    @foreach ($slides as $i => $s)
++                        <div class="swiper-slide" data-index="{{ $i }}" data-razdel="{{ $s['razdel'] }}">
++                            <div class="group relative aspect-square overflow-hidden rounded-2xl {{ $s['kind'] === 'image' ? 'bg-navy/10' : 'bg-navy' }}">
++                                @if ($s['poster'])
++                                    <img src="{{ $s['poster'] }}" alt="{{ $s['caption'] }}" loading="lazy"
++                                         class="h-full w-full object-cover transition duration-500 group-hover:scale-105">
++                                @elseif ($s['kind'] === 'file')
++                                    <video src="{{ $s['src'] }}#t=0.5" preload="metadata" muted playsinline class="h-full w-full object-cover"></video>
++                                @endif
++                                @if ($s['kind'] !== 'image')
++                                    <span class="absolute inset-0 grid place-items-center">
++                                        <span class="grid h-10 w-10 place-items-center rounded-full bg-white/90 shadow-lg">
++                                            <svg class="ml-0.5 h-4 w-4 text-accent" viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg>
++                                        </span>
++                                    </span>
++                                @endif
++                            </div>
++                        </div>
++                    @endforeach
+                 </div>
+-            @endif
++            </div>
+         </div>
+ 
+         {{-- Правый слайдер: активный слайд --}}
+@@ -83,7 +107,7 @@
+             <div class="photo-main swiper !absolute inset-0 h-full w-full">
+                 <div class="swiper-wrapper">
+                     @foreach ($slides as $i => $s)
+-                        <div class="swiper-slide relative overflow-hidden" data-kind="{{ $s['kind'] }}">
++                        <div class="swiper-slide relative overflow-hidden" data-kind="{{ $s['kind'] }}" data-razdel="{{ $s['razdel'] }}">
+                             @if ($s['kind'] === 'image')
+                                 <img src="{{ $s['src'] }}" alt="{{ $s['caption'] ?: 'Фото прыжка' }}" @if ($i > 0) loading="lazy" @endif
+                                      class="photo-media h-full w-full object-cover">
+@@ -115,19 +139,17 @@
+                 </div>
+             </div>
+ 
+-            @if ($count > 1)
+-                <div data-photo-nav class="absolute bottom-4 right-4 z-10 flex items-center gap-2">
+-                    <button type="button" data-photo-prev aria-label="Предыдущий слайд"
+-                            class="grid h-10 w-10 place-items-center rounded-full bg-white/90 text-ink shadow transition hover:bg-white">
+-                        <svg class="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M15 18l-6-6 6-6"/></svg>
+-                    </button>
+-                    <span data-photo-counter class="min-w-[48px] rounded-full bg-black/50 px-3 py-2 text-center text-xs font-bold text-white">1 / {{ $count }}</span>
+-                    <button type="button" data-photo-next aria-label="Следующий слайд"
+-                            class="grid h-10 w-10 place-items-center rounded-full bg-white/90 text-ink shadow transition hover:bg-white">
+-                        <svg class="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M9 6l6 6-6 6"/></svg>
+-                    </button>
+-                </div>
+-            @endif
++            <div data-photo-nav class="absolute bottom-4 right-4 z-10 flex items-center gap-2 {{ $count > 1 ? '' : 'hidden' }}">
++                <button type="button" data-photo-prev aria-label="Предыдущий слайд"
++                        class="grid h-10 w-10 place-items-center rounded-full bg-white/90 text-ink shadow transition hover:bg-white">
++                    <svg class="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M15 18l-6-6 6-6"/></svg>
++                </button>
++                <span data-photo-counter class="min-w-[48px] rounded-full bg-black/50 px-3 py-2 text-center text-xs font-bold text-white">1 / {{ $count }}</span>
++                <button type="button" data-photo-next aria-label="Следующий слайд"
++                        class="grid h-10 w-10 place-items-center rounded-full bg-white/90 text-ink shadow transition hover:bg-white">
++                    <svg class="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M9 6l6 6-6 6"/></svg>
++                </button>
++            </div>
+         </div>
+     </div>
+ </section>
+@@ -139,11 +161,28 @@
+ (function () {
+     var root = document.querySelector('[data-photos]');
+     if (!root || typeof Swiper === 'undefined') return;
+-    var count = parseInt(root.dataset.count, 10);
++
++    var mainBox = root.querySelector('.photo-main');
++    var thumbBox = root.querySelector('.photo-thumbs');
++    var mainWrap = mainBox.querySelector('.swiper-wrapper');
++    var thumbWrap = thumbBox.querySelector('.swiper-wrapper');
+     var nav = root.querySelector('[data-photo-nav]');
+     var counter = root.querySelector('[data-photo-counter]');
+     var reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+-    var linked = count >= 4; // лента «три следующих» с бесконечной прокруткой
++
++    // Разметка слайдов запоминается строками: Swiper при сборке ленты
++    // штампует копии и правит классы, поэтому перед каждой вкладкой
++    // слайдеры собираются заново из исходного вида, а не из того, что осталось.
++    var obrazcy = {
++        main: Array.prototype.map.call(mainWrap.children, function (n) {
++            return { razdel: n.dataset.razdel || '', html: n.outerHTML };
++        }),
++        thumb: Array.prototype.map.call(thumbWrap.children, function (n) {
++            return { razdel: n.dataset.razdel || '', html: n.outerHTML };
++        })
++    };
++
++    var main = null, thumbs = null, count = 0;
+ 
+     // --- Видео на слайде: запуск по кнопке, сброс при уходе со слайда ---
+     function reset(slide) {
+@@ -171,100 +210,146 @@
+         }
+     }
+ 
+-    // --- Левый слайдер: превью ---
+-    var thumbs = new Swiper(root.querySelector('.photo-thumbs'), {
+-        slidesPerView: 3,
+-        spaceBetween: 16,
+-        speed: reduceMotion ? 0 : 700,
+-        loop: linked,
+-        loopPreventsSliding: false,          // быстрые клики не теряются, пока лента ещё едет
+-        initialSlide: linked ? 1 : 0,        // слева — следующий за активным
+-        watchSlidesProgress: true,
+-        slideToClickedSlide: false,
+-    });
++    function sobrat(wrap, obrazcy, razdel, povtorov) {
++        var nuzhnye = obrazcy.filter(function (o) { return !razdel || o.razdel === razdel; });
++        var html = '';
++        for (var r = 0; r < (povtorov || 1); r++) {
++            html += nuzhnye.map(function (o, i) {
++                // Номер превью — внутри вкладки, а не во всём наборе.
++                return o.html.replace(/data-index="\d+"/, 'data-index="' + i + '"');
++            }).join('');
++        }
++        wrap.innerHTML = html;
++        return nuzhnye.length;
++    }
+ 
+-    // --- Правый слайдер: активный слайд (плавное растворение) ---
+-    var main = new Swiper(root.querySelector('.photo-main'), {
+-        effect: 'fade',
+-        fadeEffect: { crossFade: true },
+-        speed: reduceMotion ? 0 : 800,
+-        loop: true,
+-        loopPreventsSliding: false,
+-        navigation: {
+-            prevEl: root.querySelector('[data-photo-prev]'),
+-            nextEl: root.querySelector('[data-photo-next]'),
+-        },
+-        // При 2–3 слайдах превью — обычный thumbs (подсветка активного)
+-        thumbs: linked ? undefined : { swiper: thumbs },
+-    });
++    function zapustit(razdel) {
++        if (main) { main.destroy(true, true); main = null; }
++        if (thumbs) { thumbs.destroy(true, true); thumbs = null; }
++
++        count = sobrat(mainWrap, obrazcy.main, razdel, 1);
++        var linked = count >= 4;            // лента «три следующих» с бесконечной прокруткой
++        // Лента превью в режиме loop требует запаса слайдов — при малом числе повторяем её.
++        sobrat(thumbWrap, obrazcy.thumb, razdel, linked ? Math.ceil(8 / count) : 1);
++
++        thumbBox.classList.toggle('hidden', count < 2);
++        thumbBox.classList.toggle('is-static', !linked);
++        if (nav) nav.classList.toggle('hidden', count < 2);
++        if (counter) counter.textContent = '1 / ' + count;
++
++        root.querySelectorAll('.photo-main .swiper-slide').forEach(function (s) {
++            var btn = s.querySelector('[data-photo-play]');
++            if (btn) btn.addEventListener('click', function () { play(s); });
++            var video = s.querySelector('video');
++            if (video) video.addEventListener('ended', function () { reset(s); });
++        });
+ 
+-    var syncing = false;
+-    var prevReal = main.realIndex;
++        if (!count) return;
+ 
+-    // Клик по превью — сделать его активным (Swiper гасит клик после свайпа сам)
+-    root.querySelector('.photo-thumbs').addEventListener('click', function (e) {
+-        var slide = e.target.closest('.swiper-slide');
+-        if (slide) main.slideToLoop(parseInt(slide.dataset.index, 10));
+-    });
++        // --- Левый слайдер: превью ---
++        thumbs = new Swiper(thumbBox, {
++            slidesPerView: 3,
++            spaceBetween: 16,
++            speed: reduceMotion ? 0 : 700,
++            loop: linked,
++            loopPreventsSliding: false,          // быстрые клики не теряются, пока лента ещё едет
++            initialSlide: linked ? 1 : 0,        // слева — следующий за активным
++            watchSlidesProgress: true,
++            slideToClickedSlide: false,
++        });
++
++        // --- Правый слайдер: активный слайд (плавное растворение) ---
++        main = new Swiper(mainBox, {
++            effect: 'fade',
++            fadeEffect: { crossFade: true },
++            speed: reduceMotion ? 0 : 800,
++            loop: count > 1,
++            loopPreventsSliding: false,
++            navigation: {
++                prevEl: root.querySelector('[data-photo-prev]'),
++                nextEl: root.querySelector('[data-photo-next]'),
++            },
++            // При 2–3 слайдах превью — обычный thumbs (подсветка активного)
++            thumbs: linked ? undefined : { swiper: thumbs },
++        });
++
++        var syncing = false;
++        var prevReal = main.realIndex;
+ 
+-    if (linked) {
+-        var nThumbs = thumbs.slides.length;
++        if (linked) {
++            var nThumbs = thumbs.slides.length;
+ 
+-        // Двигаем ленту превью туда, где первым стоит «следующий за активным»,
+-        // по кратчайшему пути — лента едет плавно в нужную сторону.
+-        var syncThumbs = function (delta) {
+-            var target = (main.realIndex + 1) % count;
+-            syncing = true;
+-            if (delta === 1) thumbs.slideNext();
+-            else if (delta === -1) thumbs.slidePrev();
+-            else {
+-                var cur = thumbs.realIndex, best = cur, bestDist = Infinity;
+-                for (var i = 0; i < nThumbs; i++) {
+-                    if (i % count !== target) continue;
+-                    var d = Math.abs(i - cur); d = Math.min(d, nThumbs - d);
+-                    if (d < bestDist) { bestDist = d; best = i; }
++            // Двигаем ленту превью туда, где первым стоит «следующий за активным»,
++            // по кратчайшему пути — лента едет плавно в нужную сторону.
++            var syncThumbs = function (delta) {
++                var target = (main.realIndex + 1) % count;
++                syncing = true;
++                if (delta === 1) thumbs.slideNext();
++                else if (delta === -1) thumbs.slidePrev();
++                else {
++                    var cur = thumbs.realIndex, best = cur, bestDist = Infinity;
++                    for (var i = 0; i < nThumbs; i++) {
++                        if (i % count !== target) continue;
++                        var d = Math.abs(i - cur); d = Math.min(d, nThumbs - d);
++                        if (d < bestDist) { bestDist = d; best = i; }
++                    }
++                    thumbs.slideToLoop(best);
+                 }
+-                thumbs.slideToLoop(best);
+-            }
+-            syncing = false;
+-        };
+-
+-        // Свайп ленты превью пальцем/мышью — главный слайдер следует за ней.
+-        // Реагируем только на реальное перетаскивание: служебные перестановки loop тоже шлют slideChange.
+-        var dragging = false;
+-        thumbs.on('sliderFirstMove', function () { dragging = true; });
+-        thumbs.on('transitionEnd', function () {
+-            if (!dragging) return;
+-            dragging = false;
+-            var idx = ((thumbs.realIndex % count) - 1 + count) % count;
+-            // slideToLoop в loop-режиме срабатывает в следующем кадре — запоминаем цель заранее,
+-            // чтобы запоздалый slideChange главного слайдера не сдвинул ленту ещё раз.
+-            if (idx !== main.realIndex) { prevReal = idx; main.slideToLoop(idx); }
+-        });
++                syncing = false;
++            };
++
++            // Свайп ленты превью пальцем/мышью — главный слайдер следует за ней.
++            // Реагируем только на реальное перетаскивание: служебные перестановки loop тоже шлют slideChange.
++            var dragging = false;
++            thumbs.on('sliderFirstMove', function () { dragging = true; });
++            thumbs.on('transitionEnd', function () {
++                if (!dragging) return;
++                dragging = false;
++                var idx = ((thumbs.realIndex % count) - 1 + count) % count;
++                // slideToLoop в loop-режиме срабатывает в следующем кадре — запоминаем цель заранее,
++                // чтобы запоздалый slideChange главного слайдера не сдвинул ленту ещё раз.
++                if (idx !== main.realIndex) { prevReal = idx; main.slideToLoop(idx); }
++            });
++
++            main.on('slideChange', function () {
++                if (syncing) return;
++                var delta = main.realIndex - prevReal;
++                if (delta > count / 2) delta -= count;
++                if (delta < -count / 2) delta += count;
++                if (delta === 0) return; // служебное событие loop без реальной смены слайда
++                prevReal = main.realIndex;
++                syncThumbs(delta);
++            });
++        }
+ 
+         main.on('slideChange', function () {
+-            if (syncing) return;
+-            var delta = main.realIndex - prevReal;
+-            if (delta > count / 2) delta -= count;
+-            if (delta < -count / 2) delta += count;
+-            if (delta === 0) return; // служебное событие loop без реальной смены слайда
+-            prevReal = main.realIndex;
+-            syncThumbs(delta);
++            // Классы активного слайда на этот момент ещё старые — ориентируемся на activeIndex.
++            main.slides.forEach(function (s, i) { if (i !== main.activeIndex) reset(s); });
++            if (counter) counter.textContent = (main.realIndex + 1) + ' / ' + count;
+         });
+     }
+ 
+-    main.on('slideChange', function () {
+-        // Классы активного слайда на этот момент ещё старые — ориентируемся на activeIndex.
+-        main.slides.forEach(function (s, i) { if (i !== main.activeIndex) reset(s); });
+-        if (counter) counter.textContent = (main.realIndex + 1) + ' / ' + count;
++    // Клик по превью — сделать его активным (Swiper гасит клик после свайпа сам).
++    // Слушатель вешается один раз на короб: ленту пересобирают вкладки.
++    thumbBox.addEventListener('click', function (e) {
++        var slide = e.target.closest('.swiper-slide');
++        if (slide && main) main.slideToLoop(parseInt(slide.dataset.index, 10));
+     });
+ 
+-    root.querySelectorAll('.photo-main .swiper-slide').forEach(function (s) {
+-        var btn = s.querySelector('[data-photo-play]');
+-        if (btn) btn.addEventListener('click', function () { play(s); });
+-        var video = s.querySelector('video');
+-        if (video) video.addEventListener('ended', function () { reset(s); });
+-    });
++    // --- Вкладки подразделов ---
++    var tabs = root.querySelector('[data-photo-tabs]');
++    if (tabs) {
++        tabs.addEventListener('click', function (e) {
++            var btn = e.target.closest('[data-photo-tab]');
++            if (!btn || btn.getAttribute('aria-selected') === 'true') return;
++            tabs.querySelectorAll('[data-photo-tab]').forEach(function (b) {
++                b.setAttribute('aria-selected', String(b === btn));
++            });
++            zapustit(btn.dataset.photoTab);
++        });
++    }
++
++    zapustit('');
+ })();
+ </script>
+ @endpush
+--- /dev/null
++++ b/database/migrations/2026_10_01_100000_add_razdel_to_gallery_items_table.php
+@@ -0,0 +1,27 @@
++<?php
++
++use Illuminate\Database\Migrations\Migration;
++use Illuminate\Database\Schema\Blueprint;
++use Illuminate\Support\Facades\Schema;
++
++/**
++ * Подраздел слайда в блоке «Наши фотографии»: тандем, самостоятельный,
++ * спортивный, VR. Пусто — слайд показывается во вкладке «Все».
++ */
++return new class extends Migration
++{
++    public function up(): void
++    {
++        Schema::table('gallery_items', function (Blueprint $table) {
++            $table->string('razdel', 32)->nullable()->index()->after('type');
++        });
++    }
++
++    public function down(): void
++    {
++        Schema::table('gallery_items', function (Blueprint $table) {
++            $table->dropIndex(['razdel']);
++            $table->dropColumn('razdel');
++        });
++    }
++};
+--- /dev/null
++++ b/app/Orchid/Filters/RazdelGaleriiFilter.php
+@@ -0,0 +1,49 @@
++<?php
++
++declare(strict_types=1);
++
++namespace App\Orchid\Filters;
++
++use App\Models\GalleryItem;
++use Illuminate\Database\Eloquent\Builder;
++use Orchid\Filters\Filter;
++use Orchid\Screen\Fields\Select;
++
++/**
++ * Отбор слайдов галереи по подразделу — тандем, самостоятельный, спортивный, VR.
++ */
++class RazdelGaleriiFilter extends Filter
++{
++    public function name(): string
++    {
++        return 'Подраздел';
++    }
++
++    public function parameters(): array
++    {
++        return ['razdel'];
++    }
++
++    public function run(Builder $builder): Builder
++    {
++        return $builder->where('razdel', $this->request->get('razdel'));
++    }
++
++    public function display(): array
++    {
++        return [
++            Select::make('razdel')
++                ->options(GalleryItem::razdely())
++                ->empty('Все подразделы')
++                ->value($this->request->get('razdel'))
++                ->title('Подраздел'),
++        ];
++    }
++
++    public function value(): string
++    {
++        $razdel = (string) $this->request->get('razdel');
++
++        return $this->name() . ': ' . (GalleryItem::razdely()[$razdel] ?? $razdel);
++    }
++}
+--- /dev/null
++++ b/app/Orchid/Screens/FotoArkhiv/FotoArkhivScreen.php
+@@ -0,0 +1,184 @@
++<?php
++
++declare(strict_types=1);
++
++namespace App\Orchid\Screens\FotoArkhiv;
++
++use App\Models\GalleryItem;
++use Illuminate\Http\RedirectResponse;
++use Illuminate\Http\Request;
++use Illuminate\Support\Facades\Storage;
++use Illuminate\Support\Str;
++use Illuminate\Validation\Rule;
++use Orchid\Attachment\Models\Attachment;
++use Orchid\Screen\Actions\Button;
++use Orchid\Screen\Actions\Link;
++use Orchid\Screen\Fields\CheckBox;
++use Orchid\Screen\Fields\Select;
++use Orchid\Screen\Fields\Upload;
++use Orchid\Screen\Screen;
++use Orchid\Support\Facades\Layout;
++use Orchid\Support\Facades\Toast;
++
++/**
++ * Фотоархив сайта: общий склад снимков, разложенный по подразделам.
++ *
++ * Файлы лежат в storage/app/public/fotoarkhiv/<подраздел>/ — каталог переживает
++ * обновление поставки (deploy/obnovit.sh переносит storage/ целиком) и уже
++ * раздаётся через ссылку public/storage. Загруженное отсюда можно сразу
++ * поставить в блок «Наши фотографии» или оставить лежать про запас.
++ */
++class FotoArkhivScreen extends Screen
++{
++    public function name(): ?string
++    {
++        return 'Фотоархив';
++    }
++
++    public function description(): ?string
++    {
++        return 'Склад фотографий сайта по подразделам. Снимки отсюда попадают в блок «Наши фотографии».';
++    }
++
++    public function query(): iterable
++    {
++        return ['papki' => $this->svodka()];
++    }
++
++    /** Сколько файлов лежит в каждой папке архива и сколько из них уже на сайте. */
++    private function svodka(): array
++    {
++        $disk = Storage::disk('public');
++        $vGalereye = GalleryItem::query()
++            ->whereNotNull('razdel')
++            ->selectRaw('razdel, count(*) as vsego, sum(is_active) as vidno')
++            ->groupBy('razdel')
++            ->get()
++            ->keyBy('razdel');
++
++        $svodka = [];
++        foreach (GalleryItem::razdely() as $razdel => $nazvanie) {
++            $papka = GalleryItem::papkaArkhiva($razdel);
++            $svodka[] = [
++                'razdel'    => $razdel,
++                'nazvanie'  => $nazvanie,
++                'papka'     => 'storage/app/public/' . rtrim($papka, '/'),
++                'faylov'    => count($disk->files(rtrim($papka, '/'))),
++                'slaydov'   => (int) ($vGalereye[$razdel]->vsego ?? 0),
++                'vidno'     => (int) ($vGalereye[$razdel]->vidno ?? 0),
++            ];
++        }
++
++        return $svodka;
++    }
++
++    public function commandBar(): iterable
++    {
++        return [
++            Link::make('Блок «Наши фотографии»')
++                ->icon('bs.list-ul')
++                ->route('platform.gallery'),
++        ];
++    }
++
++    public function layout(): iterable
++    {
++        return [
++            Layout::view('admin.fotoarkhiv-svodka'),
++
++            Layout::rows([
++                Select::make('razdel')
++                    ->title('Подраздел')
++                    ->options(GalleryItem::razdely())
++                    ->required()
++                    ->help('Файлы лягут в папку архива с этим именем.'),
++
++                Upload::make('fotki')
++                    ->title('Фотографии')
++                    ->groups('fotoarkhiv')
++                    ->acceptedFiles('image/jpeg,image/png,image/webp')
++                    ->help('Можно сразу несколько. Размер одного файла ограничен настройками хостинга (upload_max_filesize).'),
++
++                CheckBox::make('v_galereyu')
++                    ->title('Сразу в блок «Наши фотографии»')
++                    ->placeholder('Создать слайды и показать на сайте')
++                    ->value(true)
++                    ->sendTrueOrFalse(),
++
++                Button::make('Положить в архив')
++                    ->icon('bs.upload')
++                    ->method('dobavit'),
++            ])->title('Пополнить архив'),
++        ];
++    }
++
++    public function dobavit(Request $request): RedirectResponse
++    {
++        $data = $request->validate([
++            'razdel'     => ['required', Rule::in(array_keys(GalleryItem::razdely()))],
++            'fotki'      => ['required', 'array', 'min:1'],
++            'fotki.*'    => ['integer'],
++            'v_galereyu' => ['nullable', 'boolean'],
++        ], [
++            'fotki.required' => 'Выберите хотя бы одну фотографию.',
++        ]);
++
++        $razdel = $data['razdel'];
++        $papka = GalleryItem::papkaArkhiva($razdel);
++        $disk = Storage::disk('public');
++        $disk->makeDirectory(rtrim($papka, '/'));
++
++        $sort = (int) GalleryItem::max('sort');
++        $polozheno = 0;
++
++        foreach (Attachment::whereIn('id', $data['fotki'])->get() as $vlozhenie) {
++            // Orchid кладёт загруженное в папку по дате и под именем-хэшем.
++            // В архив снимок ложится под человеческим именем: по этим папкам
++            // ходят руками, и «dcb291bc….jpg» в них искать нечем.
++            //
++            // ⚠️ Именно копия, а не перенос. Одинаковые по содержимому снимки
++            // Orchid держит одним файлом на диске — вложения разных загрузок
++            // указывают на него же. Перенос такой файл уводил, и у прежних
++            // вложений оставалась ссылка в пустоту.
++            $bylo = $vlozhenie->physicalPath();
++            if ($bylo !== null && $vlozhenie->path !== $papka && $disk->exists($bylo)) {
++                $imya = $this->svobodnoeImya($vlozhenie->original_name, $papka, $vlozhenie->extension);
++                $disk->copy($bylo, $papka . $imya . '.' . $vlozhenie->extension);
++                $vlozhenie->forceFill(['path' => $papka, 'name' => $imya, 'disk' => 'public'])->save();
++            }
++
++            if ($data['v_galereyu'] ?? false) {
++                GalleryItem::create([
++                    'type'      => GalleryItem::TYPE_PHOTO,
++                    'razdel'    => $razdel,
++                    'image_id'  => $vlozhenie->id,
++                    'is_active' => true,
++                    'sort'      => ++$sort,
++                ]);
++            }
++
++            $polozheno++;
++        }
++
++        Toast::info($polozheno . ' — положено в архив «' . GalleryItem::razdely()[$razdel] . '»');
++
++        return redirect()->route('platform.fotoarkhiv');
++    }
++
++    /**
++     * Имя файла в папке архива: по исходному имени снимка, латиницей и без
++     * пробелов. Занятое имя не затирается — к нему добавляется номер.
++     */
++    private function svobodnoeImya(?string $iskhodnoe, string $papka, string $rasshirenie): string
++    {
++        $disk = Storage::disk('public');
++        $osnova = Str::slug(pathinfo((string) $iskhodnoe, PATHINFO_FILENAME)) ?: 'foto';
++
++        $imya = $osnova;
++        for ($n = 2; $disk->exists($papka . $imya . '.' . $rasshirenie); $n++) {
++            $imya = $osnova . '-' . $n;
++        }
++
++        return $imya;
++    }
++}
+--- /dev/null
++++ b/app/Console/Commands/FotoArkhivKomanda.php
+@@ -0,0 +1,108 @@
++<?php
++
++declare(strict_types=1);
++
++namespace App\Console\Commands;
++
++use App\Models\GalleryItem;
++use Illuminate\Console\Command;
++use Illuminate\Support\Facades\Storage;
++use Orchid\Attachment\Models\Attachment;
++
++/**
++ * Разбор фотоархива: снимки, положенные в папки подразделов напрямую
++ * (по SSH или FTP), становятся слайдами блока «Наши фотографии».
++ *
++ * Файлы остаются лежать на месте — вложение заводится ссылкой на них,
++ * копий не плодится.
++ */
++class FotoArkhivKomanda extends Command
++{
++    protected $signature = 'glavpryg:fotoarkhiv
++                            {--razdel= : только один подраздел (tandem, samostoyatelnyy, sportivnyy, vr)}
++                            {--skrytno : завести слайды выключенными, показать потом вручную}
++                            {--pokazat : ничего не менять, только перечислить находки}';
++
++    protected $description = 'Завести слайды галереи по снимкам из фотоархива';
++
++    /** Что считаем фотографией. */
++    private const RASSHIRENIYA = ['jpg', 'jpeg', 'png', 'webp'];
++
++    public function handle(): int
++    {
++        $disk = Storage::disk('public');
++        $razdely = GalleryItem::razdely();
++
++        if ($odin = $this->option('razdel')) {
++            if (! isset($razdely[$odin])) {
++                $this->error("Неизвестный подраздел «{$odin}». Есть: " . implode(', ', array_keys($razdely)));
++
++                return self::FAILURE;
++            }
++            $razdely = [$odin => $razdely[$odin]];
++        }
++
++        $sort = (int) GalleryItem::max('sort');
++        $zavedeno = 0;
++
++        foreach ($razdely as $razdel => $nazvanie) {
++            $papka = rtrim(GalleryItem::papkaArkhiva($razdel), '/');
++            if (! $disk->exists($papka)) {
++                $disk->makeDirectory($papka);
++            }
++
++            foreach ($disk->files($papka) as $put) {
++                $rasshirenie = strtolower(pathinfo($put, PATHINFO_EXTENSION));
++                if (! in_array($rasshirenie, self::RASSHIRENIYA, true)) {
++                    continue;
++                }
++
++                $imya = pathinfo($put, PATHINFO_FILENAME);
++
++                // Уже заведённое не заводим повторно: признак — вложение,
++                // указывающее ровно на этот файл.
++                $vlozhenie = Attachment::where('disk', 'public')
++                    ->where('path', $papka . '/')
++                    ->where('name', $imya)
++                    ->where('extension', $rasshirenie)
++                    ->first();
++
++                if ($vlozhenie && GalleryItem::where('image_id', $vlozhenie->id)->exists()) {
++                    continue;
++                }
++
++                $this->line("  + {$nazvanie}: {$put}");
++                $zavedeno++;
++
++                if ($this->option('pokazat')) {
++                    continue;
++                }
++
++                $vlozhenie ??= Attachment::create([
++                    'name'          => $imya,
++                    'original_name' => basename($put),
++                    'mime'          => $disk->mimeType($put) ?: 'image/jpeg',
++                    'extension'     => $rasshirenie,
++                    'size'          => $disk->size($put),
++                    'path'          => $papka . '/',
++                    'disk'          => 'public',
++                    'hash'          => md5_file($disk->path($put)),
++                ]);
++
++                GalleryItem::create([
++                    'type'      => GalleryItem::TYPE_PHOTO,
++                    'razdel'    => $razdel,
++                    'image_id'  => $vlozhenie->id,
++                    'is_active' => ! $this->option('skrytno'),
++                    'sort'      => ++$sort,
++                ]);
++            }
++        }
++
++        $this->info($this->option('pokazat')
++            ? "Новых снимков в архиве: {$zavedeno} (ничего не менялось)"
++            : "Заведено слайдов: {$zavedeno}");
++
++        return self::SUCCESS;
++    }
++}
+--- /dev/null
++++ b/resources/views/admin/fotoarkhiv-svodka.blade.php
+@@ -0,0 +1,42 @@
++{{-- Сводка фотоархива: что лежит в каждой папке и сколько из этого видно на сайте. --}}
++<div class="bg-white rounded shadow-sm mb-3">
++    <div class="p-4">
++        <legend class="text-black">Что в архиве</legend>
++        <p class="small text-muted mb-3">
++            Файлы лежат на сервере в <code>storage/app/public/fotoarkhiv/</code> — по папке на подраздел.
++            Папки переживают обновление сайта. Снимки, выложенные туда напрямую (по SSH или FTP),
++            подхватываются командой <code>php artisan glavpryg:fotoarkhiv</code>.
++        </p>
++
++        <div class="table-responsive">
++            <table class="table table-sm align-middle mb-0">
++                <thead>
++                    <tr>
++                        <th>Подраздел</th>
++                        <th>Папка на сервере</th>
++                        <th class="text-end">Файлов</th>
++                        <th class="text-end">Слайдов</th>
++                        <th class="text-end">Видно на сайте</th>
++                    </tr>
++                </thead>
++                <tbody>
++                    @foreach ($papki as $p)
++                        <tr>
++                            <td class="fw-bold">{{ $p['nazvanie'] }}</td>
++                            <td><code>{{ $p['papka'] }}</code></td>
++                            <td class="text-end">{{ $p['faylov'] }}</td>
++                            <td class="text-end">{{ $p['slaydov'] }}</td>
++                            <td class="text-end">
++                                @if ($p['vidno'])
++                                    {{ $p['vidno'] }}
++                                @else
++                                    <span class="text-muted">—</span>
++                                @endif
++                            </td>
++                        </tr>
++                    @endforeach
++                </tbody>
++            </table>
++        </div>
++    </div>
++</div>
+--- /dev/null
++++ b/public/js/adminka-podput.js
+@@ -0,0 +1,47 @@
++/**
++ * Починка адресов загрузки файлов в админке, когда сайт живёт в подпути.
++ *
++ * Orchid собирает адреса своих служебных запросов (загрузка файла, удаление
++ * вложения, поиск) не маршрутом Laravel, а вручную — из имени хоста и метки
++ * `dashboard-prefix`:
++ *
++ *     `${location.protocol}//${location.hostname}${prefix.content}${path}`
++ *
++ * В метке лежит `platform.prefix`, то есть «/admin». Сайт же выложен по адресу
++ * mokeevasky.ru/glavpryg, и подпуть в этой склейке теряется: загрузка уходила
++ * на `/admin/systems/files` вместо `/glavpryg/admin/systems/files` и получала
++ * 404. Ломались все поля загрузки разом — и Picture, и Upload, и картинки
++ * в текстовом редакторе.
++ *
++ * Правка подставляет в метку настоящий путь админки, взятый из адреса самой
++ * открытой страницы. Orchid читает метку в момент запроса, а не при загрузке
++ * страницы, поэтому поправить её заранее достаточно.
++ */
++(function () {
++    function popravit() {
++        var metka = document.head.querySelector('meta[name="dashboard-prefix"]');
++        if (!metka) {
++            return;
++        }
++
++        var prefiks = metka.getAttribute('content') || '';
++        var put = window.location.pathname;
++        if (prefiks === '' || put.indexOf(prefiks) === 0) {
++            return;             // сайт в корне домена — поправлять нечего
++        }
++
++        // Путь админской страницы — «<подпуть><префикс>/…»: всё, что стоит
++        // до префикса, и есть потерянный подпуть.
++        var mesto = put.indexOf(prefiks + '/');
++        if (mesto < 0 && put.slice(-prefiks.length) === prefiks) {
++            mesto = put.length - prefiks.length;
++        }
++        if (mesto > 0) {
++            metka.setAttribute('content', put.slice(0, mesto) + prefiks);
++        }
++    }
++
++    popravit();
++    // Turbo подменяет содержимое головы при переходе — поправку надо повторять.
++    document.addEventListener('turbo:load', popravit);
++})();
