@@ -5,7 +5,7 @@ from datetime import datetime, timezone
 from fastapi import APIRouter, Form, Request
 from fastapi.responses import JSONResponse, RedirectResponse, StreamingResponse
 
-from .. import db, timefmt
+from .. import config, db, timefmt
 from ..deps import current_user, render
 from ..services import claude_auth, claude_driver, runs
 
@@ -45,13 +45,14 @@ def chats(request: Request, id: int | None = None):
 
     if id is not None:
         current = db.query_one(
-            "SELECT id, title, claude_session_id FROM conversations "
-            "WHERE id = %s AND kind = 'chat'",
+            "SELECT id, title, claude_session_id, model, compact_window "
+            "FROM conversations WHERE id = %s AND kind = 'chat'",
             (id,),
         )
     elif items:
         current = db.query_one(
-            "SELECT id, title, claude_session_id FROM conversations WHERE id = %s",
+            "SELECT id, title, claude_session_id, model, compact_window "
+            "FROM conversations WHERE id = %s",
             (items[0]["id"],),
         )
 
@@ -74,6 +75,8 @@ def chats(request: Request, id: int | None = None):
             "items": items,
             "current": current,
             "messages": messages,
+            "models": config.ALLOWED_MODELS,
+            "windows": config.WINDOW_CHOICES,
         },
     )
 
@@ -101,6 +104,24 @@ def chat_delete(request: Request, chat_id: int):
     return RedirectResponse(request.url_for("chats"), status_code=303)
 
 
+@router.post("/chats/{chat_id}/rezhim", name="chat_rezhim")
+def chat_rezhim(request: Request, chat_id: int,
+                model: str = Form(""), compact_window: str = Form("")):
+    """Модель и потолок контекста чатика. Пустое — «как в „Настройках“»."""
+    user, redirect = _guard(request)
+    if redirect:
+        return redirect
+    db.execute(
+        "UPDATE conversations SET model = %s, compact_window = %s "
+        "WHERE id = %s AND kind = 'chat'",
+        (model if model in config.ALLOWED_MODELS else None,
+         claude_driver.compact_window(compact_window) or None,
+         chat_id),
+    )
+    return RedirectResponse(
+        f"{request.url_for('chats')}?id={chat_id}", status_code=303)
+
+
 @router.post("/chats/{chat_id}/rename", name="chat_rename")
 def chat_rename(request: Request, chat_id: int, title: str = Form(...)):
     user, redirect = _guard(request)
@@ -124,8 +145,8 @@ async def chat_send(request: Request, chat_id: int, text: str = Form(...)):
         return JSONResponse({"error": "нет доступа"}, status_code=401)
 
     conv = db.query_one(
-        "SELECT id, title, claude_session_id FROM conversations "
-        "WHERE id = %s AND kind = 'chat'",
+        "SELECT id, title, claude_session_id, model, compact_window "
+        "FROM conversations WHERE id = %s AND kind = 'chat'",
         (chat_id,),
     )
     if not conv:
@@ -147,7 +168,7 @@ async def chat_send(request: Request, chat_id: int, text: str = Form(...)):
     db.execute("UPDATE conversations SET updated_at = now() WHERE id = %s", (chat_id,))
 
     settings = db.get_settings()
-    model = settings.get("model", "opus")
+    model, window = claude_driver.rezhim(conv, settings)
     first_message = conv["title"] == "Новый чат"
 
     async def producer(run):
@@ -157,7 +178,7 @@ async def chat_send(request: Request, chat_id: int, text: str = Form(...)):
             model=model,
             session_id=conv["claude_session_id"],
             with_tools=False,
-            compact_window=claude_driver.compact_window(settings.get("compact_window")),
+            compact_window=window,
         ):
             if event["type"] == "result":
                 _save_answer(chat_id, event)

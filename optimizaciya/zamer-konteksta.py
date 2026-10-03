@@ -226,6 +226,59 @@ def Shag(zapros, zapis, chtenie, vyhod):
 # Первое сообщение — три шага: холодный кэш, потом два по тёплому. Первый шаг
 # записан дважды с одним `requestId`: так стенограмма хранит размышление и
 # вызов инструмента одной реплики. Второе сообщение — один шаг.
+def Modelirovanie(shagi, potolok, svodka=2000):
+    """Во что обошлись бы те же шаги при заданном потолке контекста.
+
+    Модель грубая и нарочно: считаются чтение контекста и выход, запись кэша и
+    остывание не моделируются — поэтому числа годятся для **сравнения**
+    потолков между собой, а не как предсказание счёта. Сжатие считается так:
+    на шаге, где контекст перевалил за потолок, платится чтение контекста и
+    выход сводки, а дальше контекст идёт от сводки.
+    """
+    smeshchenie = 0          # сколько токенов унесли сжатия
+    cena = 0.0
+    szhatiy = 0
+    for shag in shagi:
+        kontekst = max(shag["kontekst"] - smeshchenie, svodka)
+        if potolok and kontekst > potolok:
+            cena += kontekst * CENA_CHTENIE + svodka * CENA_VYHOD
+            szhatiy += 1
+            smeshchenie += kontekst - svodka
+            kontekst = svodka
+        cena += kontekst * CENA_CHTENIE + shag["vyhod"] * CENA_VYHOD
+    return cena, szhatiy
+
+
+def ImyaTemy(imyaKataloga):
+    """`-home-mokeeva-main-glavpryg-sayt` → `glavpryg-sayt`, корень → `main`."""
+    koren = str(pathlib.Path(__file__).resolve().parent.parent).replace("/", "-")
+    imya = imyaKataloga[len(koren):].lstrip("-")
+    return (imya or "main")[:34]
+
+
+def SvodModelirovaniya(temaFiltr=None, potolki=(0, 100_000, 150_000, 250_000)):
+    """Сравнение потолков по стенограммам: во что обошлась бы та же работа."""
+    print(f"{'тема':<34} {'шагов':>6} {'факт':>8} " +
+          " ".join(f"{('без потолка' if p == 0 else str(p // 1000) + ' тыс.'):>14}"
+                   for p in potolki))
+    for katalog in sorted(KORENX.iterdir()):
+        if not katalog.is_dir() or (temaFiltr and temaFiltr not in katalog.name):
+            continue
+        for sessiya in sorted(katalog.glob("*.jsonl")):
+            shagi = ShagiSessii(sessiya)
+            if len(shagi) < 50:
+                continue
+            fakt = sum(s["cena"] for s in shagi)
+            stroka = f"{ImyaTemy(katalog.name):<34} {len(shagi):>6} {fakt:>7.0f}$ "
+            for potolok in potolki:
+                cena, szhatiy = Modelirovanie(shagi, potolok)
+                stroka += f"{cena:>9.0f}$ /{szhatiy:>3} "
+            print(stroka)
+    print("\nстолбцы: цена по модели и число сжатий. Модель считает чтение и выход,")
+    print("запись кэша и остывание — нет, поэтому сравнивать можно столбцы между")
+    print("собой, а не с графой «факт».")
+
+
 FIKTIVNAYA = [
     {"type": "user", "promptId": "p1", "message": {"content": "задание"}},
     Shag("r1", 100000, 0, 1000),
@@ -297,11 +350,16 @@ def main():
     razbor.add_argument("--verh", type=int, default=10, help="сколько строк печатать")
     razbor.add_argument("--kalibrovka", action="store_true",
                         help="оценить знаки на токен")
+    razbor.add_argument("--modelirovanie", action="store_true",
+                        help="сравнить потолки контекста по стенограммам")
     razbor.add_argument("--proverka", action="store_true", help="самопроверка")
     dovody = razbor.parse_args()
 
     if dovody.proverka:
         return Proverka()
+    if dovody.modelirovanie:
+        SvodModelirovaniya(dovody.tema)
+        return 0
     if dovody.kalibrovka:
         Kalibrovka()
         return 0

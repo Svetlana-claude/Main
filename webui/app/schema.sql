@@ -131,3 +131,10 @@ ALTER TABLE users ADD COLUMN IF NOT EXISTS totp_last_step bigint  NOT NULL DEFAU
 -- велик он сейчас и остыл ли кэш (живёт час). Пишется по каждому ответу и сжатию.
 ALTER TABLE conversations ADD COLUMN IF NOT EXISTS context_tokens integer NOT NULL DEFAULT 0;
 ALTER TABLE conversations ADD COLUMN IF NOT EXISTS context_at     timestamptz;
+
+-- Модель и потолок контекста на разговор. NULL — «как в „Настройках“». Рутина
+-- (правки вёрстки, прогон проверок) идёт на младшей модели и с низким потолком,
+-- разборы остаются на старшей: шаг у темы на потолке стоит одинаково, что бы он
+-- ни делал (замер — optimizaciya/ekonomnaya-rabota.md).
+ALTER TABLE conversations ADD COLUMN IF NOT EXISTS model          text;
+ALTER TABLE conversations ADD COLUMN IF NOT EXISTS compact_window integer;

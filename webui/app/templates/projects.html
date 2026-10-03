@@ -93,6 +93,27 @@
                 <button class="btn" type="button" id="compact-btn"
                         title="Заменить историю темы сводкой: следующие шаги станут дешевле, подробности ранних сообщений модель забудет">Сжать контекст</button>
               {% endif %}
+              {# Модель и потолок — на разговор: рутина (правки вёрстки, прогон
+                 проверок) идёт на младшей модели и с низким потолком, разборы
+                 остаются на старшей. Пустое значение — «как в „Настройках“». #}
+              <form method="post" action="{{ url_for('topic_rezhim', topic_id=current_topic.id) }}"
+                    class="formrow" style="gap:4px">
+                <label class="faint" for="rezhim-model">Модель</label>
+                <select class="select" id="rezhim-model" name="model" style="width:120px">
+                  <option value="">как в настройках</option>
+                  {% for m in models %}
+                    <option value="{{ m }}" {% if current_topic.model == m %}selected{% endif %}>{{ m }}</option>
+                  {% endfor %}
+                </select>
+                <label class="faint" for="rezhim-window">Потолок</label>
+                <select class="select" id="rezhim-window" name="compact_window" style="width:155px">
+                  <option value="">как в настройках</option>
+                  {% for w in windows %}
+                    <option value="{{ w }}" {% if current_topic.compact_window == w %}selected{% endif %}>{{ w // 1000 }} тыс. токенов</option>
+                  {% endfor %}
+                </select>
+                <button class="btn" type="submit" id="rezhim-btn">Применить</button>
+              </form>
               <a class="btn" href="{{ url_for('export_conversation', conversation_id=current_topic.id) }}">Экспорт</a>
               <form method="post" action="{{ url_for('topic_delete', topic_id=current_topic.id) }}"
                     onsubmit="return confirm('Удалить тему «{{ current_topic.title }}»?')">

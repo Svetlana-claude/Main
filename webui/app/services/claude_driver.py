@@ -195,6 +195,27 @@ def compact_window(raw: str | int | None) -> int:
     return max(COMPACT_WINDOW_MIN, min(COMPACT_WINDOW_MAX, value))
 
 
+def rezhim(conv: dict | None, settings: dict) -> tuple[str, int]:
+    """Модель и потолок контекста разговора: своё значение главнее общего.
+
+    `NULL` в `conversations.model` и `conversations.compact_window` означает
+    «как в „Настройках“». Смысл в том, что шаг агента стоит одинаково, что бы
+    он ни делал: правка вёрстки у темы на потолке 217 тыс. обходится как разбор.
+    Поэтому рутина ставится на младшую модель и низкий потолок, а разборы
+    остаются на старшей — разбор `optimizaciya/ekonomnaya-rabota.md`.
+    """
+    conv = conv or {}
+    # Негодное значение не роняет разговор и не подменяет выбор молча: сперва
+    # своё значение, потом общее из «Настроек», и только потом opus.
+    model = conv.get("model") or ""
+    if model not in config.ALLOWED_MODELS:
+        model = settings.get("model") or ""
+    if model not in config.ALLOWED_MODELS:
+        model = "opus"
+    window = conv.get("compact_window") or settings.get("compact_window")
+    return model, compact_window(window)
+
+
 def _child_env(window: int = 0) -> dict[str, str]:
     """Окружение для `claude` без наших ключей.
 

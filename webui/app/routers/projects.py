@@ -353,7 +353,8 @@ def projects(request: Request, id: int | None = None, topic: int | None = None):
             topic = topics[0]["id"]
         if topic is not None:
             current_topic = db.query_one(
-                "SELECT id, title, claude_session_id, context_tokens, context_at "
+                "SELECT id, title, claude_session_id, context_tokens, context_at, "
+                "       model, compact_window "
                 "FROM conversations WHERE id = %s AND project_id = %s",
                 (topic, project["id"]),
             )
@@ -382,6 +383,8 @@ def projects(request: Request, id: int | None = None, topic: int | None = None):
             "project": project,
             "topics": topics,
             "current_topic": current_topic,
+            "models": config.ALLOWED_MODELS,
+            "windows": config.WINDOW_CHOICES,
             "messages": messages,
             "files": files,
         },
@@ -475,6 +478,34 @@ def topic_delete(request: Request, topic_id: int):
     return RedirectResponse(target, status_code=303)
 
 
+@router.post("/projects/topics/{topic_id}/rezhim", name="topic_rezhim")
+def topic_rezhim(request: Request, topic_id: int,
+                 model: str = Form(""), compact_window: str = Form("")):
+    """Модель и потолок контекста темы. Пустое значение — «как в „Настройках“».
+
+    Негодное значение не записывается, а сбрасывается в «как в настройках»:
+    тема не должна встать из-за опечатки в поле формы.
+    """
+    user, redirect = _guard(request)
+    if redirect:
+        return redirect
+    row = db.query_one(
+        "SELECT project_id FROM conversations WHERE id = %s AND kind = 'topic'",
+        (topic_id,),
+    )
+    if not row:
+        return RedirectResponse(str(request.url_for("projects")), status_code=303)
+    db.execute(
+        "UPDATE conversations SET model = %s, compact_window = %s WHERE id = %s",
+        (model if model in config.ALLOWED_MODELS else None,
+         claude_driver.compact_window(compact_window) or None,
+         topic_id),
+    )
+    target = str(request.url_for("projects"))
+    return RedirectResponse(
+        f"{target}?id={row['project_id']}&topic={topic_id}", status_code=303)
+
+
 @router.post("/projects/topics/{topic_id}/send", name="topic_send")
 async def topic_send(request: Request, topic_id: int, text: str = Form(...)):
     user = current_user(request)
@@ -483,7 +514,8 @@ async def topic_send(request: Request, topic_id: int, text: str = Form(...)):
 
     conv = db.query_one(
         """
-        SELECT c.id, c.claude_session_id, p.workdir, p.allow_bash
+        SELECT c.id, c.claude_session_id, c.model, c.compact_window,
+               p.workdir, p.allow_bash
         FROM conversations c JOIN projects p ON p.id = c.project_id
         WHERE c.id = %s AND c.kind = 'topic'
         """,
@@ -508,7 +540,7 @@ async def topic_send(request: Request, topic_id: int, text: str = Form(...)):
     db.execute("UPDATE conversations SET updated_at = now() WHERE id = %s", (topic_id,))
 
     settings = db.get_settings()
-    model = settings.get("model", "opus")
+    model, window = claude_driver.rezhim(conv, settings)
     workdir = Path(conv["workdir"])
 
     async def producer(run):
@@ -520,7 +552,7 @@ async def topic_send(request: Request, topic_id: int, text: str = Form(...)):
             with_tools=True,
             workdir=workdir,
             allow_bash=bool(conv["allow_bash"]),
-            compact_window=claude_driver.compact_window(settings.get("compact_window")),
+            compact_window=window,
         ):
             if event["type"] == "result":
                 _save_answer(topic_id, event)
@@ -563,7 +595,8 @@ async def topic_compact(request: Request, topic_id: int):
 
     conv = db.query_one(
         """
-        SELECT c.id, c.claude_session_id, p.workdir, p.allow_bash
+        SELECT c.id, c.claude_session_id, c.model, c.compact_window,
+               p.workdir, p.allow_bash
         FROM conversations c JOIN projects p ON p.id = c.project_id
         WHERE c.id = %s AND c.kind = 'topic'
         """,
@@ -577,18 +610,19 @@ async def topic_compact(request: Request, topic_id: int):
         return JSONResponse({"error": "в этой теме уже идёт ответ"}, status_code=409)
 
     settings = db.get_settings()
+    model, window = claude_driver.rezhim(conv, settings)
 
     async def producer(run):
         pre = post = 0
         failure = ""
         async for event in claude_driver.run(
             "/compact",
-            model=settings.get("model", "opus"),
+            model=model,
             session_id=conv["claude_session_id"],
             with_tools=True,
             workdir=Path(conv["workdir"]),
             allow_bash=bool(conv["allow_bash"]),
-            compact_window=claude_driver.compact_window(settings.get("compact_window")),
+            compact_window=window,
         ):
             if event["type"] == "compact":
                 if event["state"] == "done":

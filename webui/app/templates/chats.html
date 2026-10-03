@@ -36,6 +36,27 @@
           <button class="btn" type="submit">Переименовать</button>
         </form>
         <span class="spacer"></span>
+        {# Модель и потолок — на разговор: рутина (правки вёрстки, прогон
+           проверок) идёт на младшей модели и с низким потолком, разборы
+           остаются на старшей. Пустое значение — «как в „Настройках“». #}
+        <form method="post" action="{{ url_for('chat_rezhim', chat_id=current.id) }}"
+              class="formrow" style="gap:4px">
+          <label class="faint" for="rezhim-model">Модель</label>
+          <select class="select" id="rezhim-model" name="model" style="width:120px">
+            <option value="">как в настройках</option>
+            {% for m in models %}
+              <option value="{{ m }}" {% if current.model == m %}selected{% endif %}>{{ m }}</option>
+            {% endfor %}
+          </select>
+          <label class="faint" for="rezhim-window">Потолок</label>
+          <select class="select" id="rezhim-window" name="compact_window" style="width:155px">
+            <option value="">как в настройках</option>
+            {% for w in windows %}
+              <option value="{{ w }}" {% if current.compact_window == w %}selected{% endif %}>{{ w // 1000 }} тыс. токенов</option>
+            {% endfor %}
+          </select>
+          <button class="btn" type="submit" id="rezhim-btn">Применить</button>
+        </form>
         <a class="btn" href="{{ url_for('export_conversation', conversation_id=current.id) }}">Экспорт в markdown</a>
         <form method="post" action="{{ url_for('chat_delete', chat_id=current.id) }}"
               onsubmit="return confirm('Удалить чат «{{ current.title }}» со всеми сообщениями?')">
