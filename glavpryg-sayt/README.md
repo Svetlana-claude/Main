@@ -15,9 +15,9 @@ glavpryg-sayt/
 ├── deploy/
 │   ├── nginx-glavpryg.conf     правила nginx → /etc/nginx/snippets/glavpryg.conf
 │   ├── php-fpm-glavpryg.conf   пул PHP-FPM → /etc/php/8.4/fpm/pool.d/glavpryg.conf
-│   └── obnovit.sh              обновление новой поставкой
+│   └── obnovit.sh              обновление поставкой — отключён, сайт в git
 ├── zapiska-razrabotchiku.md    что просим поправить в поставке (выдача — PDF в downloads/)
-├── pravki/                     наши правки в коде поставки, патчами (см. pravki/README.md)
+├── pravki/                     архив: прежние патчи, вошли в историю репозитория сайта
 ├── tools/
 │   └── podgotovit-foto.py      присланную съёмку — к выкладке в фотоархив
 ├── tests/
@@ -77,7 +77,18 @@ glavpryg-sayt/
 Orchid держит одним файлом на диске, и вложения разных загрузок смотрят на тот
 же путь.
 
-## Обновление новой поставкой
+## Код сайта — в своём репозитории
+
+С 03.10.2026 приложение `/var/www/glavpryg` — git-репозиторий
+(`git@github.com:Svetlana-claude/glavpryg.git`, приватный). Правка: поправить
+файл там, проверить прогонами из `glavpryg-sayt/tests/`, закоммитить и
+`git push` **в каталоге сайта**. Памятка — `README.md` самого сайта. Устройство
+и почему так — `architect.md`, раздел про Главпрыг.
+
+## Обновление новой поставкой (больше не применяется)
+
+⚠️ Пока в сайте есть `.git`, `obnovit.sh` отказывается работать. Ниже —
+как было, на случай если поставка всё же придёт.
 
     sudo bash glavpryg-sayt/deploy/obnovit.sh /путь/к/распакованной/поставке
     bash glavpryg-sayt/tests/check-glavpryg.sh
