@@ -58,6 +58,32 @@ def kadr(put: Path, podpis: str) -> None:
     im.save(put, quality=85)
 
 
+def zhdat_adres(st, chast: str, ushli: bool = False, srok: int = 45000) -> None:
+    """Дождаться, пока адрес страницы придёт к нужному виду.
+
+    ⚠️ Ждать в админке `wait_for_load_state` нельзя. Orchid ходит по страницам
+    через Turbo: тот забирает новую страницу запросом в фоне и подменяет
+    содержимое, полной загрузки окна при этом не происходит. Ожидание
+    возвращается мгновенно — и на **прежней** странице, с прежним адресом.
+    Проверка после этого краснела восемью случаями разом на приложении,
+    которое работает: вход, пункт меню, сводка, сохранение карточки.
+
+    Поймали это так: правка меток подпути включила Turbo на ссылках админки
+    (раньше он считал их внешними и грузил страницы целиком, потому ожидание
+    и срабатывало). Продукт стал работать лучше, а проверка — хуже.
+
+    Поэтому ждём дело: сам адрес. `ushli=True` — дождаться, когда адрес
+    перестанет содержать строку (ушли со страницы входа).
+    """
+    st.wait_for_function(
+        "([chast, ushli]) => ushli"
+        " ? !location.href.includes(chast)"
+        " : location.href.includes(chast)",
+        arg=[chast, ushli],
+        timeout=srok,
+    )
+
+
 def slaydov_v_baze() -> dict[str, int]:
     """Сколько слайдов уже заведено: всего (ключ «») и по подразделам.
 
@@ -141,12 +167,13 @@ def main() -> int:
             st.fill('input[name="email"]', dovody.pochta)
             st.fill('input[name="password"]', dovody.parol)
             st.click('button[type="submit"]')
-            st.wait_for_load_state("networkidle", timeout=60000)
+            zhdat_adres(st, "/admin/login", ushli=True)
             proverit("/admin/login" not in st.url, "вход в админку")
 
             # --- Пункт меню открывается нажатием, а не переходом по адресу ---
             st.get_by_role("link", name="Фотоархив").first.click()
-            st.wait_for_load_state("networkidle", timeout=60000)
+            zhdat_adres(st, "/admin/fotoarkhiv")
+            st.wait_for_timeout(1500)       # Turbo дорисовывает содержимое
             proverit(st.url.endswith("/admin/fotoarkhiv"), f"пункт меню ведёт в архив ({st.url})")
 
             telo = st.inner_text("body")
@@ -173,7 +200,7 @@ def main() -> int:
 
                 st.get_by_role("button", name="Положить в архив").first.click()
                 st.wait_for_load_state("networkidle", timeout=60000)
-                st.wait_for_timeout(2000)
+                st.wait_for_timeout(4000)       # Turbo дорисовывает сводку
 
             v_papke = sorted(f.name for f in (ARKHIV / "sportivnyy").glob("*.jpg"))
             proverit(f"{METKA}-zagruzka.jpg" in v_papke,
@@ -211,7 +238,9 @@ def main() -> int:
 
             vybor.select_option("vr")
             st.get_by_role("button", name="Сохранить").first.click()
-            st.wait_for_load_state("networkidle", timeout=60000)
+            # Сохранение уводит на список (`redirect()->route('platform.gallery')`),
+            # так что уход с «/edit» и есть признак, что правка записана.
+            zhdat_adres(st, "/edit", ushli=True)
 
             st.goto(f"{osnova}/admin/gallery?razdel=vr", wait_until="networkidle", timeout=60000)
             stalo = st.locator("table tbody tr").count()
@@ -221,7 +250,7 @@ def main() -> int:
             st.goto(f"{osnova}/admin/gallery/{svoy}/edit", wait_until="networkidle", timeout=60000)
             st.locator('select[name="item[razdel]"]').select_option("tandem")
             st.get_by_role("button", name="Сохранить").first.click()
-            st.wait_for_load_state("networkidle", timeout=60000)
+            zhdat_adres(st, "/edit", ushli=True)
 
             st.goto(f"{osnova}/admin/gallery?razdel=tandem", wait_until="networkidle", timeout=60000)
             vernulos = st.locator("table tbody tr").count()

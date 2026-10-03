@@ -35,6 +35,24 @@ def opisat_formy(stranica) -> list[dict]:
     )
 
 
+def zhdat_adres(stranica, chast: str, ushli: bool = False, srok: int = 45000) -> None:
+    """Дождаться, пока адрес страницы придёт к нужному виду.
+
+    ⚠️ В админке ждать `wait_for_load_state` нельзя: Orchid ходит по страницам
+    через Turbo, полной загрузки окна не происходит, и ожидание возвращается
+    мгновенно на прежней странице. Проверка объявляла «вход не прошёл» при
+    работающем входе. Ждём дело — сам адрес. Подробный разбор в
+    `check-fotoarkhiv-adminka.py`, где на эту же мель сели восемью случаями.
+    """
+    stranica.wait_for_function(
+        "([chast, ushli]) => ushli"
+        " ? !location.href.includes(chast)"
+        " : location.href.includes(chast)",
+        arg=[chast, ushli],
+        timeout=srok,
+    )
+
+
 def main() -> int:
     razbor = argparse.ArgumentParser()
     razbor.add_argument("adres", nargs="?", default="https://mokeevasky.ru/glavpryg")
@@ -88,7 +106,10 @@ def main() -> int:
         stranica.fill('input[name="email"]', dovody.pochta)
         stranica.fill('input[name="password"]', dovody.parol)
         stranica.click('button[type="submit"]')
-        stranica.wait_for_load_state("networkidle", timeout=60000)
+        try:
+            zhdat_adres(stranica, "/admin/login", ushli=True)
+        except Exception:
+            pass                    # остались на входе — разберёт проверка ниже
         if "/admin/login" in stranica.url:
             print("ОШИБКА  вход в админку не прошёл — заявку не проверить")
             brauzer.close()
@@ -103,7 +124,7 @@ def main() -> int:
         #    в списке заявок. Заодно это проверка кнопки «Удалить».
         if doshla:
             stranica.get_by_role("link", name=metka).first.click()
-            stranica.wait_for_load_state("load", timeout=60000)
+            zhdat_adres(stranica, "/admin/leads/")      # карточка заявки
             stranica.get_by_role("button", name="Удалить").first.click()
             # ⚠️ Одного нажатия мало: Orchid переспрашивает окном, и в окне
             # кнопка называется так же — «Удалить». Первое нажатие только
@@ -113,7 +134,10 @@ def main() -> int:
             okno = stranica.locator(".modal.show").first
             okno.wait_for(state="visible", timeout=15000)
             okno.get_by_role("button", name="Удалить").first.click()
-            stranica.wait_for_load_state("networkidle", timeout=60000)
+            # Удаление уводит на список (`redirect()->route('platform.leads')`),
+            # адрес карточки — «…/leads/{id}/edit». Уход с «/edit» и есть
+            # признак, что удаление прошло; ждать загрузки окна нельзя (Turbo).
+            zhdat_adres(stranica, "/edit", ushli=True)
             stranica.goto(f"{osnova}/admin/leads", wait_until="load", timeout=60000)
             if metka in stranica.content():
                 print(f"ОШИБКА  пробная заявка осталась в админке — удалите руками: {metka}")

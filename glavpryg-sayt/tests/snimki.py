@@ -13,16 +13,27 @@ from pathlib import Path
 
 from playwright.sync_api import sync_playwright
 
+# Полный набор страниц сайта. ⚠️ Четыре страницы услуг снимаются все четыре:
+# шаблон у каждой свой (`resources/views/services/*.blade.php`), и в макете им
+# отвечают отдельные кадры (разработчик подписал их «Frame 25–28»). Пока
+# снимался один тандем, расхождения на трёх остальных никто не видел.
 STRANICY = [
     ("glavnaya", ""),
-    ("uslugi", "services/tandem"),
+    ("uslugi-tandem", "services/tandem"),
+    ("uslugi-samostoyatelnyy", "services/samostoyatelnyy"),
+    ("uslugi-obuchenie", "services/obuchenie"),
+    ("uslugi-sportivnye", "services/sportivnye"),
     ("ceny", "prices"),
     ("sertifikat", "certificate"),
     ("zakaz-sertifikata", "certificate/order"),
     ("blog", "blog"),
+    ("blog-statya", "blog/dvoynaya-vysota"),
     ("o-nas", "about"),
     ("vr-trenazher", "vr-trainer"),
     ("kontakty", "contacts"),
+    ("pravovaya", "legal/marketing"),
+    ("vhod", "login"),
+    ("registraciya", "register"),
     ("vhod-v-adminku", "admin/login"),
 ]
 
