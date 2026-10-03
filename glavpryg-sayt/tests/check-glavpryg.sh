@@ -133,6 +133,14 @@ else
     skazat_ploho "/Claude/login отдал $k — сайт задел интерфейс"
 fi
 
+# 11. Наша копия макета админки не отстала от Orchid. Без неё в подкаталоге
+#     не работает ни одно поле загрузки файлов — а отстаёт она молча.
+if /usr/bin/php8.4 "$(dirname "$0")/check-maket-orchid.php" > /dev/null; then
+    skazat_horosho "копия макета админки совпадает с Orchid"
+else
+    skazat_ploho "копия макета админки разошлась с Orchid — tests/check-maket-orchid.php"
+fi
+
 echo
 if [ "$oshibki" -eq 0 ]; then
     echo "Все проверки пройдены."

@@ -1,0 +1,663 @@
+--- a/app/Support/Adminka.php
++++ b/app/Support/Adminka.php
+@@ -0,0 +1,44 @@
++<?php
++
++namespace App\Support;
++
++use Orchid\Support\Facades\Dashboard;
++
++/**
++ * Пути админки — полные, от корня домена.
++ *
++ * Зачем нужен отдельный помощник. `Dashboard::prefix()` отдаёт префикс
++ * **маршрута** — «/admin». Этого достаточно, пока сайт живёт в корне домена,
++ * и мало, когда он выложен в подкаталог: наш стоит по адресу
++ * `mokeevasky.ru/glavpryg`, и путь админской страницы — «/glavpryg/admin».
++ *
++ * Разница была бы безобидной, если бы Orchid не собирал адреса своих
++ * служебных запросов вручную, склейкой строк (`application_controller.js`):
++ *
++ *     location.protocol + '//' + location.hostname + метка + путь
++ *
++ * В метку `dashboard-prefix` макет Orchid кладёт префикс маршрута, подкаталог
++ * в склейку не попадает — и запрос на загрузку файла уходил на
++ * `mokeevasky.ru/admin/systems/files` вместо `/glavpryg/admin/systems/files`.
++ * Отваливались все поля загрузки разом, и молча.
++ *
++ * ⚠️ Менять ради этого `config('platform.prefix')` нельзя: тот же ключ
++ * Orchid берёт префиксом при **регистрации** маршрутов
++ * (`RouteServiceProvider`), и адреса стали бы «/glavpryg/glavpryg/admin».
++ * Поправить нужно именно метку, а префикс маршрута оставить как есть.
++ *
++ * Путь не вычисляется из `location.pathname` и не прописывается руками:
++ * его считает штатный генератор адресов Laravel, который про подкаталог
++ * знает. Поэтому на своём домене, в корне или в другом подкаталоге правка
++ * останется верной без настройки.
++ */
++class Adminka
++{
++    /**
++     * Путь админки от корня домена: «/glavpryg/admin» или «/admin» в корне.
++     */
++    public static function put(string $put = ''): string
++    {
++        return parse_url(url(Dashboard::prefix($put)), PHP_URL_PATH) ?: Dashboard::prefix($put);
++    }
++}
+--- a/app/Support/Kartinka.php
++++ b/app/Support/Kartinka.php
+@@ -0,0 +1,49 @@
++<?php
++
++namespace App\Support;
++
++/**
++ * Проверка, что картинка вправду лежит в `public/`.
++ *
++ * Зачем. Страница VR-тренажёра ссылается на тринадцать рисунков, а в поставке
++ * пришли только четыре: `images/vr/ris-5.jpg` … `ris-13.jpg` не было вовсе.
++ * Девять ответов 404 на одной странице, в вёрстке — значок битой картинки, и
++ * у посетителя страница выглядит недоделанной.
++ *
++ * Рисунки не вырезаны из разметки нарочно: подписи и порядок — часть
++ * технического разбора тренажёра, и когда снимки найдутся, их достаточно будет
++ * положить в папку. Поэтому блок рисунка показывается только при живом файле:
++ * нет файла — нет и блока, страница собирается целиком и без 404.
++ *
++ * ⚠️ Проверяется именно файл на диске, а не ответ сервера: `asset()` соберёт
++ * адрес и для несуществующего файла, об этом узнает только браузер.
++ */
++class Kartinka
++{
++    /**
++     * Есть ли такой файл в `public/`. Путь — как в `asset()`, без ведущего слеша.
++     */
++    public static function est(string $put): bool
++    {
++        return is_file(public_path(ltrim($put, '/')));
++    }
++
++    /**
++     * Есть ли хоть одна из картинок.
++     *
++     * Нужна для блоков-сеток: если спрятать по отдельности все рисунки сетки,
++     * от неё останется пустой блок с внешним отступом — лишняя полоса пустоты
++     * на странице. Условие на саму сетку это убирает, но сетка вернётся, как
++     * только найдётся хотя бы один её рисунок.
++     */
++    public static function estLyubaya(array $puti): bool
++    {
++        foreach ($puti as $put) {
++            if (self::est($put)) {
++                return true;
++            }
++        }
++
++        return false;
++    }
++}
+--- a/app/Support/Kontakty.php
++++ b/app/Support/Kontakty.php
+@@ -0,0 +1,96 @@
++<?php
++
++namespace App\Support;
++
++use App\Models\Setting;
++
++/**
++ * Контакты сайта — из настроек админки, одним источником.
++ *
++ * Зачем. В поставке телефон, адрес и часы работы были вписаны прямо в
++ * разметку — `tel:+74956789999` в шапке, в мобильном меню, на странице
++ * контактов, в подвале. Настройка «Телефон в шапке» при этом существовала и
++ * доходила ровно до одной страницы. Заказчик меняет номер в админке, видит на
++ * сайте прежний и решает, что админка не работает.
++ *
++ * Хуже того, данные расходились между собой: страница контактов показывала
++ * «дер. Большое Грызлово», а в настройках лежал «Аэродром Финам», часы —
++ * «с 8:00 до 20:00» против «Пн–Вс 8:00–22:00».
++ *
++ * ⚠️ Запасные значения здесь — не выдумка, а тот самый текст, который стоял в
++ * шаблонах и был на сайте. В настройках лежали заготовки разработчика (почта
++ * была `info@namedomain.ru`), поэтому настоящее содержимое перенесено из
++ * разметки в настройки, а не наоборот: на вид страница не изменилась, но
++ * теперь ею правит админка. Запасные значения остаются на случай, если поле
++ * настройки окажется пустым — страница не должна показывать пустоту.
++ */
++class Kontakty
++{
++    private const ZAPASNOY_TELEFON = '+7 (495) 678 99 99';
++    private const ZAPASNAYA_POCHTA = 'info@glavpryg.ru';
++    private const ZAPASNOY_ADRES = '142290, Россия, Московская обл., Серпуховский р-он, дер. Большое Грызлово';
++    private const ZAPASNYE_CHASY = 'Ежедневно c 8:00 до 20:00';
++
++    /** Телефон в шапке — как его показывать человеку. */
++    public static function telefon(): string
++    {
++        return Setting::current()->phone_header ?: self::ZAPASNOY_TELEFON;
++    }
++
++    /** Телефон в подвале: своя настройка, а нет её — тот же, что в шапке. */
++    public static function telefonPodvala(): string
++    {
++        return Setting::current()->phone_footer ?: self::telefon();
++    }
++
++    /**
++     * Ссылка для звонка из показываемого номера.
++     *
++     * ⚠️ Из номера выбрасывается всё, кроме цифр: `tel:` с пробелами и
++     * скобками часть телефонов набирает неверно. Ведущая «8» заменяется на
++     * «+7» — иначе звонок из-за границы не уходит.
++     */
++    public static function tel(?string $nomer = null): string
++    {
++        $cifry = preg_replace('/\D+/', '', $nomer ?? self::telefon());
++
++        if (str_starts_with((string) $cifry, '8') && strlen((string) $cifry) === 11) {
++            $cifry = '7' . substr((string) $cifry, 1);
++        }
++
++        return 'tel:+' . $cifry;
++    }
++
++    public static function pochta(): string
++    {
++        return Setting::current()->email ?: self::ZAPASNAYA_POCHTA;
++    }
++
++    public static function adres(): string
++    {
++        return Setting::current()->address ?: self::ZAPASNOY_ADRES;
++    }
++
++    public static function chasy(): string
++    {
++        return Setting::current()->work_hours ?: self::ZAPASNYE_CHASY;
++    }
++
++    /**
++     * Ссылка на мессенджер или соцсеть, если она заведена в настройках.
++     *
++     * Кнопки Telegram и Max стояли в вёрстке с мёртвым `href="#"`. Пустая
++     * настройка означает «кнопку не показывать»: ссылка в никуда хуже, чем
++     * отсутствие кнопки.
++     *
++     * ⚠️ Одинокая решётка считается пустотой. Именно она лежала в настройках
++     * заготовкой (`social_tg = '#'`), и показывать по ней кнопку — то же
++     * самое, что показывать её по мёртвому `href="#"` из разметки.
++     */
++    public static function set(string $klyuch): ?string
++    {
++        $znachenie = trim((string) (Setting::current()->{'social_' . $klyuch} ?? ''));
++
++        return $znachenie !== '' && $znachenie !== '#' ? $znachenie : null;
++    }
++}
+--- a/app/Orchid/PlatformProvider.php
++++ b/app/Orchid/PlatformProvider.php
+@@ -16,10 +16,13 @@
+     {
+         parent::boot($dashboard);
+ 
+-        // Сайт выложен в подпуть (/glavpryg), а Orchid собирает адреса загрузки
+-        // файлов от корня домена и подпуть теряет. Скрипт возвращает его на место —
+-        // подробности в самом файле.
+-        $dashboard->registerResource('scripts', asset('js/adminka-podput.js'));
++        // Подпуть админки починен на сервере, а не скриптом в браузере: метки
++        // `dashboard-prefix` и `turbo-root` получают полный путь в нашем
++        // переопределении макета Orchid
++        // (`resources/views/vendor/platform/app.blade.php`), а сам путь считает
++        // `App\Support\Adminka`. Прежняя заплата `public/js/adminka-podput.js`
++        // больше не подключается: она правила ту же метку уже в браузере,
++        // после загрузки страницы, и ломалась бы при любой осечке Turbo.
+     }
+ 
+     public function menu(): array
+--- a/resources/views/vendor/platform/app.blade.php
++++ b/resources/views/vendor/platform/app.blade.php
+@@ -0,0 +1,89 @@
++{{--
++    Макет админки Orchid, переопределённый у себя.
++
++    Это копия `vendor/orchid/platform/resources/views/app.blade.php`, в которой
++    изменены **две строки** — метки `turbo-root` и `dashboard-prefix`. В
++    поставке Orchid в них попадает префикс маршрута («/admin»), а нужен полный
++    путь от корня домена («/glavpryg/admin»): сайт живёт в подкаталоге. Разбор,
++    почему это нельзя поправить настройкой, — в `App\Support\Adminka`.
++
++    ⚠️ Копия чужого макета: обновив Orchid, её надо сверить с новой поставкой,
++    иначе админка останется на прежней разметке и тихо потеряет то, что в
++    макете поменяли. Сверяет `tests/check-maket-orchid.php` — он же называет
++    строки, разошедшиеся не по нашей вине.
++--}}
++<!DOCTYPE html>
++<html lang="{{  app()->getLocale() }}" data-controller="html-load" dir="{{ \Orchid\Support\Locale::currentDir() }}">
++<head>
++    <meta charset="utf-8">
++    <meta http-equiv="X-UA-Compatible" content="IE=edge">
++    <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no, user-scalable=no">
++    <title>
++        @yield('title', config('app.name'))
++        @hasSection('title')
++            - {{ config('app.name') }}
++        @endif
++    </title>
++    <meta name="csrf_token" content="{{ csrf_token() }}" id="csrf_token">
++    <meta name="auth" content="{{ Auth::check() }}" id="auth">
++    @if(\Orchid\Support\Locale::isRtl())
++        <link rel="stylesheet" type="text/css" href="{{  mix('/css/orchid.rtl.css','vendor/orchid') }}"  data-turbo-track="reload" >
++    @else
++        <link rel="stylesheet" type="text/css" href="{{  mix('/css/orchid.css','vendor/orchid') }}"  data-turbo-track="reload" >
++    @endif
++
++    @stack('head')
++
++    <meta name="view-transition" content="same-origin">
++    {{-- Наша правка: полный путь, иначе Turbo считает ссылки админки внешними. --}}
++    <meta name="turbo-root" content="{{ \App\Support\Adminka::put() }}">
++    <meta name="turbo-refresh-method" content="{{ config('platform.turbo.refresh-method', 'replace') }}">
++    <meta name="turbo-refresh-scroll" content="{{ config('platform.turbo.refresh-scroll', 'reset') }}">
++    <meta name="turbo-prefetch" content="{{ var_export(config('platform.turbo.prefetch', true)) }}">
++    {{-- Наша правка: полный путь, иначе все поля загрузки файлов бьют в 404. --}}
++    <meta name="dashboard-prefix" content="{{ \App\Support\Adminka::put() }}">
++
++    @if(!config('platform.turbo.cache', false))
++        <meta name="turbo-cache-control" content="no-cache">
++    @endif
++
++    @foreach(collect(['/js/manifest.js', '/js/vendor.js', '/js/orchid.js']) as $key)
++        <script src="{{ mix($key,'vendor/orchid') }}" data-turbo-track="reload" type="text/javascript"></script>
++    @endforeach
++
++    @foreach(Dashboard::getResource('stylesheets') as $stylesheet)
++        <link rel="stylesheet" href="{{  $stylesheet }}" data-turbo-track="reload">
++    @endforeach
++
++    @stack('stylesheets')
++
++    @foreach(Dashboard::getResource('scripts') as $scripts)
++        <script src="{{  $scripts }}" defer type="text/javascript" data-turbo-track="reload"></script>
++    @endforeach
++
++    @if(!empty(config('platform.vite', [])))
++        @vite(config('platform.vite'))
++    @endif
++</head>
++
++<body class="{{ \Orchid\Support\Names::getPageNameClass() }}" data-controller="pull-to-refresh">
++
++<div class="container-fluid" data-controller="@yield('controller')" @yield('controller-data')>
++
++    <div class="row justify-content-center d-md-flex h-100">
++        @yield('aside')
++
++        <div class="col-xxl col-lg-9 col-xl-9 col-12 mx-auto">
++            @yield('body')
++        </div>
++    </div>
++
++
++    @include('platform::partials.toast')
++</div>
++
++@stack('scripts')
++
++@include('platform::partials.search-modal')
++</body>
++</html>
+--- a/resources/views/partials/home/certificate.blade.php
++++ b/resources/views/partials/home/certificate.blade.php
+@@ -1,16 +1,49 @@
+-{{-- Сертификат на мечту (CTA) --}}
++{{--
++    Сертификат на мечту (CTA).
++
++    Блок приходит из общего макета `layouts/redesign.blade.php` и стоит на
++    четырёх страницах: главная, `/services/tandem`, `/about`, `/vr-trainer`.
++    Остальные страницы макета отключают его через `@section('sharedOff', '1')`.
++
++    ⚠️ В поставке эта форма не отправляла ничего: ни `action`, ни `method`, ни
++    `name` у полей, ни метки CSRF. Нажатие на «Заказать сертификат» просто
++    перезагружало страницу, посетитель считал, что заявку оставил, а заявки не
++    было — и так на четырёх страницах сразу. Отправка заведена по образцу
++    рабочей формы `partials/gift-certificate.blade.php`: тип заявки `gift` в
++    модели `Lead` был заготовлен заранее, его просто не подключили.
++--}}
++@php
++    $soglasie = \App\Models\Setting::current()->gift_consent
++        ?: 'Нажимая кнопку, вы даёте согласие на обработку персональных данных.';
++@endphp
++
+ <section id="certificate" class="mt-20 lg:mt-28">
+     <div class="rounded-2xl bg-orange-grad px-6 py-10 sm:px-12 sm:py-12">
+         <h2 class="h-title text-[28px] font-bold leading-none text-white sm:text-5xl lg:text-[75px]">Сертификат на мечту</h2>
+-        <form class="mt-8 flex flex-col gap-4 lg:flex-row">
+-            <input type="text" placeholder="ФИО"
+-                   class="w-full rounded-2xl bg-white px-6 py-5 text-base font-medium text-ink placeholder-gray-400 outline-none lg:flex-1">
+-            <input type="tel" placeholder="Ваш телефон"
+-                   class="w-full rounded-2xl bg-white px-6 py-5 text-base font-medium text-ink placeholder-gray-400 outline-none lg:flex-1">
++
++        @if (session('lead_sent'))
++            <div class="mt-6 rounded-2xl bg-white/95 px-6 py-4 text-base font-semibold text-ink">
++                Спасибо! Заявка принята, мы свяжемся с вами.
++            </div>
++        @endif
++
++        <form method="POST" action="{{ route('leads.store', 'gift') }}"
++              class="mt-8 flex flex-col gap-4 lg:flex-row">
++            @csrf
++            <input type="text" name="name" value="{{ old('name') }}" aria-label="ФИО" placeholder="ФИО"
++                   class="w-full rounded-2xl bg-white px-6 py-5 text-base font-medium text-ink placeholder-gray-400 outline-none focus:ring-2 focus:ring-white lg:flex-1">
++            <input type="tel" name="phone" value="{{ old('phone') }}" required aria-label="Ваш телефон" placeholder="Ваш телефон"
++                   class="w-full rounded-2xl bg-white px-6 py-5 text-base font-medium text-ink placeholder-gray-400 outline-none focus:ring-2 focus:ring-white lg:flex-1">
+             <button type="submit"
+-                    class="h-title rounded-2xl bg-black px-8 py-5 text-base font-bold text-white transition hover:bg-gray-900 lg:w-auto">
++                    class="h-title rounded-2xl bg-black px-8 py-5 text-base font-bold text-white transition hover:bg-gray-900 focus:ring-2 focus:ring-white lg:w-auto">
+                 Заказать сертификат
+             </button>
+         </form>
++
++        @error('phone')
++            <p class="mt-3 text-sm font-semibold text-white">{{ $message }}</p>
++        @enderror
++
++        <p class="mt-4 max-w-3xl text-xs leading-snug text-white/85">{{ $soglasie }}</p>
+     </div>
+ </section>
+--- a/resources/views/vr-trainer.blade.php
++++ b/resources/views/vr-trainer.blade.php
+@@ -136,26 +136,34 @@
+             <li class="flex gap-3"><span class="mt-2 h-1.5 w-1.5 shrink-0 rounded-full bg-accent"></span><span>Интерфейс передачи данных (USB/Ethernet) в VR-систему.</span></li>
+         </ul>
+ 
++        @if (\App\Support\Kartinka::estLyubaya(['images/vr/ris-5.jpg', 'images/vr/ris-6.jpg', 'images/vr/ris-7.jpg']))
+         <div class="mt-8 grid gap-6 sm:grid-cols-3">
++            @if (\App\Support\Kartinka::est('images/vr/ris-5.jpg'))
+             <figure>
+                 <div class="overflow-hidden rounded-2xl ring-1 ring-gray-100">
+                     <img src="{{ asset('images/vr/ris-5.jpg') }}" alt="Рис. 5. Микроконтроллер СИО парашютного тренажёра" class="aspect-[4/3] w-full object-cover">
+                 </div>
+                 <figcaption class="mt-2 text-center text-xs italic text-ink/50">Рис. 5. Микроконтроллер СИО</figcaption>
+             </figure>
++            @endif
++            @if (\App\Support\Kartinka::est('images/vr/ris-6.jpg'))
+             <figure>
+                 <div class="overflow-hidden rounded-2xl ring-1 ring-gray-100">
+                     <img src="{{ asset('images/vr/ris-6.jpg') }}" alt="Рис. 6. Датчики Холла — натяжения/положения строп управления" class="aspect-[4/3] w-full object-cover">
+                 </div>
+                 <figcaption class="mt-2 text-center text-xs italic text-ink/50">Рис. 6. Датчики Холла</figcaption>
+             </figure>
++            @endif
++            @if (\App\Support\Kartinka::est('images/vr/ris-7.jpg'))
+             <figure>
+                 <div class="overflow-hidden rounded-2xl ring-1 ring-gray-100">
+                     <img src="{{ asset('images/vr/ris-7.jpg') }}" alt="Рис. 7. Панель управления парашютным тренажёром" class="aspect-[4/3] w-full object-cover">
+                 </div>
+                 <figcaption class="mt-2 text-center text-xs italic text-ink/50">Рис. 7. Панель управления</figcaption>
+             </figure>
++            @endif
+         </div>
++        @endif
+ 
+         {{-- 3.2 --}}
+         <h3 class="h-title mt-12 text-xl font-bold text-navy">3.2. Программно-моделирующая часть</h3>
+@@ -176,12 +184,14 @@
+             <li class="flex gap-3"><span class="mt-2 h-1.5 w-1.5 shrink-0 rounded-full bg-accent"></span><span>Система визуализации (VR-шлем: HTC Vive Pro 2).</span></li>
+         </ul>
+ 
++        @if (\App\Support\Kartinka::est('images/vr/ris-8.jpg'))
+         <figure class="mt-8">
+             <div class="overflow-hidden rounded-2xl ring-1 ring-gray-100">
+                 <img src="{{ asset('images/vr/ris-8.jpg') }}" alt="Рис. 8. Моделирование точки выброски, высоты, ветра на парашютном тренажёре" class="aspect-[16/9] w-full object-cover">
+             </div>
+             <figcaption class="mt-2 text-center text-xs italic text-ink/50">Рис. 8. Моделирование точки выброски, высоты и ветра</figcaption>
+         </figure>
++        @endif
+     </section>
+ 
+     {{-- 4. Принцип работы --}}
+@@ -197,12 +207,14 @@
+             <li class="flex gap-3"><span class="mt-2 h-1.5 w-1.5 shrink-0 rounded-full bg-accent"></span><span>Подъёмник опускается, оставляя пользователя в подвешенном состоянии.</span></li>
+         </ul>
+ 
++        @if (\App\Support\Kartinka::est('images/vr/ris-9.jpg'))
+         <figure class="mt-6">
+             <div class="overflow-hidden rounded-2xl ring-1 ring-gray-100">
+                 <img src="{{ asset('images/vr/ris-9.jpg') }}" alt="Рис. 9. Парашютист в подвешенном состоянии на парашютном тренажёре" class="aspect-[16/9] w-full object-cover">
+             </div>
+             <figcaption class="mt-2 text-center text-xs italic text-ink/50">Рис. 9. Парашютист в подвешенном состоянии</figcaption>
+         </figure>
++        @endif
+ 
+         <h3 class="h-title mt-12 text-xl font-bold text-navy">4.2. Запуск симуляции</h3>
+         <ul class="mt-4 space-y-3 text-[15px] leading-relaxed text-ink/80">
+@@ -211,20 +223,26 @@
+             <li class="flex gap-3"><span class="mt-2 h-1.5 w-1.5 shrink-0 rounded-full bg-accent"></span><span>Две базовых станции считывают положение VR-шлема.</span></li>
+         </ul>
+ 
++        @if (\App\Support\Kartinka::estLyubaya(['images/vr/ris-10.jpg', 'images/vr/ris-11.jpg']))
+         <div class="mt-8 grid gap-6 sm:grid-cols-2">
++            @if (\App\Support\Kartinka::est('images/vr/ris-10.jpg'))
+             <figure>
+                 <div class="overflow-hidden rounded-2xl ring-1 ring-gray-100">
+                     <img src="{{ asset('images/vr/ris-10.jpg') }}" alt="Рис. 10. Изображение виртуальной дропзоны на парашютном тренажёре" class="aspect-[16/9] w-full object-cover">
+                 </div>
+                 <figcaption class="mt-2 text-center text-xs italic text-ink/50">Рис. 10. Изображение виртуальной дропзоны</figcaption>
+             </figure>
++            @endif
++            @if (\App\Support\Kartinka::est('images/vr/ris-11.jpg'))
+             <figure>
+                 <div class="overflow-hidden rounded-2xl ring-1 ring-gray-100">
+                     <img src="{{ asset('images/vr/ris-11.jpg') }}" alt="Рис. 11. Базовая станция, отслеживающая положение VR-шлема" class="aspect-[16/9] w-full object-cover">
+                 </div>
+                 <figcaption class="mt-2 text-center text-xs italic text-ink/50">Рис. 11. Базовая станция отслеживания VR-шлема</figcaption>
+             </figure>
++            @endif
+         </div>
++        @endif
+ 
+         <h3 class="h-title mt-12 text-xl font-bold text-navy">4.3. Управление парашютом</h3>
+         <ul class="mt-4 space-y-3 text-[15px] leading-relaxed text-ink/80">
+@@ -233,20 +251,26 @@
+             <li class="flex gap-3"><span class="mt-2 h-1.5 w-1.5 shrink-0 rounded-full bg-accent"></span><span>Отрабатывается приземление, развороты, управление скоростью.</span></li>
+         </ul>
+ 
++        @if (\App\Support\Kartinka::estLyubaya(['images/vr/ris-12.jpg', 'images/vr/ris-13.jpg']))
+         <div class="mt-8 grid gap-6 sm:grid-cols-2">
++            @if (\App\Support\Kartinka::est('images/vr/ris-12.jpg'))
+             <figure>
+                 <div class="overflow-hidden rounded-2xl ring-1 ring-gray-100">
+                     <img src="{{ asset('images/vr/ris-12.jpg') }}" alt="Рис. 12. Отработка разворота на парашютном тренажёре" class="aspect-[16/9] w-full object-cover">
+                 </div>
+                 <figcaption class="mt-2 text-center text-xs italic text-ink/50">Рис. 12. Отработка разворота</figcaption>
+             </figure>
++            @endif
++            @if (\App\Support\Kartinka::est('images/vr/ris-13.jpg'))
+             <figure>
+                 <div class="overflow-hidden rounded-2xl ring-1 ring-gray-100">
+                     <img src="{{ asset('images/vr/ris-13.jpg') }}" alt="Рис. 13. Посадка на парашютном тренажёре" class="aspect-[16/9] w-full object-cover">
+                 </div>
+                 <figcaption class="mt-2 text-center text-xs italic text-ink/50">Рис. 13. Посадка</figcaption>
+             </figure>
++            @endif
+         </div>
++        @endif
+ 
+         <h3 class="h-title mt-12 text-xl font-bold text-navy">4.4. Завершение</h3>
+         <ul class="mt-4 space-y-3 text-[15px] leading-relaxed text-ink/80">
+--- a/resources/views/partials/home/nav.blade.php
++++ b/resources/views/partials/home/nav.blade.php
+@@ -5,12 +5,12 @@
+     </a>
+ 
+     {{-- Единый навбар: 🏠 · пункты · | · иконки · телефон --}}
+-    <div class="hidden items-center gap-1 rounded-full bg-white/10 px-2 py-2 text-white shadow-[0_6px_20px_rgba(0,0,0,0.20)] backdrop-blur-2xl backdrop-saturate-150 lg:flex">
++    <div data-steklo="панель меню" class="hidden items-center gap-1 rounded-full bg-black/15 px-2 py-2 text-white shadow-[0_6px_20px_rgba(0,0,0,0.20)] backdrop-blur-2xl backdrop-saturate-150 backdrop-brightness-[.55] lg:flex">
+         <a href="{{ route('home') }}" aria-label="Главная" class="grid h-9 w-9 place-items-center rounded-full bg-white/15 transition hover:bg-white/25">
+             <svg class="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 11l9-8 9 8M5 10v10h14V10"/></svg>
+         </a>
+         <div class="group relative">
+-            <span class="flex cursor-default items-center gap-1 rounded-full px-4 py-2 text-[13px] text-white/90 transition group-hover:bg-white/15">
++            <span class="flex cursor-default items-center gap-1 rounded-full px-4 py-2 text-[13px] text-white transition group-hover:bg-white/15">
+                 Услуги
+                 <svg class="h-3 w-3 transition-transform duration-200 group-hover:rotate-180" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 9l6 6 6-6"/></svg>
+             </span>
+@@ -22,9 +22,9 @@
+                 </div>
+             </div>
+         </div>
+-        <a href="{{ route('certificate') }}" class="rounded-full px-4 py-2 text-[13px] text-white/90 transition hover:bg-white/15">Сертификаты</a>
+-        <a href="{{ route('about') }}" class="rounded-full px-4 py-2 text-[13px] text-white/90 transition hover:bg-white/15">О нас</a>
+-        <a href="{{ route('contacts') }}" class="rounded-full px-4 py-2 text-[13px] text-white/90 transition hover:bg-white/15">Контакты</a>
++        <a href="{{ route('certificate') }}" class="rounded-full px-4 py-2 text-[13px] text-white transition hover:bg-white/15">Сертификаты</a>
++        <a href="{{ route('about') }}" class="rounded-full px-4 py-2 text-[13px] text-white transition hover:bg-white/15">О нас</a>
++        <a href="{{ route('contacts') }}" class="rounded-full px-4 py-2 text-[13px] text-white transition hover:bg-white/15">Контакты</a>
+         <span class="mx-1.5 h-6 w-px bg-white/25"></span>
+         <a href="#" aria-label="Telegram" class="grid h-9 w-9 place-items-center rounded-full transition hover:bg-white/15">
+             <svg class="h-4 w-4" viewBox="0 0 24 24" fill="currentColor"><path d="M21.9 4.3 18.6 20c-.2 1-.9 1.3-1.8.8l-5-3.7-2.4 2.3c-.3.3-.5.5-1 .5l.4-5 9.2-8.3c.4-.4-.1-.6-.6-.2L6.6 13.2l-4.9-1.5c-1-.3-1-1 .2-1.5L20.6 2.9c.9-.3 1.6.2 1.3 1.4Z"/></svg>
+@@ -32,10 +32,10 @@
+         <a href="#" aria-label="Max" class="grid h-9 w-9 place-items-center rounded-full transition hover:bg-white/15">
+             <svg class="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 11.5a8.5 8.5 0 0 1-12.3 7.6L3 21l1.9-5.7A8.5 8.5 0 1 1 21 11.5Z"/></svg>
+         </a>
+-        <a href="tel:+74956789999" aria-label="Позвонить" class="grid h-9 w-9 place-items-center rounded-full transition hover:bg-white/15">
++        <a href="{{ \App\Support\Kontakty::tel() }}" aria-label="Позвонить" class="grid h-9 w-9 place-items-center rounded-full transition hover:bg-white/15">
+             <svg class="h-4 w-4" viewBox="0 0 24 24" fill="currentColor"><path d="M6.6 10.8c1.4 2.8 3.8 5.1 6.6 6.6l2.2-2.2c.3-.3.7-.4 1-.2 1.1.4 2.3.6 3.5.6.6 0 1 .4 1 1V20c0 .6-.4 1-1 1C10.5 21 3 13.5 3 4c0-.6.4-1 1-1h3.5c.6 0 1 .4 1 1 0 1.2.2 2.4.6 3.5.1.4 0 .8-.2 1l-2.3 2.3Z"/></svg>
+         </a>
+-        <a href="tel:+74956789999" class="rounded-full px-3 py-2 text-[13px] font-medium text-white transition hover:bg-white/15">+7 (495) 678 99 99</a>
++        <a href="{{ \App\Support\Kontakty::tel() }}" class="rounded-full px-3 py-2 text-[13px] font-medium text-white transition hover:bg-white/15">{{ \App\Support\Kontakty::telefon() }}</a>
+         <a href="{{ route('account.index') }}" aria-label="Личный кабинет" class="grid h-9 w-9 place-items-center rounded-full bg-white/15 transition hover:bg-white/25">
+             <svg class="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 21a8 8 0 0 0-16 0"/><circle cx="12" cy="7" r="4"/></svg>
+         </a>
+@@ -43,10 +43,10 @@
+ 
+     {{-- Mobile --}}
+     <div class="flex items-center gap-2 lg:hidden">
+-        <a href="tel:+74956789999" aria-label="Позвонить" class="grid h-10 w-10 place-items-center rounded-full bg-white/10 text-white shadow-[0_6px_20px_rgba(0,0,0,0.20)] backdrop-blur-2xl backdrop-saturate-150">
++        <a href="{{ \App\Support\Kontakty::tel() }}" aria-label="Позвонить" data-steklo="кнопка телефона" class="grid h-10 w-10 place-items-center rounded-full bg-black/15 text-white shadow-[0_6px_20px_rgba(0,0,0,0.20)] backdrop-blur-2xl backdrop-saturate-150 backdrop-brightness-[.55]">
+             <svg class="h-5 w-5" viewBox="0 0 24 24" fill="currentColor"><path d="M6.6 10.8c1.4 2.8 3.8 5.1 6.6 6.6l2.2-2.2c.3-.3.7-.4 1-.2 1.1.4 2.3.6 3.5.6.6 0 1 .4 1 1V20c0 .6-.4 1-1 1C10.5 21 3 13.5 3 4c0-.6.4-1 1-1h3.5c.6 0 1 .4 1 1 0 1.2.2 2.4.6 3.5.1.4 0 .8-.2 1l-2.3 2.3Z"/></svg>
+         </a>
+-        <button type="button" data-menu-open aria-label="Меню" class="grid h-10 w-10 place-items-center rounded-full bg-white/10 text-white shadow-[0_6px_20px_rgba(0,0,0,0.20)] backdrop-blur-2xl backdrop-saturate-150">
++        <button type="button" data-menu-open aria-label="Меню" data-steklo="кнопка меню" class="grid h-10 w-10 place-items-center rounded-full bg-black/15 text-white shadow-[0_6px_20px_rgba(0,0,0,0.20)] backdrop-blur-2xl backdrop-saturate-150 backdrop-brightness-[.55]">
+             <svg class="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 7h16M4 12h16M4 17h16"/></svg>
+         </button>
+     </div>
+--- a/resources/views/partials/home/nav-light.blade.php
++++ b/resources/views/partials/home/nav-light.blade.php
+@@ -26,10 +26,10 @@
+             <a href="#" aria-label="Telegram" class="grid h-9 w-9 place-items-center rounded-full text-ink/70 transition hover:bg-gray-100">
+                 <svg class="h-4 w-4" viewBox="0 0 24 24" fill="currentColor"><path d="M21.9 4.3 18.6 20c-.2 1-.9 1.3-1.8.8l-5-3.7-2.4 2.3c-.3.3-.5.5-1 .5l.4-5 9.2-8.3c.4-.4-.1-.6-.6-.2L6.6 13.2l-4.9-1.5c-1-.3-1-1 .2-1.5L20.6 2.9c.9-.3 1.6.2 1.3 1.4Z"/></svg>
+             </a>
+-            <a href="tel:+74956789999" aria-label="Позвонить" class="grid h-9 w-9 place-items-center rounded-full text-ink/70 transition hover:bg-gray-100">
++            <a href="{{ \App\Support\Kontakty::tel() }}" aria-label="Позвонить" class="grid h-9 w-9 place-items-center rounded-full text-ink/70 transition hover:bg-gray-100">
+                 <svg class="h-4 w-4" viewBox="0 0 24 24" fill="currentColor"><path d="M6.6 10.8c1.4 2.8 3.8 5.1 6.6 6.6l2.2-2.2c.3-.3.7-.4 1-.2 1.1.4 2.3.6 3.5.6.6 0 1 .4 1 1V20c0 .6-.4 1-1 1C10.5 21 3 13.5 3 4c0-.6.4-1 1-1h3.5c.6 0 1 .4 1 1 0 1.2.2 2.4.6 3.5.1.4 0 .8-.2 1l-2.3 2.3Z"/></svg>
+             </a>
+-            <a href="tel:+74956789999" class="font-medium text-ink transition hover:text-accent">+7 (495) 678 99 99</a>
++            <a href="{{ \App\Support\Kontakty::tel() }}" class="font-medium text-ink transition hover:text-accent">{{ \App\Support\Kontakty::telefon() }}</a>
+         </nav>
+ 
+         <div class="flex items-center gap-3">
+--- a/resources/views/partials/home/mobile-menu.blade.php
++++ b/resources/views/partials/home/mobile-menu.blade.php
+@@ -45,13 +45,13 @@
+ 
+         {{-- Контакты --}}
+         <div class="mt-auto space-y-4 border-t border-gray-100 px-6 py-6">
+-            <a href="tel:+74956789999" class="flex items-center gap-3 text-sm text-ink/80 transition hover:text-accent">
++            <a href="{{ \App\Support\Kontakty::tel() }}" class="flex items-center gap-3 text-sm text-ink/80 transition hover:text-accent">
+                 <span class="grid h-9 w-9 shrink-0 place-items-center rounded-lg bg-orange-100 text-accent">
+                     <svg class="h-4 w-4" viewBox="0 0 24 24" fill="currentColor"><path d="M6.6 10.8c1.4 2.8 3.8 5.1 6.6 6.6l2.2-2.2c.3-.3.7-.4 1-.2 1.1.4 2.3.6 3.5.6.6 0 1 .4 1 1V20c0 .6-.4 1-1 1C10.5 21 3 13.5 3 4c0-.6.4-1 1-1h3.5c.6 0 1 .4 1 1 0 1.2.2 2.4.6 3.5.1.4 0 .8-.2 1l-2.3 2.3Z"/></svg>
+                 </span>
+-                <span class="font-semibold text-ink">+7 (495) 678 99 99</span>
++                <span class="font-semibold text-ink">{{ \App\Support\Kontakty::telefon() }}</span>
+             </a>
+-            <a href="mailto:info@glavpryg.ru" class="flex items-center gap-3 text-sm text-ink/80 transition hover:text-accent">
++            <a href="mailto:{{ \App\Support\Kontakty::pochta() }}" class="flex items-center gap-3 text-sm text-ink/80 transition hover:text-accent">
+                 <span class="grid h-9 w-9 shrink-0 place-items-center rounded-lg bg-orange-100 text-accent">
+                     <svg class="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="M3 7l9 6 9-6"/></svg>
+                 </span>
+--- a/resources/views/partials/mobile-menu.blade.php
++++ b/resources/views/partials/mobile-menu.blade.php
+@@ -22,7 +22,7 @@
+             <a href="{{ route('login') }}" class="hover:text-brand-blue transition">Войти</a>
+         @endauth
+ 
+-        <a href="tel:+74956789999" class="mt-6 text-base text-white/75 font-semibold">+7 (495) 678 99 99</a>
++        <a href="{{ \App\Support\Kontakty::tel() }}" class="mt-6 text-base text-white/75 font-semibold">{{ \App\Support\Kontakty::telefon() }}</a>
+         <a href="#booking" data-modal-open="booking" class="inline-flex items-center gap-2 bg-brand-blue text-white rounded-full px-7 py-3 text-sm font-bold hover:bg-brand-blue-dark transition">
+             Полетели
+             <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path d="M5 12h14M13 5l7 7-7 7"/></svg>
+--- a/resources/views/contacts.blade.php
++++ b/resources/views/contacts.blade.php
+@@ -32,7 +32,7 @@
+                         <div>
+                             <h3 class="h-title text-sm font-bold text-navy">Адрес</h3>
+                             <p class="mt-1 text-[15px] leading-relaxed text-ink/80">
+-                                142290, Россия, Московская обл.,<br>Серпуховский р-он, дер. Большое Грызлово
++                                {{ \App\Support\Kontakty::adres() }}
+                             </p>
+                             <p class="mt-1 text-xs text-ink/50">120 км от Москвы</p>
+                         </div>
+@@ -45,7 +45,7 @@
+                         <svg class="h-6 w-6" viewBox="0 0 24 24" fill="currentColor"><path d="M6.6 10.8c1.4 2.8 3.8 5.1 6.6 6.6l2.2-2.2c.3-.3.7-.4 1-.2 1.1.4 2.3.6 3.5.6.6 0 1 .4 1 1V20c0 .6-.4 1-1 1C10.5 21 3 13.5 3 4c0-.6.4-1 1-1h3.5c.6 0 1 .4 1 1 0 1.2.2 2.4.6 3.5.1.4 0 .8-.2 1l-2.3 2.3Z"/></svg>
+                     </span>
+                     <h3 class="h-title mt-4 text-sm font-bold text-navy">Телефон</h3>
+-                    <a href="tel:+74956789999" class="mt-1 block text-[15px] font-semibold text-ink transition hover:text-accent">+7 (495) 678 99 99</a>
++                    <a href="{{ \App\Support\Kontakty::tel() }}" class="mt-1 block text-[15px] font-semibold text-ink transition hover:text-accent">{{ \App\Support\Kontakty::telefon() }}</a>
+                 </div>
+ 
+                 {{-- Режим работы --}}
+@@ -54,7 +54,7 @@
+                         <svg class="h-6 w-6" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M12 8v4l3 2m6-2a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+                     </span>
+                     <h3 class="h-title mt-4 text-sm font-bold text-navy">Режим работы</h3>
+-                    <p class="mt-1 text-[15px] text-ink/80">Ежедневно c 8:00 до 20:00</p>
++                    <p class="mt-1 text-[15px] text-ink/80">{{ \App\Support\Kontakty::chasy() }}</p>
+                 </div>
+ 
+                 {{-- Мессенджеры --}}
+--- a/resources/views/partials/home/contacts.blade.php
++++ b/resources/views/partials/home/contacts.blade.php
+@@ -4,10 +4,9 @@
+         <div class="flex flex-col justify-center lg:col-span-1">
+             <h2 class="h-title text-2xl font-bold text-white sm:text-3xl lg:text-[35px]">Контакты</h2>
+             <div class="mt-5 text-xs leading-relaxed text-white/80">
+-                <p>142290, Россия Московская обл.,</p>
+-                <p>Серпуховский р-он, дер. Большое Грызлово</p>
++                <p>{{ \App\Support\Kontakty::adres() }}</p>
+             </div>
+-            <p class="mt-5 text-[10px] text-white/60">c 8:00 до 20:00</p>
++            <p class="mt-5 text-[10px] text-white/60">{{ \App\Support\Kontakty::chasy() }}</p>
+             <div class="mt-4 flex gap-3">
+                 <a href="#" class="flex items-center gap-2 rounded-lg bg-[#222] px-4 py-2.5 text-xs text-white transition hover:bg-[#333]">
+                     <svg class="h-4 w-4" viewBox="0 0 24 24" fill="currentColor"><path d="M21.9 4.3 18.6 20c-.2 1-.9 1.3-1.8.8l-5-3.7-2.4 2.3c-.3.3-.5.5-1 .5l.4-5 9.2-8.3c.4-.4-.1-.6-.6-.2L6.6 13.2l-4.9-1.5c-1-.3-1-1 .2-1.5L20.6 2.9c.9-.3 1.6.2 1.3 1.4Z"/></svg>
+--- a/resources/views/prices.blade.php
++++ b/resources/views/prices.blade.php
+@@ -22,9 +22,9 @@
+             <a href="{{ route('contacts') }}" class="hover:text-brand-blue transition">Контакты</a>
+         </nav>
+         <div class="ml-auto flex items-center gap-4">
+-            <a href="tel:+74956789999" class="hidden md:inline-flex items-center gap-2 text-sm font-semibold text-ink-900">
++            <a href="{{ \App\Support\Kontakty::tel() }}" class="hidden md:inline-flex items-center gap-2 text-sm font-semibold text-ink-900">
+                 <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 24 24"><path d="M20 15.5l-2.6-.3a1 1 0 00-.9.3l-1.9 1.9a15 15 0 01-6.6-6.6l1.9-1.9a1 1 0 00.3-.9L9.5 5.5A1 1 0 008.5 4.6L5 4.5a1 1 0 00-1 1 17 17 0 0014.5 14.5 1 1 0 001-1l-.1-3.5a1 1 0 00-.9-1z"/></svg>
+-                +7 (495) 678 99 99
++                {{ \App\Support\Kontakty::telefon() }}
+             </a>
+             @auth('client')
+                 <a href="{{ route('account.index') }}" class="hidden md:inline-flex items-center gap-2 text-sm font-semibold text-ink-900 hover:text-brand-blue transition">Кабинет</a>
+--- a/resources/views/legal-show.blade.php
++++ b/resources/views/legal-show.blade.php
+@@ -20,9 +20,9 @@
+             <a href="{{ route('contacts') }}" class="hover:text-brand-blue transition">Контакты</a>
+         </nav>
+         <div class="ml-auto flex items-center gap-4">
+-            <a href="tel:+74956789999" class="hidden md:inline-flex items-center gap-2 text-sm font-semibold text-ink-900">
++            <a href="{{ \App\Support\Kontakty::tel() }}" class="hidden md:inline-flex items-center gap-2 text-sm font-semibold text-ink-900">
+                 <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 24 24"><path d="M20 15.5l-2.6-.3a1 1 0 00-.9.3l-1.9 1.9a15 15 0 01-6.6-6.6l1.9-1.9a1 1 0 00.3-.9L9.5 5.5A1 1 0 008.5 4.6L5 4.5a1 1 0 00-1 1 17 17 0 0014.5 14.5 1 1 0 001-1l-.1-3.5a1 1 0 00-.9-1z"/></svg>
+-                +7 (495) 678 99 99
++                {{ \App\Support\Kontakty::telefon() }}
+             </a>
+             @auth('client')
+                 <a href="{{ route('account.index') }}" class="hidden md:inline-flex items-center gap-2 text-sm font-semibold text-ink-900 hover:text-brand-blue transition">Кабинет</a>
