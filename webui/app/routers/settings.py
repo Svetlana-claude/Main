@@ -123,8 +123,7 @@ def settings_save(
     db.set_setting("refresh_seconds", clamp_int(refresh_seconds, 2, 600, 10))
     db.set_setting("metrics_keep_hours", clamp_int(metrics_keep_hours, 1, 720, 48))
 
-    allowed_models = {"opus", "sonnet", "haiku", "fable"}
-    db.set_setting("model", model if model in allowed_models else "opus")
+    db.set_setting("model", model if model in config.ALLOWED_MODELS else "opus")
     db.set_setting("theme", theme if theme in {"light", "dark", "system"} else "light")
     # Пояс — только из списка: произвольная строка из формы уронила бы
     # перевод времени на каждой странице
