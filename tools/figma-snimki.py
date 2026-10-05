@@ -8,8 +8,11 @@
 Работает в два шага:
 
     --spisok   прочитать боковую панель просмотрщика и выписать кадры:
-               идентификатор узла и название. Список виртуальный, поэтому
-               панель прокручивается до конца.
+               идентификатор узла, тип и название. Список виртуальный,
+               поэтому панель прокручивается от начала до конца. В опись
+               идут только кадры и секции верхнего уровня — брошенные на
+               холст картинки и надписи макетами не считаются.
+    --stranica только одна страница файла («Page 2»).
     --snyat    открыть каждый кадр в режиме презентации и снять его.
 
 Запуск:
@@ -44,16 +47,38 @@ DOVODY_BRAUZERA = ["--disable-blink-features=AutomationControlled"]
 
 SOBRAT_STROKI = """() => {
   const out = [];
-  document.querySelectorAll('[data-testid="layer-row"]').forEach(r => {
+  // ⚠️ Строка слоя с вложенными слоями помечена иначе — `layer-row-with-children`.
+  // Именно такие строки и есть макеты страниц: искали одно `layer-row` —
+  // и опись выходила из картинок и надписей без единого макета.
+  document.querySelectorAll('[data-testid="layer-row"], [data-testid="layer-row-with-children"]').forEach(r => {
     const id = [...r.querySelectorAll('[data-testid$="-layers-panel-row"]')]
       .map(e => e.dataset.testid.replace('-layers-panel-row',''))[0] || '';
+    // Тип слоя — подпись значка строки: «Frame», «Rectangle», «Image», «Text».
+    const znachok = r.querySelector('[role="img"][aria-label]');
     out.push({id, uroven: +r.getAttribute('aria-level'),
               nomer: +r.getAttribute('aria-rowindex'),
               vsego: +r.getAttribute('aria-setsize'),
+              tip: znachok ? znachok.getAttribute('aria-label') : '',
               imya: r.innerText.trim().split('\\n')[0]});
   });
   return out;
 }"""
+
+# Контейнер прокрутки панели слоёв — ближайший предок строки, который
+# прокручивается. Двигаем его напрямую: колесо мыши шагает как ему вздумается.
+PROKRUTIT = """(y) => {
+  const r = document.querySelector('[data-testid^="layer-row"]');
+  if (!r) return -1;
+  let e = r.parentElement;
+  while (e && e !== document.body && !(e.scrollHeight > e.clientHeight + 4)) e = e.parentElement;
+  if (!e || e === document.body) return -1;
+  e.scrollTop = y;
+  return e.scrollHeight;
+}"""
+
+# Что считать макетом страницы: кадры и секции верхнего уровня. Отдельные
+# картинки, надписи и прямоугольники, брошенные на холст, — не макеты.
+TIPY_MAKETA = {"Frame", "Section", "Component", "Component set", "Instance"}
 
 
 def klyuch_fayla(ssylka: str) -> str:
@@ -78,7 +103,7 @@ def bezopasnoe_imya(imya: str) -> str:
     return re.sub(r"\s+", "-", chistoe).lower()[:60] or "kadr"
 
 
-def sobrat_spisok(klyuch: str) -> dict:
+def sobrat_spisok(klyuch: str, tolko: str | None = None) -> dict:
     adres = (f"https://embed.figma.com/design/{klyuch}/makety"
              f"?embed-host=share")
     with sync_playwright() as p:
@@ -94,25 +119,39 @@ def sobrat_spisok(klyuch: str) -> dict:
         stranicy = st.locator('[data-testid="PagesRowWrapper"]')
         imena = [stranicy.nth(i).inner_text().strip() for i in range(stranicy.count())]
         itog = {}
+        if tolko and tolko not in imena:
+            sys.exit(f"страницы «{tolko}» в файле нет; есть: {', '.join(imena)}")
         for i, imya_stranicy in enumerate(imena):
+            if tolko and imya_stranicy != tolko:
+                continue
             stranicy.nth(i).click()
             st.wait_for_timeout(6000)
-            spisok = st.locator('[data-testid="objects-panel"]')
-            sobrano, vsego = {}, 0
-            for _ in range(80):
+            # ⚠️ Панель помнит прокрутку прежней страницы. Без возврата к
+            # началу сбор на Page 2 начинался с 83-й строки из 121, и опись
+            # выходила хвостом — без единого кадра из первых восьмидесяти.
+            vysota = st.evaluate(PROKRUTIT, 0)
+            st.wait_for_timeout(800)
+            sobrano, vsego, y = {}, 0, 0
+            for _ in range(400):
                 for stroka in st.evaluate(SOBRAT_STROKI):
                     if stroka["id"]:
                         sobrano[stroka["nomer"]] = stroka
                 vsego = max((s["vsego"] for s in sobrano.values()), default=0)
-                if len(sobrano) >= vsego:
+                if (vsego and len(sobrano) >= vsego) or vysota < 0 or y > vysota:
                     break
-                spisok.hover()
-                st.mouse.wheel(0, 900)
-                st.wait_for_timeout(450)
-            itog[imya_stranicy] = [s for s in sorted(sobrano.values(), key=lambda s: s["nomer"])
-                                   if s["uroven"] == 0]
+                y += 300
+                vysota = st.evaluate(PROKRUTIT, y)
+                st.wait_for_timeout(350)
+            verkhniy = [s for s in sorted(sobrano.values(), key=lambda s: s["nomer"])
+                        if s["uroven"] == 0]
+            itog[imya_stranicy] = [s for s in verkhniy if s["tip"] in TIPY_MAKETA]
             print(f"{imya_stranicy}: строк {len(sobrano)} из {vsego}, "
-                  f"верхнего уровня {len(itog[imya_stranicy])}")
+                  f"верхнего уровня {len(verkhniy)}, из них макетов "
+                  f"{len(itog[imya_stranicy])}")
+            # ⚠️ Неполная опись — беда, а не повод снимать что нашлось.
+            if vsego and len(sobrano) < vsego:
+                print(f"  ⚠️ собрано {len(sobrano)} строк из {vsego} — опись неполная",
+                      file=sys.stderr)
         br.close()
     return itog
 
@@ -237,6 +276,7 @@ def main() -> int:
     razbor.add_argument("--katalog", default="exchange/figma")
     razbor.add_argument("--vysota", type=int, default=4600, help="высота окна съёмки")
     razbor.add_argument("--shirina", type=int, default=1440, help="ширина окна съёмки")
+    razbor.add_argument("--stranica", help="только эта страница файла, например «Page 2»")
     dovody = razbor.parse_args()
 
     klyuch = klyuch_fayla(dovody.ssylka) if "/" in dovody.ssylka else dovody.ssylka
@@ -247,7 +287,7 @@ def main() -> int:
         snyat(klyuch, spisok, katalog, dovody.vysota, dovody.shirina)
         return 0
 
-    spisok = sobrat_spisok(klyuch)
+    spisok = sobrat_spisok(klyuch, dovody.stranica)
     katalog.mkdir(parents=True, exist_ok=True)
     put = katalog / "spisok.json"
     put.write_text(json.dumps(spisok, ensure_ascii=False, indent=1), encoding="utf-8")

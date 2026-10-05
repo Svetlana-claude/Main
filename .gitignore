@@ -46,3 +46,7 @@ webui/*.docx
 
 # Снимки страниц сайта «Главпрыг»: делаются прогоном tests/snimki.py, вес мегабайты
 glavpryg-sayt/snimki/
+
+# Снимки макетов Figma — большие картинки, пересъёмка: glavpryg-sayt/makety/README.md
+glavpryg-sayt/makety/*.png
+glavpryg-sayt/makety/.kusok.png
