@@ -1,0 +1,35 @@
+#!/bin/bash
+# Копия кода сайта одним файлом — после каждого коммита, сама.
+#
+# Ставится в репозиторий сайта:
+#     cp glavpryg-sayt/deploy/post-commit /var/www/glavpryg/.git/hooks/post-commit
+#     chmod 750 /var/www/glavpryg/.git/hooks/post-commit
+#
+# Зачем. Репозиторий сайта живёт только на сервере: удалённого на GitHub пока
+# нет. Чтобы история не лежала в одном экземпляре, после каждого коммита она
+# целиком собирается в файл `glavpryg-kod.bundle` в «Файлах проекта» — оттуда
+# его скачивают и хранят у себя. Восстановление из файла:
+#
+#     git clone glavpryg-kod.bundle glavpryg
+#
+# Куда класть — `git config glavpryg.kopiya <путь>`; не задано — в «Файлы
+# проекта» Главпрыга.
+#
+# ⚠️ Пишется во временный файл и подменяется одним движением: иначе скачивание
+# в момент пересборки отдало бы обрывок, который выглядит как копия.
+#
+# ⚠️ Сбой копии коммит не отменяет и не прячется: коммит уже сделан, а строка
+# «копия НЕ обновлена» видна сразу под ним.
+
+kuda=$(git config --get glavpryg.kopiya || echo /home/mokeeva/main/glavpryg-sayt/downloads/glavpryg-kod.bundle)
+vremennyy="$kuda.novyy"
+
+if git bundle create "$vremennyy" --all >/dev/null 2>&1 \
+    && git bundle verify "$vremennyy" >/dev/null 2>&1; then
+    mv -f "$vremennyy" "$kuda"
+    echo "копия кода обновлена: $kuda"
+else
+    rm -f "$vremennyy"
+    echo "⚠️ копия кода НЕ обновлена: $kuda — коммит при этом сделан" >&2
+fi
+exit 0

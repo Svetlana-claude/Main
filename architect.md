@@ -920,7 +920,8 @@ MariaDB. В репозитории лежит только **оснастка**:
 | Пароли | `~/.config/glavpryg-db.pass`, `~/.config/glavpryg-admin.pass` (оба 600) |
 | Дампы перед обновлением | `/var/backups/glavpryg/baza-<метка>.sql.gz` |
 | Фотоархив сайта | `/var/www/glavpryg/storage/app/public/fotoarkhiv/<подраздел>/` — `tandem`, `samostoyatelnyy`, `sportivnyy`, `vr` |
-| Код сайта | git-репозиторий прямо в `/var/www/glavpryg`, ветка `main`, удалённый — `git@github.com:Svetlana-claude/glavpryg.git` (приватный) |
+| Код сайта | git-репозиторий прямо в `/var/www/glavpryg`, ветка `main`; удалённого нет (GitHub отложен) |
+| Копия кода вне сервера | `glavpryg-sayt/downloads/glavpryg-kod.bundle` — пересобирается после каждого коммита крючком `.git/hooks/post-commit` (исходник — `deploy/post-commit`), скачивается из «Файлов проекта» |
 | Вне git | `.env`, `vendor/`, `storage/` (загруженное из админки), `public/storage` |
 | Прежние патчи | `pravki/*.patch` — архив: вошли в историю репозитория сайта коммитами 01–04 |
 | Обновление поставкой | `deploy/obnovit.sh` — отключён защитой, пока в сайте есть `.git` |
@@ -957,6 +958,15 @@ Orchid заводятся **ссылкой на файл, лежащий в ар
 выкладка» добавило бы шаг, на котором правка теряется. `.git` вне `public/` и
 снаружи не виден. Правки и проверки — в `/var/www/glavpryg`, коммит и `git push`
 там же; проверочная оснастка остаётся в `Main` (`glavpryg-sayt/tests/`).
+
+Удалённого репозитория пока нет: GitHub отложен (05.10.2026). Вместо него
+крючок `post-commit` после каждого коммита собирает всю историю в один файл в
+«Файлах проекта» — копию скачивают и хранят вне сервера, восстановление —
+`git clone glavpryg-kod.bundle`. Крючки git не версионируются, поэтому
+исходник лежит в `glavpryg-sayt/deploy/post-commit` и ставится `cp`. Ключ
+для будущего GitHub уже есть: `~/.ssh/glavpryg_deploy`, хост
+`github-glavpryg` в `~/.ssh/config` — вписывается в репозиторий как deploy
+key с правом записи.
 
 `obnovit.sh` при наличии `.git` отказывается работать: подмена каталога увела
 бы историю в `glavpryg.staroe`, а сайт собрался бы из архива без всего, что
