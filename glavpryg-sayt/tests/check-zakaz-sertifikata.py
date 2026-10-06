@@ -42,12 +42,14 @@ def oformit(st):
         telo = otvet.body()
         proverit(otvet.headers.get("content-type") == "application/pdf" and telo.startswith(b"%PDF"), "кнопка печати отдаёт PDF")
         proverit(telo.count(b"/Type /Page ") == 2 and b"/MediaBox [0 0 419.53 595.28]" in telo, "PDF: две страницы A5")
-        dannye = tinker(f"foreach (App\\Models\\Certificate::where('certificate_order_id',{nomer})->orderBy('id')->get() as $c) echo $c->kind,'|',$c->number,'|',$c->holder_name,'|',$c->emailed_to,PHP_EOL;").splitlines()
-        dannye = [d for d in dannye if d.count("|") == 3]
+        dannye = tinker(f"foreach (App\\Models\\Certificate::where('certificate_order_id',{nomer})->orderBy('id')->get() as $c) echo $c->kind,'|',$c->number,'|',$c->holder_name,'|',$c->emailed_to,'|',$c->admin_emailed_to,PHP_EOL;").splitlines()
+        dannye = [d for d in dannye if d.count("|") == 4]
         nomera = [int(d.split("|")[1]) for d in dannye] if dannye else []
         proverit(len(dannye) == 2 and nomera[1] == nomera[0] + 1 and all(d.startswith("tandem|") for d in dannye),
                  f"выпущено два тандемных, номера подряд: {nomera}")
-        proverit(all(d.endswith("Проверка Получатель|proverka@example.com") for d in dannye), "владелец — получатель подарка, письмо ушло покупателю")
+        proverit(all("|Проверка Получатель|proverka@example.com|" in d for d in dannye), "владелец — получатель подарка, письмо ушло покупателю")
+        admin = tinker("echo App\\Services\\CertificateIssuer::adminEmail();")
+        proverit(bool(admin) and all(d.endswith("|" + admin) for d in dannye), f"второе письмо ушло администрации: {admin}")
     finally:
         tinker(f"App\\Models\\CertificateOrder::whereKey({nomer})->delete();")
         print(f"пробный заказ {nomer} удалён")
