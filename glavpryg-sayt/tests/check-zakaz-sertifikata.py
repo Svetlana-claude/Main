@@ -19,6 +19,8 @@ with sync_playwright() as p:
         t = lambda sel: re.sub(r"\s+", " ", st.locator(sel).inner_text()).strip()
         print(f"--- {shir}")
         proverit(t("#sTier") == "Тандем" and t("#sTotal") == "22 500 ₽", f"начально: {t('#sTier')} {t('#sTotal')}")
+        n = st.locator("[data-format-card]").count()
+        proverit(n == 3, f"тарифов тандема три, как в макете: {n}")
         st.click('[data-tier-step="1"]')
         proverit(st.locator('#tierInput').input_value() == "samostoyatelnyy" and st.locator('#tandemFormats').is_hidden(), "стрелка → : самостоятельный, тарифы тандема скрыты")
         st.click('[data-tier-step="-1"]'); st.click('[data-tier-step="-1"]')
