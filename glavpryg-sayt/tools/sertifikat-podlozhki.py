@@ -2,13 +2,15 @@
 увеличение вдвое (≈ 310 dpi), изменяемые надписи (имя, дата, программа, номер)
 закрашиваются цветом фона — сайт впечатывает их сам.
 
-    /usr/bin/python3 glavpryg-sayt/tools/sertifikat-podlozhki.py <образец-самостоятельный> <образец-тандем>
-Пишет /var/www/glavpryg/resources/certificates/{self,tandem}.jpg
+    /usr/bin/python3 glavpryg-sayt/tools/sertifikat-podlozhki.py <образец-самостоятельный> <образец-тандем> [вариант]
+Пишет /var/www/glavpryg/resources/certificates/<вариант>/{self,tandem}.jpg
+(по умолчанию — obrazcy-2026-10). Новый вариант — новая папка, см.
+glavpryg-sayt/varianty-sertifikata.md.
 """
 import sys
 from PIL import Image, ImageDraw
 
-KUDA = "/var/www/glavpryg/resources/certificates"
+KUDA = "/var/www/glavpryg/resources/certificates/" + (sys.argv[3] if len(sys.argv) > 3 else "obrazcy-2026-10")
 # Прямоугольники надписей в координатах образца 950×1280
 ZAKRASIT = {
     "self":   [(470, 955, 905, 997), (470, 1009, 915, 1038), (248, 1126, 850, 1162), (248, 1174, 445, 1212)],

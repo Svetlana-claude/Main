@@ -1015,14 +1015,22 @@ key с правом записи.
 в своей серии: `tandem` (все тандемы и старые тарифы) и `self` (самостоятельный,
 обучение, спортивные). Начало серий — `services.certificate_numbers`
 (`CERT_NOMER_TANDEM`, `CERT_NOMER_SELF`). Выпускает `App\Services\CertificateIssuer`:
-впечатывает имя, дату выдачи, программу и номер шрифтом Unbounded в подложку
-`resources/certificates/{tandem,self}.jpg` (1804×2560, A5 ≈ 310 dpi; собираются
-из образцов заказчика `glavpryg-sayt/tools/sertifikat-podlozhki.py`), собирает
+впечатывает имя, дату выдачи, программу и номер в подложку **варианта
+оформления** и собирает
 PDF A5 без сторонних библиотек и шлёт письмо `App\Mail\CertificateIssued` на
 e-mail покупателя. Когда: сразу после заказа, пока оплата выключена
 (`CERTIFICATE_PAYMENT`); иначе — после оплаты ВТБ или отметки «Оплачена» в
 админке. Повторный выпуск ничего не делает. PDF — `/certificate/order/{id}/print`
 (браузер покупателя или администратор).
+
+**Варианты оформления — архив папок** `resources/certificates/<код>/`: в каждой
+`variant.json` (тип `kartinka` — подложки и разметка надписей; `html` — шаблон
+страницы, вид `sertifikaty::<код>.<шаблон>`) и материалы. Действующий —
+`CERT_VARIANT` (сейчас `obrazcy-2026-10`, A5; запасной — `zapasnoy-a4`).
+Сертификат хранит свой `variant`; админ смотрит заказ в любом варианте через
+`?variant=`. Образцы всех вариантов — `artisan sertifikaty:obrazcy <каталог>`,
+в «Файлы проекта» их кладёт `glavpryg-sayt/tools/sertifikaty-arkhiv.py`.
+Порядок добавления — `glavpryg-sayt/varianty-sertifikata.md`.
 
 Подробности и порядок работы — `glavpryg-sayt/README.md`; дефекты поставки —
 `current_questions.md`.
