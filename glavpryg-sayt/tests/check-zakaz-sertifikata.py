@@ -1,4 +1,6 @@
-"""Заказ сертификата: нажатие кнопок (правило 14) — выбор программы и тарифа, стрелки, количество, зависимости шагов, синий выбор. На прежнем шаблоне падает (правило 12).
+"""Заказ сертификата: нажатие кнопок (правило 14) — выбор программы и тарифа, стрелки, количество, зависимости шагов, синий выбор.
+Пока оплата отключена (CERTIFICATE_PAYMENT): шага оплаты нет, заказ оформляется кнопкой и даёт сертификат для распечатки;
+пробный заказ после проверки удаляется. На прежнем шаблоне падает (правило 12).
 
     webui/.venv/bin/python glavpryg-sayt/tests/check-zakaz-sertifikata.py
 """
@@ -8,6 +10,39 @@ oshibki, plohie = [], []
 def proverit(uslovie, chto):
     print(("ок   " if uslovie else "СБОЙ ") + chto)
     if not uslovie: plohie.append(chto)
+def oformit(st):
+    """Заказ кнопкой «Оформить заказ» → «Заявка принята» → «Сертификат для распечатки»."""
+    import re, subprocess
+    st.goto(ADRES, wait_until="networkidle")
+    st.click('label.option-card:has(input[value="gift"])')
+    st.click('label.option-card:has(input[value="pickup"])')
+    st.fill('input[name="customer_name"]', "Проверка Заказчик")
+    st.fill('input[name="customer_phone"]', "+7 900 000-00-00")
+    st.fill('input[name="gift_recipient_name"]', "Проверка Получатель")
+    st.fill('textarea[name="gift_text"]', "С днём рождения!")
+    st.check('input[name="consent"]')
+    st.click("#payBtn")
+    st.wait_for_load_state("networkidle")
+    m = re.search(r"/certificate/order/(\d+)/thanks", st.url)
+    proverit(m is not None, f"заказ оформлен без оплаты: {st.url}")
+    if not m:
+        return
+    try:
+        with st.expect_popup() as okno:
+            st.click("text=Сертификат для распечатки")
+        pech = okno.value
+        pech.wait_for_load_state("networkidle")
+        tekst = re.sub(r"\s+", " ", pech.locator("body").inner_text())
+        nomer = "ГП-" + m.group(1).zfill(6)
+        proverit("Проверка Получатель" in tekst and nomer in tekst, f"на сертификате владелец и номер {nomer}")
+        proverit("именной" in tekst.lower() and "Действует до" in tekst, "на сертификате: именной, срок действия")
+        proverit(pech.locator(".sheet").count() == 1, "лист на экземпляр")
+    finally:
+        subprocess.run(["/usr/bin/php8.4", "artisan", "tinker", "--execute",
+                        f"App\\Models\\CertificateOrder::whereKey({m.group(1)})->delete();"],
+                       cwd="/var/www/glavpryg", check=False, capture_output=True)
+        print(f"пробный заказ {m.group(1)} удалён")
+
 with sync_playwright() as p:
     br = p.chromium.launch()
     for shir in (1440, 390):
@@ -37,13 +72,16 @@ with sync_playwright() as p:
         st.click('label.option-card:has(input[value="self"])')
         proverit(st.locator('#giftBlock').is_hidden(), "себе: блок подарка скрыт")
         st.click('label.option-card:has(input[value="box"])')
-        st.click('label.option-card:has(input[value="cash_on_delivery"])')
-        proverit(t("#payBtnText").lower() == "оформить заказ" and t("#sPayment") == "Наличные курьеру", f"наличные курьеру: {t('#payBtnText')} / {t('#sPayment')}")
+        proverit(st.locator('input[type=radio][name="payment_type"]').count() == 0 and t("#payBtnText").lower() == "оформить заказ",
+                 f"оплата отключена: шага оплаты нет, кнопка «{t('#payBtnText')}»")
+        proverit("именной" in t("#certForm aside").lower(), "в заказе сказано: сертификат именной")
         st.wait_for_timeout(400)
         aktiv = st.evaluate("getComputedStyle(document.querySelector('label.option-card.is-active')).borderTopColor")
         proverit(aktiv == "rgb(33, 150, 243)", f"выбранный вариант синий: {aktiv}")
         shir_dok = st.evaluate("document.documentElement.scrollWidth")
         proverit(shir_dok <= shir, f"страница не едет вбок: {shir_dok}")
+        if shir == 1440:
+            oformit(st)
         st.context.close()
     br.close()
 proverit(not oshibki, f"консоль: {oshibki}")
