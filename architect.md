@@ -1010,6 +1010,20 @@ key с правом записи.
 - ⚠️ **нужен PHP 8.4**, хотя «УСТАНОВКА.md» разработчика обещает 8.3:
   `vendor/composer/platform_check.php` требует `>= 8.4.0`.
 
+**Сертификаты на прыжок (с 06.10.2026).** Заказ (`certificate_orders`) после
+выпуска даёт записи `certificates` — по одной на экземпляр, с порядковым номером
+в своей серии: `tandem` (все тандемы и старые тарифы) и `self` (самостоятельный,
+обучение, спортивные). Начало серий — `services.certificate_numbers`
+(`CERT_NOMER_TANDEM`, `CERT_NOMER_SELF`). Выпускает `App\Services\CertificateIssuer`:
+впечатывает имя, дату выдачи, программу и номер шрифтом Unbounded в подложку
+`resources/certificates/{tandem,self}.jpg` (1804×2560, A5 ≈ 310 dpi; собираются
+из образцов заказчика `glavpryg-sayt/tools/sertifikat-podlozhki.py`), собирает
+PDF A5 без сторонних библиотек и шлёт письмо `App\Mail\CertificateIssued` на
+e-mail покупателя. Когда: сразу после заказа, пока оплата выключена
+(`CERTIFICATE_PAYMENT`); иначе — после оплаты ВТБ или отметки «Оплачена» в
+админке. Повторный выпуск ничего не делает. PDF — `/certificate/order/{id}/print`
+(браузер покупателя или администратор).
+
 Подробности и порядок работы — `glavpryg-sayt/README.md`; дефекты поставки —
 `current_questions.md`.
 

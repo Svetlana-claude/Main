@@ -1,6 +1,6 @@
 """Заказ сертификата: нажатие кнопок (правило 14) — выбор программы и тарифа, стрелки, количество, зависимости шагов, синий выбор.
 Пока оплата отключена (CERTIFICATE_PAYMENT): шага оплаты нет, заказ оформляется кнопкой и даёт сертификат для распечатки;
-пробный заказ после проверки удаляется. На прежнем шаблоне падает (правило 12).
+выпускается сертификат A5 (PDF, номер в серии, письмо); пробный заказ после проверки удаляется. На прежнем шаблоне падает (правило 12).
 
     webui/.venv/bin/python glavpryg-sayt/tests/check-zakaz-sertifikata.py
 """
@@ -10,16 +10,23 @@ oshibki, plohie = [], []
 def proverit(uslovie, chto):
     print(("ок   " if uslovie else "СБОЙ ") + chto)
     if not uslovie: plohie.append(chto)
+def tinker(kod):
+    import subprocess
+    r = subprocess.run(["/usr/bin/php8.4", "artisan", "tinker", "--execute", kod],
+                       cwd="/var/www/glavpryg", capture_output=True, text=True)
+    return r.stdout.strip()
+
 def oformit(st):
-    """Заказ кнопкой «Оформить заказ» → «Заявка принята» → «Сертификат для распечатки»."""
-    import re, subprocess
+    """Заказ кнопкой «Оформить заказ» → «Заявка принята» → сертификат A5 в PDF, номер, письмо."""
+    import re
     st.goto(ADRES, wait_until="networkidle")
+    st.click('[data-qty="1"]')                       # два сертификата — два номера подряд
     st.click('label.option-card:has(input[value="gift"])')
     st.click('label.option-card:has(input[value="pickup"])')
     st.fill('input[name="customer_name"]', "Проверка Заказчик")
     st.fill('input[name="customer_phone"]', "+7 900 000-00-00")
+    st.fill('input[name="customer_email"]', "proverka@example.com")
     st.fill('input[name="gift_recipient_name"]', "Проверка Получатель")
-    st.fill('textarea[name="gift_text"]', "С днём рождения!")
     st.check('input[name="consent"]')
     st.click("#payBtn")
     st.wait_for_load_state("networkidle")
@@ -27,21 +34,23 @@ def oformit(st):
     proverit(m is not None, f"заказ оформлен без оплаты: {st.url}")
     if not m:
         return
+    nomer = m.group(1)
     try:
-        with st.expect_popup() as okno:
-            st.click("text=Сертификат для распечатки")
-        pech = okno.value
-        pech.wait_for_load_state("networkidle")
-        tekst = re.sub(r"\s+", " ", pech.locator("body").inner_text())
-        nomer = "ГП-" + m.group(1).zfill(6)
-        proverit("Проверка Получатель" in tekst and nomer in tekst, f"на сертификате владелец и номер {nomer}")
-        proverit("именной" in tekst.lower() and "Действует до" in tekst, "на сертификате: именной, срок действия")
-        proverit(pech.locator(".sheet").count() == 1, "лист на экземпляр")
+        proverit("отправлен на proverka@example.com" in st.locator("body").inner_text(), "на «Заявка принята»: сертификат отправлен на почту")
+        ssylka = st.locator("text=Сертификат для распечатки")
+        otvet = st.request.get(ssylka.get_attribute("href"))
+        telo = otvet.body()
+        proverit(otvet.headers.get("content-type") == "application/pdf" and telo.startswith(b"%PDF"), "кнопка печати отдаёт PDF")
+        proverit(telo.count(b"/Type /Page ") == 2 and b"/MediaBox [0 0 419.53 595.28]" in telo, "PDF: две страницы A5")
+        dannye = tinker(f"foreach (App\\Models\\Certificate::where('certificate_order_id',{nomer})->orderBy('id')->get() as $c) echo $c->kind,'|',$c->number,'|',$c->holder_name,'|',$c->emailed_to,PHP_EOL;").splitlines()
+        dannye = [d for d in dannye if d.count("|") == 3]
+        nomera = [int(d.split("|")[1]) for d in dannye] if dannye else []
+        proverit(len(dannye) == 2 and nomera[1] == nomera[0] + 1 and all(d.startswith("tandem|") for d in dannye),
+                 f"выпущено два тандемных, номера подряд: {nomera}")
+        proverit(all(d.endswith("Проверка Получатель|proverka@example.com") for d in dannye), "владелец — получатель подарка, письмо ушло покупателю")
     finally:
-        subprocess.run(["/usr/bin/php8.4", "artisan", "tinker", "--execute",
-                        f"App\\Models\\CertificateOrder::whereKey({m.group(1)})->delete();"],
-                       cwd="/var/www/glavpryg", check=False, capture_output=True)
-        print(f"пробный заказ {m.group(1)} удалён")
+        tinker(f"App\\Models\\CertificateOrder::whereKey({nomer})->delete();")
+        print(f"пробный заказ {nomer} удалён")
 
 with sync_playwright() as p:
     br = p.chromium.launch()
