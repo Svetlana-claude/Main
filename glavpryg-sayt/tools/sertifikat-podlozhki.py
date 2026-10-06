@@ -2,26 +2,30 @@
 увеличение вдвое (≈ 310 dpi), изменяемые надписи (имя, дата, программа, номер)
 закрашиваются цветом фона — сайт впечатывает их сам.
 
-    /usr/bin/python3 glavpryg-sayt/tools/sertifikat-podlozhki.py <образец-самостоятельный> <образец-тандем> [вариант]
-Пишет /var/www/glavpryg/resources/certificates/<вариант>/{self,tandem}.jpg
-(по умолчанию — obrazcy-2026-10). Новый вариант — новая папка, см.
+    /usr/bin/python3 glavpryg-sayt/tools/sertifikat-podlozhki.py <вариант> <шаблон>=<образец> ...
+Шаблоны: self, tandem — образцы 2026-10; krylo — самостоятельный прыжок
+«крыло» (05.2026). Пишет /var/www/glavpryg/resources/certificates/<вариант>/
+self.jpg или tandem.jpg. Новый вариант — новая папка, см.
 glavpryg-sayt/varianty-sertifikata.md.
 """
 import sys
 from PIL import Image, ImageDraw
 
-KUDA = "/var/www/glavpryg/resources/certificates/" + (sys.argv[3] if len(sys.argv) > 3 else "obrazcy-2026-10")
+KUDA = "/var/www/glavpryg/resources/certificates/" + sys.argv[1]
 # Прямоугольники надписей в координатах образца 950×1280
 ZAKRASIT = {
     "self":   [(470, 955, 905, 997), (470, 1009, 915, 1038), (248, 1126, 850, 1162), (248, 1174, 445, 1212)],
     "tandem": [(350, 940, 705, 1003), (225, 1084, 765, 1224)],
+    "krylo":  [(330, 968, 860, 1016), (330, 1036, 712, 1064), (228, 1110, 700, 1166), (228, 1178, 412, 1212)],
 }
-for vid, put in zip(("self", "tandem"), sys.argv[1:3]):
+for para in sys.argv[2:]:
+    shablon, put = para.split("=", 1)
+    vid = "self" if shablon == "krylo" else shablon
     im = Image.open(put).convert("RGB")
     assert im.size == (950, 1280), im.size
     d = ImageDraw.Draw(im)
     px = im.load()
-    for x0, y0, x1, y1 in ZAKRASIT[vid]:
+    for x0, y0, x1, y1 in ZAKRASIT[shablon]:
         # Фон образца не чисто белый: заливаем медианой рамки вокруг надписи,
         # иначе края заплатки видны.
         kraj = [px[x, y] for x in range(x0 - 3, x1 + 4) for y in (y0 - 3, y1 + 3)] \
