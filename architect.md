@@ -1028,7 +1028,10 @@ PDF A5 без сторонних библиотек и шлёт два пись�
 **Варианты оформления — архив папок** `resources/certificates/<код>/`: в каждой
 `variant.json` (тип `kartinka` — подложки и разметка надписей; `html` — шаблон
 страницы, вид `sertifikaty::<код>.<шаблон>`) и материалы. Действующий —
-`CERT_VARIANT` (сейчас `obrazcy-2026-10`, A5; запасной — `zapasnoy-a4`).
+`CERT_VARIANT`, по умолчанию `agressive-2026-10` (A5, шрифт AGRESSIVE заказчика,
+подложки берёт из `obrazcy-2026-10` путём `../`); прежние — `obrazcy-2026-10`
+(Unbounded) и `zapasnoy-a4`. При `razryadka: 0` строка рисуется целиком,
+с кернингом шрифта.
 Сертификат хранит свой `variant`; админ смотрит заказ в любом варианте через
 `?variant=`. Образцы всех вариантов — `artisan sertifikaty:obrazcy <каталог>`,
 в «Файлы проекта» их кладёт `glavpryg-sayt/tools/sertifikaty-arkhiv.py`.
