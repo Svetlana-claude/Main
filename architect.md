@@ -923,6 +923,7 @@ MariaDB. В репозитории лежит только **оснастка**:
 | Код сайта | git-репозиторий прямо в `/var/www/glavpryg`, ветка `main`; удалённого нет (GitHub отложен) |
 | Копия кода вне сервера | `glavpryg-sayt/downloads/glavpryg-kod.bundle` — пересобирается после каждого коммита крючком `.git/hooks/post-commit` (исходник — `deploy/post-commit`), скачивается из «Файлов проекта» |
 | Вне git | `.env`, `vendor/`, `storage/` (загруженное из админки), `public/storage` |
+| Почта | ящик `glavpryg@mokeevasky.ru` на этом сервере: Postfix (25, 587 с паролем), Dovecot IMAP 993, OpenDKIM (селектор `mail`, ключ `/etc/opendkim/keys/mokeevasky.ru/`); сертификат TLS — Let's Encrypt домена, перезагрузка `/etc/letsencrypt/renewal-hooks/deploy/pochta-reload.sh`; пароль ящика — `~/.config/glavpryg-mail.pass`. Сайт шлёт через `mokeevasky.ru:25` (сервер в `mynetworks`). DNS-записи и PTR — `glavpryg-sayt/pochta.md` |
 | Прежние патчи | `pravki/*.patch` — архив: вошли в историю репозитория сайта коммитами 01–04 |
 | Обновление поставкой | `deploy/obnovit.sh` — отключён защитой, пока в сайте есть `.git` |
 | Проверки | `tests/check-glavpryg.sh`, `check-formy.py`, `check-adminka.py`, `snimki.py` |
