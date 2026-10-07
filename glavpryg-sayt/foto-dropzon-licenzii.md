@@ -4,30 +4,43 @@
 фото — `public/images/dropzony/<slug>.webp`, кадр 4:3, до 960 px.
 
 Прежние фото пришли с сайта на Tilda, а туда — со стороннего сайта; прав на них
-не было. 08.10.2026 заменены на снимки, переданные в общественное достояние:
+не было. 08.10.2026 их заменили на виды мест в общественном достоянии, а затем —
+на снимки **с парашютистами** под свободными лицензиями:
 
-- **CC0** — автор отказался от прав; можно использовать, изменять и публиковать,
-  в том числе в коммерческих целях, **без указания автора**.
-- **PDM** (Public Domain Mark) — снимок помечен как общественное достояние.
-  Пометку ставит загрузивший на Flickr, поэтому степень уверенности ниже, чем
-  у CC0; такой снимок здесь один — Эверест.
+- **CC0 / PDM / общественное достояние** — подпись автора не нужна.
+- **CC BY** — можно использовать, изменять и публиковать, в том числе в
+  коммерческих целях, **при указании автора и лицензии** со ссылками.
+- **CC BY-SA** — то же, что CC BY; изменённый снимок распространяется на тех же
+  условиях. Обрезка и уменьшение под кадр 4:3 — изменение, поэтому сами
+  обработанные файлы тоже под CC BY-SA.
 
-Подпись автора на сайте не требуется ни для одного из них.
+Подпись «Фото: автор, лицензия» выводится на сайте поверх снимка — и в
+карточке, и в окне с полным текстом. Данные подписи — массив `$foto` в шаблоне.
 
-| Место | Лицензия | Автор | Страница снимка |
-|---|---|---|---|
-| Пальма Джумейра (`dubai`) | CC0 | palak2511 | https://wordpress.org/photos/photo/312695e31f/ |
-| Эверест (`everest`) | PDM | Stan Adam | https://www.flickr.com/photos/37742802@N04/48039582941 |
-| Майсур (`maysur`) | CC0 | Ashutosh Bhosale | https://wordpress.org/photos/photo/96265acdfd/ |
-| Пустыня Намиб (`namib`) | CC0 | Keith Hardy | https://commons.wikimedia.org/w/index.php?curid=62198199 |
-| Восс (`voss`) | CC0 | DimiTalen | https://commons.wikimedia.org/wiki/File:Panorama_of_Vangsvatnet_from_Vossevangen,_Voss,_2006.jpg |
-| Рио-де-Жанейро (`rio`) | CC0 | — | https://www.rawpixel.com/image/3285683/free-photo-image-rio-janeiro-city-aerial-view |
-| Долина Лаутербруннен (`lauterbrunnen`) | CC0 | Leonhard Lenz | https://commons.wikimedia.org/w/index.php?curid=169560665 |
-| Квинсленд (`kvinslend`) | CC0 | — | https://www.rawpixel.com/image/5941789/free-public-domain-cc0-photo |
-| Гранд-Каньон (`grand-kanon`) | CC0 | — | https://www.rawpixel.com/image/3295418/free-photo-image-canyon-landscape-canyonland |
-| Ледник Фокс (`foks`) | CC0 | Bernard Spragg | https://www.flickr.com/photos/88123769@N02/12643854623 |
-| Большое Грызлово (`gryzlovo`) | своё | — | с прежнего сайта Главпрыга |
+| Место | Что на снимке | Лицензия | Автор | Страница снимка |
+|---|---|---|---|---|
+| Пальма Джумейра (`dubai`) | тандем над Пальмой | CC0 | palak2511 | https://wordpress.org/photos/photo/312695e31f/ |
+| Эверест (`everest`) | свободное падение на фоне Эвереста | PDM | Explore Himalaya | https://www.flickr.com/photos/28595037@N08/31097025171 |
+| Майсур (`maysur`) | купола «Акаш Ганги», группы ВВС Индии | CC BY 4.0 | Sanil Nath | https://commons.wikimedia.org/w/index.php?curid=145345121 |
+| Пустыня Намиб (`namib`) | тандем над пустыней | CC BY 2.0 | hillsieboy | https://www.flickr.com/photos/81681077@N00/185617370 |
+| Восс (`voss`) | **Аурланнсфьорд** со Стегастейна, не сам Восс | CC BY 2.0 | PhotoHenning | https://www.flickr.com/photos/31467556@N00/15875275173 |
+| Рио-де-Жанейро (`rio`) | прыжок над Барра-да-Тижука | CC BY 3.0 | Tiago Cobra | https://commons.wikimedia.org/w/index.php?curid=56248529 |
+| Долина Лаутербруннен (`lauterbrunnen`) | тандем **над Сьоном**, Швейцарские Альпы | CC BY-SA 4.0 | Romandie Parachutisme | https://commons.wikimedia.org/wiki/File:Saut_en_parachute_tandem_%C3%A0_Sion.jpg |
+| Квинсленд (`kvinslend`) | тандем Skydive Cairns | CC BY 2.0 | Benson FY | https://www.flickr.com/photos/49973921@N06/5360265968 |
+| Гранд-Каньон (`grand-kanon`) | парашютист с флагом **над горами Аризоны** у Тусона | общественное достояние (снимок ВВС США) | Senior Airman Chris Massey | https://commons.wikimedia.org/wiki/File:Thunder_and_Lightning_over_Arizona_Open_House_160312-F-ZT877-0101.jpg |
+| Ледник Фокс (`foks`) | купол над горами Западного побережья | CC BY-SA 4.0 | Stewart Nimmo | https://commons.wikimedia.org/wiki/File:TWC_Skydiving%E2%80%A2_Stewart_Nimmo_%E2%80%A2_MRD_8637.jpg |
+| Большое Грызлово (`gryzlovo`) | наш аэродром | своё | — | с прежнего сайта Главпрыга |
 
-Поиск — через Openverse (`api.openverse.org`, фильтр `license=cc0,pdm`) и
-Wikimedia Commons. Снимки с прыжком нашлись только для Дубая; остальные —
-виды самих мест.
+Тексты лицензий: [CC BY 2.0](https://creativecommons.org/licenses/by/2.0/),
+[CC BY 3.0](https://creativecommons.org/licenses/by/3.0/),
+[CC BY 4.0](https://creativecommons.org/licenses/by/4.0/),
+[CC BY-SA 4.0](https://creativecommons.org/licenses/by-sa/4.0/).
+
+**Не точное место.** Три снимка сделаны рядом, а не в самой дропзоне: Восс
+(Аурланнсфьорд, тот же регион Западной Норвегии), Лаутербруннен (Сьон, те же
+Швейцарские Альпы), Гранд-Каньон (Аризона у Тусона). Свободных снимков с
+парашютистами в этих местах не нашлось; alt на сайте называет то, что на
+кадре на самом деле. Если заказчик пришлёт свои кадры или купит стоковые —
+файлы меняются по тем же именам.
+
+Поиск — Openverse (`api.openverse.org`) и Wikimedia Commons.
