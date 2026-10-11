@@ -1,0 +1,265 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@500;700;800&display=swap" rel="stylesheet">
+<style>
+  html, body { margin: 0; background: #31384D; }
+  svg { display: block; font-family: 'Inter', sans-serif; }
+</style>
+</head>
+<body>
+<!-- Анимация «Посадка»: вид камеры 360 над головой парашютиста, сзади-сверху -->
+<svg id="s" width="960" height="720" viewBox="0 0 960 720" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient id="nebo" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#5aa7ec"/><stop offset="1" stop-color="#cfe8fb"/>
+    </linearGradient>
+    <linearGradient id="oranzh" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#ffb347"/><stop offset="1" stop-color="#f26a1b"/>
+    </linearGradient>
+    <linearGradient id="dymka" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#cfe8fb" stop-opacity=".9"/><stop offset="1" stop-color="#cfe8fb" stop-opacity="0"/>
+    </linearGradient>
+  </defs>
+
+  <rect width="960" height="720" fill="url(#nebo)"/>
+  <!-- земля: полосы поля в перспективе -->
+  <g id="zemlya"></g>
+  <rect id="dymkaR" x="0" width="960" height="40" fill="url(#dymka)"/>
+  <!-- мишень и колдун -->
+  <g id="mishen"></g>
+  <!-- тень парашютиста -->
+  <ellipse id="ten" cx="480" rx="60" ry="12" fill="#1d3a12" opacity="0"/>
+
+  <!-- купол (вверху кадра) и стропы -->
+  <g id="kupolGr">
+    <g stroke="#5a5f6e" stroke-width="2" fill="none">
+      <path id="svobR"/><path id="svobL"/>
+    </g>
+    <g stroke="#ffd400" stroke-width="2.5" fill="none">
+      <path id="upravR"/><path id="upravL"/>
+    </g>
+    <path id="kupol" fill="#e8452c" stroke="#a52a17" stroke-width="3"/>
+    <g id="sekcii" stroke="#a52a17" stroke-width="2"></g>
+    <path id="hvostL" fill="#c7381f"/><path id="hvostR" fill="#c7381f"/>
+  </g>
+
+  <!-- парашютист со спины -->
+  <g id="chelovek">
+    <path id="nogaL" stroke="#31384D" stroke-width="24" stroke-linecap="round" stroke-linejoin="round" fill="none"/>
+    <path id="nogaR" stroke="#31384D" stroke-width="24" stroke-linecap="round" stroke-linejoin="round" fill="none"/>
+    <circle id="stopaL" r="13" fill="#1b1f2a"/><circle id="stopaR" r="13" fill="#1b1f2a"/>
+    <rect x="436" y="348" width="88" height="104" rx="24" fill="#31384D"/>
+    <!-- ранец -->
+    <rect x="446" y="356" width="68" height="78" rx="14" fill="#4a5470" stroke="#1b1f2a" stroke-width="3"/>
+    <path d="M440 446 L520 446" stroke="#f2a33a" stroke-width="7" stroke-linecap="round"/>
+    <path id="rukaL" stroke="#31384D" stroke-width="18" stroke-linecap="round" stroke-linejoin="round" fill="none"/>
+    <path id="rukaR" stroke="#31384D" stroke-width="18" stroke-linecap="round" stroke-linejoin="round" fill="none"/>
+    <rect id="klevL" width="16" height="26" rx="5" fill="#ffd400" stroke="#8a6d00" stroke-width="2"/>
+    <rect id="klevR" width="16" height="26" rx="5" fill="#ffd400" stroke="#8a6d00" stroke-width="2"/>
+    <circle id="kistL" r="12" fill="#1b1f2a"/><circle id="kistR" r="12" fill="#1b1f2a"/>
+    <!-- шлем сзади -->
+    <circle cx="480" cy="322" r="30" fill="#ffffff" stroke="#31384D" stroke-width="4"/>
+    <path d="M454 314 Q480 300 506 314" stroke="#e8452c" stroke-width="6" fill="none"/>
+  </g>
+
+  <!-- шкала положения рук -->
+  <g id="shkala">
+    <rect x="752" y="200" width="188" height="214" rx="20" fill="#31384D" opacity=".88"/>
+    <text x="846" y="230" text-anchor="middle" font-size="17" font-weight="800" fill="#c9d3e6">РУКИ</text>
+    <g id="sh0"><rect x="768" y="244" width="156" height="46" rx="23"/><text x="846" y="274" text-anchor="middle" font-size="20" font-weight="800">Полный ход</text></g>
+    <g id="sh1"><rect x="768" y="298" width="156" height="46" rx="23"/><text x="846" y="328" text-anchor="middle" font-size="20" font-weight="800">Среднее</text></g>
+    <g id="sh2"><rect x="768" y="352" width="156" height="46" rx="23"/><text x="846" y="382" text-anchor="middle" font-size="20" font-weight="800">Подушка</text></g>
+  </g>
+
+  <!-- подсказки по корпусу -->
+  <g id="korpus" opacity="0">
+    <rect x="20" y="200" width="250" height="96" rx="20" fill="#31384D" opacity=".88"/>
+    <text x="40" y="236" font-size="19" font-weight="800" fill="#ffd400">Корпус прямо</text>
+    <text x="40" y="270" font-size="19" font-weight="800" fill="#ffffff">Ноги вместе</text>
+  </g>
+  <g id="gorizont" opacity="0">
+    <rect x="20" y="306" width="250" height="52" rx="20" fill="#31384D" opacity=".88"/>
+    <text x="40" y="340" font-size="19" font-weight="800" fill="#ffffff">Взгляд — на горизонт</text>
+  </g>
+  <g id="udacha" opacity="0">
+    <rect x="290" y="70" width="380" height="60" rx="30" fill="#1f9d55"/>
+    <text x="480" y="110" text-anchor="middle" font-size="28" font-weight="800" fill="#fff">На ногах — посадка ✓</text>
+  </g>
+  <g>
+    <rect x="20" y="20" width="168" height="34" rx="17" fill="#31384D" opacity=".75"/>
+    <circle cx="40" cy="37" r="7" fill="#e8452c"/>
+    <text x="56" y="43" font-size="16" font-weight="700" fill="#fff">камера 360</text>
+  </g>
+
+  <!-- нижняя плашка -->
+  <rect x="0" y="600" width="960" height="120" fill="#31384D"/>
+  <circle id="nomerKrug" cx="76" cy="660" r="36" fill="url(#oranzh)"/>
+  <text id="nomer" x="76" y="674" text-anchor="middle" font-size="38" font-weight="800" fill="#fff"></text>
+  <text id="podpis" x="132" y="652" font-size="32" font-weight="800" fill="#fff"></text>
+  <text id="podpis2" x="132" y="690" font-size="22" font-weight="500" fill="#c9d3e6"></text>
+</svg>
+<script>
+const $ = id => document.getElementById(id);
+const lerp = (a, b, k) => a + (b - a) * k;
+const zazhat = x => Math.max(0, Math.min(1, x));
+const plavno = x => { x = zazhat(x); return x * x * (3 - 2 * x); };
+const otrezok = (t, a, b) => plavno((t - a) / (b - a));
+const P = (a, b, k) => [lerp(a[0], b[0], k), lerp(a[1], b[1], k)];
+// значение по опорным точкам [[t, v], ...] с плавными переходами
+const poTochkam = (tk, t) => {
+  if (t <= tk[0][0]) return tk[0][1];
+  for (let i = 1; i < tk.length; i++) if (t <= tk[i][0]) {
+    const k = (t - tk[i - 1][0]) / (tk[i][0] - tk[i - 1][0]);
+    return lerp(tk[i - 1][1], tk[i][1], k);
+  }
+  return tk[tk.length - 1][1];
+};
+
+const SHAGI = [
+  [0,    '1', 'Финальная прямая — против ветра', 'Полный ход: руки вверху, купол летит быстро'],
+  [3.6,  '2', 'Земля приближается — среднее положение', 'Руки плавно до уровня плеч, купол тормозит'],
+  [6.8,  '3', 'Подушка — плавно и до конца', 'Руки вниз к бёдрам: снижение гаснет, полёт ровный'],
+  [9.6,  '4', 'Касание — на обе ноги', 'Ноги вместе, колени чуть согнуты, клеванты внизу'],
+  [11.6, '✓', 'Удачное приземление', 'Встал на ноги, гашу купол'],
+];
+const DLINA = 15;
+
+// высота над землёй (м) и путь вперёд (м)
+const VYSOTA = [[0, 32], [3.6, 17], [6.8, 5.5], [8.4, 1.6], [9.6, 0.25], [10.0, 0]];
+const PUT = [[0, 0], [3.6, 34], [6.8, 62], [8.4, 72], [9.6, 77], [10.4, 78.5], [11, 78.6]];
+const GORIZONT = 210, FOKUS = 260, MISHEN = 92;
+
+// положения рук: полный ход, среднее, подушка (сзади: правая рука справа)
+const RUKI = [
+  { L: [418, 232], R: [542, 232] },
+  { L: [400, 352], R: [560, 352] },
+  { L: [430, 452], R: [530, 452] },
+];
+const plechoL = [444, 360], plechoR = [516, 360];
+
+function ruka(id, kist, plecho, k, napr) {
+  const lokot = [lerp(plecho[0], k[0], .5) + napr * 26, lerp(plecho[1], k[1], .5) + 8];
+  $(id).setAttribute('d', `M${plecho} L${lokot} L${k}`);
+  $(kist).setAttribute('cx', k[0]); $(kist).setAttribute('cy', k[1]);
+}
+
+function kadr(t) {
+  let shag = SHAGI[0];
+  for (const s of SHAGI) if (t >= s[0]) shag = s;
+  $('nomer').textContent = shag[1];
+  $('podpis').textContent = shag[2];
+  $('podpis2').textContent = shag[3];
+
+  const h = poTochkam(VYSOTA, t), x = poTochkam(PUT, t);
+  const H = h + 2.2; // камера над землёй
+
+  // горизонт чуть поднимается при подушке (купол выравнивает полёт)
+  const pod = otrezok(t, 6.9, 8.6);
+  const gor = lerp(118, GORIZONT, 1 - Math.min(h, 32) / 32) - 10 * pod;
+  // поле: полосы по 6 м
+  let polosy = `<rect x="0" y="${gor}" width="960" height="${720 - gor}" fill="#7fb35a"/>`;
+  const ekrY = d => gor + FOKUS * H / d;
+  const nachalo = Math.floor(x / 12) * 12;
+  for (let z = nachalo + 600; z >= nachalo; z -= 12) {
+    const d1 = z - x, d2 = z + 12 - x;
+    if (d2 <= 0.5) continue;
+    const y1 = d1 > 0.5 ? Math.min(ekrY(d1), 720) : 720, y2 = ekrY(d2);
+    if (y2 > 720) continue;
+    const chet = Math.round(z / 12) % 2 === 0;
+    polosy += `<rect x="0" y="${y2}" width="960" height="${y1 - y2 + 0.5}" fill="${chet ? '#93c96a' : '#6ea24b'}"/>`;
+  }
+  // дорожка по центру поля
+  for (let z = nachalo; z < nachalo + 300; z += 12) {
+    const d1 = z - x, d2 = z + 5 - x;
+    if (d1 <= 0.6) continue;
+    const y1 = ekrY(d1), y2 = ekrY(d2), w1 = FOKUS * 1.2 / d1, w2 = FOKUS * 1.2 / d2;
+    if (y1 > 720) continue;
+    polosy += `<path d="M${480 - w1} ${y1} L${480 + w1} ${y1} L${480 + w2} ${y2} L${480 - w2} ${y2} Z" fill="#a3cf7d"/>`;
+  }
+  // кусты по краям поля: дают масштаб и скорость
+  const kusty = [];
+  for (let z = Math.floor(x / 18) * 18; z < x + 400; z += 18) {
+    const d = z - x; if (d < 2) continue;
+    for (const st of [-1, 1]) {
+      const lat = st * (22 + (Math.abs(Math.sin(z * 1.7 + st)) * 26));
+      const y = ekrY(d), sx = 480 + FOKUS * 1.6 * lat / d, rr = FOKUS * 2.2 / d;
+      if (y < 760 && sx > -80 && sx < 1040) kusty.push([d, `<ellipse cx="${sx}" cy="${y - rr * .6}" rx="${rr}" ry="${rr * .8}" fill="#3f7a2e"/><ellipse cx="${sx - rr * .3}" cy="${y - rr * .9}" rx="${rr * .55}" ry="${rr * .45}" fill="#58953f"/>`]);
+    }
+  }
+  kusty.sort((a, b) => b[0] - a[0]);
+  polosy += kusty.map(k => k[1]).join('');
+  // лес на горизонте
+  polosy += `<path d="M0 ${gor} ` + Array.from({ length: 25 }, (_, i) => `Q ${i * 40 + 20} ${gor - 16 - (i * 7) % 9} ${i * 40 + 40} ${gor}`).join(' ') + ` Z" fill="#3f6b33"/>`;
+  $('zemlya').innerHTML = polosy;
+  $('dymkaR').setAttribute('y', gor - 4);
+
+  // мишень: круг с крестом впереди
+  const dM = MISHEN - x;
+  if (dM > 0.8) {
+    const y = ekrY(dM), rx = FOKUS * 5 / dM, ry = rx * H / dM;
+    $('mishen').innerHTML = y < 720 ? `<ellipse cx="480" cy="${y}" rx="${rx}" ry="${Math.max(ry, 1)}" fill="#f4f1e8" stroke="#e8452c" stroke-width="${Math.max(2, rx / 12)}"/>
+      <path d="M${480 - rx * .7} ${y} L${480 + rx * .7} ${y} M480 ${y - ry * .7} L480 ${y + ry * .7}" stroke="#e8452c" stroke-width="${Math.max(2, rx / 14)}"/>` : '';
+  } else $('mishen').innerHTML = '';
+
+  // руки: полный ход → среднее → подушка
+  const k1 = otrezok(t, 3.8, 5.0), k2 = otrezok(t, 6.9, 8.6);
+  let kl = P(P(RUKI[0].L, RUKI[1].L, k1), RUKI[2].L, k2);
+  let kr = P(P(RUKI[0].R, RUKI[1].R, k1), RUKI[2].R, k2);
+  ruka('rukaL', 'kistL', plechoL, kl, -1);
+  ruka('rukaR', 'kistR', plechoR, kr, 1);
+  $('klevL').setAttribute('x', kl[0] - 8); $('klevL').setAttribute('y', kl[1] - 32);
+  $('klevR').setAttribute('x', kr[0] - 8); $('klevR').setAttribute('y', kr[1] - 32);
+
+  // купол: после касания опадает вперёд
+  const gash = otrezok(t, 11.0, 13.0);
+  const kY = -gash * 140, kOp = 1 - otrezok(t, 12.0, 13.2);
+  const tormoz = k1 * .45 + k2 * .55;
+  const verh = 18 + kY, niz = 74 + kY;
+  $('kupol').setAttribute('d', `M170 ${niz} Q 180 ${verh} 300 ${verh} L 660 ${verh} Q 780 ${verh} 790 ${niz} Q 480 ${niz - 26} 170 ${niz} Z`);
+  let sek = '';
+  for (let i = 1; i < 9; i++) { const xx = 170 + i * 620 / 9; sek += `<line x1="${xx}" y1="${verh + 6}" x2="${xx}" y2="${niz - 14}"/>`; }
+  $('sekcii').innerHTML = sek;
+  const hv = 6 + tormoz * 30;
+  $('hvostL').setAttribute('d', `M210 ${niz - 6} L330 ${niz - 14} L320 ${niz - 14 + hv} L215 ${niz - 6 + hv * .6} Z`);
+  $('hvostR').setAttribute('d', `M750 ${niz - 6} L630 ${niz - 14} L640 ${niz - 14 + hv} L745 ${niz - 6 + hv * .6} Z`);
+  $('kupolGr').setAttribute('opacity', kOp);
+  $('svobL').setAttribute('d', `M${plechoL} L${300} ${niz - 4}`);
+  $('svobR').setAttribute('d', `M${plechoR} L${660} ${niz - 4}`);
+  $('upravL').setAttribute('d', `M${kl[0]} ${kl[1] - 30} L${265} ${niz - 6 + hv * .6}`);
+  $('upravR').setAttribute('d', `M${kr[0]} ${kr[1] - 30} L${695} ${niz - 6 + hv * .6}`);
+
+  // ноги: вместе, к касанию колени сгибаются
+  const sgib = otrezok(t, 9.3, 9.9) * (1 - otrezok(t, 10.6, 11.4) * .6);
+  const stopa = 566 - sgib * 22;
+  const kolL = [458 - sgib * 14, 510], kolR = [502 + sgib * 14, 510];
+  $('nogaL').setAttribute('d', `M462 450 L${kolL} L460 ${stopa}`);
+  $('nogaR').setAttribute('d', `M498 450 L${kolR} L500 ${stopa}`);
+  $('stopaL').setAttribute('cx', 458); $('stopaL').setAttribute('cy', stopa + 6);
+  $('stopaR').setAttribute('cx', 502); $('stopaR').setAttribute('cy', stopa + 6);
+
+  // тень под ногами: подходит к стопам по мере снижения
+  const tenY = stopa + 10 + Math.min(h, 9) * 12;
+  $('ten').setAttribute('cy', tenY);
+  $('ten').setAttribute('rx', 46 + Math.min(h, 9) * 4);
+  $('ten').setAttribute('opacity', h < 9 ? .45 * (1 - h / 9) + .1 : 0);
+
+  // шкала положения рук
+  const tek = t < 3.8 ? 0 : t < 6.9 ? 1 : 2;
+  [0, 1, 2].forEach(i => {
+    const g = $('sh' + i);
+    g.querySelector('rect').setAttribute('fill', i === tek ? '#f26a1b' : 'rgba(255,255,255,.08)');
+    g.querySelector('text').setAttribute('fill', i === tek ? '#fff' : '#8d94a5');
+  });
+  $('shkala').setAttribute('opacity', 1 - otrezok(t, 11.2, 11.6));
+
+  $('korpus').setAttribute('opacity', otrezok(t, 1.0, 1.4) * (1 - otrezok(t, 11.2, 11.6)));
+  $('gorizont').setAttribute('opacity', otrezok(t, 4.0, 4.4) * (1 - otrezok(t, 11.2, 11.6)));
+  $('udacha').setAttribute('opacity', otrezok(t, 10.4, 10.8));
+}
+window.kadr = kadr; window.DLINA = DLINA;
+kadr(0);
+</script>
+</body>
+</html>
