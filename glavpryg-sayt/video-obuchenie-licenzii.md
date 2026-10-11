@@ -60,8 +60,8 @@
 ### Блок «Отказы» с вкладками
 
 Отдельный блок в конце страницы по образцу «Наших фотографий»: вкладки
-«Частичный» (`otk-chastichnyy`, `otk-zakrutka`, `otk-slayder`,
-`otk-klevanta`), «Полный» (`otk-polnyy`), «Особые случаи»
+«Частичный» (`otk-zakrutka`, `otk-slayder`,
+`otk-klevanta`), «Полный» (`otk-polnyy`, `otk-chastichnyy`), «Особые случаи»
 (`otk-dva`, `otk-dver`, `otk-dver-foto`). Под крупным кадром — подпись и
 источник. Новых файлов нет, условия те же.
 
