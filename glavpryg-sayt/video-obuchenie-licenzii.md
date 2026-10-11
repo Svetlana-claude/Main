@@ -38,7 +38,7 @@
 |---|---|---|---|---|
 | `otk-raskrytie` | нормальное раскрытие от вытяжного до купола | CC0 | SkydivePhoto | https://commons.wikimedia.org/wiki/File:Parachute_opening.webm |
 | `otk-otcepka` | аварийный порядок: отказ, отцепка, раскрытие запасного | своё | Главпрыг, анимация | исходник `glavpryg-sayt/animaciya-otcepka.html` |
-| `otk-ruchka` | рывок кольца, показ на земле; на странице больше не стоит, файл оставлен | CC BY-SA 4.0 | Florentc59 | https://commons.wikimedia.org/wiki/File:Rescue_parachute_opening.ogg |
+| `otk-ruchka` | рывок кольца, показ на земле; стоит в галерее «Отказы на фото и видео» | CC BY-SA 4.0 | Florentc59 | https://commons.wikimedia.org/wiki/File:Rescue_parachute_opening.ogg |
 | `otk-dver` | запасной раскрылся у двери, Талли, 2025 (отрезок 34–54 с) | CC BY 4.0 | ATSB | https://commons.wikimedia.org/wiki/File:Premature_parachute_opening_over_Tully_Airport.webm |
 
 ### Фото к видам отказов
@@ -56,6 +56,13 @@
 | `otk-polnyy` | полный отказ | вытяжной парашют при нормальном раскрытии | CC BY-SA 4.0 | Lawyerwebb | https://commons.wikimedia.org/wiki/File:Pilot_chute_inflated_bfore_collapse.jpg |
 | `otk-dva` | два купола | настоящий случай, обрезан средний кадр серии | CC BY-SA 3.0 | Dmitry A. Mottl | https://commons.wikimedia.org/wiki/File:Malfunctioned_chute.jpg |
 | `otk-dver-foto` | раскрытие у двери | кадр из ролика ATSB | CC BY 4.0 | ATSB | https://commons.wikimedia.org/wiki/File:Premature_parachute_opening_over_Tully_Airport.webm |
+
+### Галерея «Отказы на фото и видео»
+
+Отдельный блок в конце страницы: девять плиток, по щелчку кадр выводится на
+большой экран с подписью и источником. Ролики — `otk-otcepka`, `otk-dver`,
+`otk-ruchka`; снимки — шесть фото из таблицы выше (без `otk-dver-foto`: этот
+случай показан роликом). Новых файлов нет, условия те же.
 
 - **CC BY-SA 4.0:** обработанный ролик `otk-ruchka` распространяется на тех же
   условиях.
