@@ -38,7 +38,7 @@
 |---|---|---|---|---|
 | `otk-raskrytie` | нормальное раскрытие от вытяжного до купола | CC0 | SkydivePhoto | https://commons.wikimedia.org/wiki/File:Parachute_opening.webm |
 | `otk-otcepka` | аварийный порядок: отказ, отцепка, раскрытие запасного | своё | Главпрыг, анимация | исходник `glavpryg-sayt/animaciya-otcepka.html` |
-| `otk-ruchka` | рывок кольца, показ на земле; стоит в галерее «Отказы на фото и видео» | CC BY-SA 4.0 | Florentc59 | https://commons.wikimedia.org/wiki/File:Rescue_parachute_opening.ogg |
+| `otk-ruchka` | рывок кольца, показ на земле; на странице не стоит, файл оставлен | CC BY-SA 4.0 | Florentc59 | https://commons.wikimedia.org/wiki/File:Rescue_parachute_opening.ogg |
 | `otk-dver` | запасной раскрылся у двери, Талли, 2025 (отрезок 34–54 с) | CC BY 4.0 | ATSB | https://commons.wikimedia.org/wiki/File:Premature_parachute_opening_over_Tully_Airport.webm |
 
 ### Фото к видам отказов
@@ -61,7 +61,7 @@
 
 Отдельный блок в конце страницы по образцу «Наших фотографий»: вкладки
 «Частичный» (`otk-chastichnyy`, `otk-zakrutka`, `otk-slayder`,
-`otk-klevanta`), «Полный» (`otk-polnyy`, `otk-ruchka`), «Особые случаи»
+`otk-klevanta`), «Полный» (`otk-polnyy`), «Особые случаи»
 (`otk-dva`, `otk-dver`, `otk-dver-foto`). Под крупным кадром — подпись и
 источник. Новых файлов нет, условия те же.
 
