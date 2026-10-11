@@ -22,7 +22,8 @@
 | Файл | Что на ролике | Лицензия | Автор | Источник |
 |---|---|---|---|---|
 | `otk-raskrytie` | нормальное раскрытие от вытяжного до купола | CC0 | SkydivePhoto | https://commons.wikimedia.org/wiki/File:Parachute_opening.webm |
-| `otk-ruchka` | рывок кольца, показ на земле, замедлен в 1,5 раза | CC BY-SA 4.0 | Florentc59 | https://commons.wikimedia.org/wiki/File:Rescue_parachute_opening.ogg |
+| `otk-otcepka` | аварийный порядок: отказ, отцепка, раскрытие запасного | своё | Главпрыг, анимация | исходник `glavpryg-sayt/animaciya-otcepka.html` |
+| `otk-ruchka` | рывок кольца, показ на земле; на странице больше не стоит, файл оставлен | CC BY-SA 4.0 | Florentc59 | https://commons.wikimedia.org/wiki/File:Rescue_parachute_opening.ogg |
 | `otk-dver` | запасной раскрылся у двери, Талли, 2025 (отрезок 34–54 с) | CC BY 4.0 | ATSB | https://commons.wikimedia.org/wiki/File:Premature_parachute_opening_over_Tully_Airport.webm |
 
 ### Фото к видам отказов
