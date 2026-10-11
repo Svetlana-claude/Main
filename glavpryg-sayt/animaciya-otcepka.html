@@ -63,6 +63,8 @@
     <path id="rukaL" stroke="#31384D" stroke-width="18" stroke-linecap="round" stroke-linejoin="round" fill="none"/>
     <circle id="kistR" r="12" fill="#f0c8a0"/>
     <circle id="kistL" r="12" fill="#f0c8a0"/>
+    <!-- высотник на левой руке -->
+    <circle id="vysotnikRuka" r="9" fill="#ffffff" stroke="#111" stroke-width="4"/>
     <!-- голова в шлеме -->
     <circle cx="480" cy="322" r="32" fill="#ffffff" stroke="#31384D" stroke-width="4"/>
     <rect x="458" y="312" width="44" height="14" rx="7" fill="#31384D"/>
@@ -99,6 +101,24 @@
     </g>
     <rect x="655" y="146" width="230" height="36" rx="18" fill="#31384D"/>
     <text x="770" y="171" text-anchor="middle" font-size="19" font-weight="800" fill="#fff">крупно: замок на плече</text>
+  </g>
+  <!-- крупно в углу: высотник, стрелка на красной метке 800 м -->
+  <g id="lupaVys" opacity="0">
+    <rect x="684" y="26" width="248" height="28" rx="14" fill="#31384D"/>
+    <text x="808" y="46" text-anchor="middle" font-size="17" font-weight="800" fill="#fff">высотник на левой руке</text>
+    <circle cx="808" cy="168" r="100" fill="#ffd400"/>
+    <circle cx="808" cy="168" r="92" fill="#1b1f2a"/>
+    <circle cx="808" cy="168" r="84" fill="#ffffff"/>
+    <path id="vysKrasnoe" stroke="#d62828" stroke-width="14" fill="none"/>
+    <path id="vysZheltoe" stroke="#f2a33a" stroke-width="14" fill="none"/>
+    <g id="vysRiski" stroke="#1b1f2a" stroke-linecap="round"></g>
+    <g id="vysCifry" font-size="22" font-weight="800" fill="#1b1f2a" text-anchor="middle"></g>
+    <text x="808" y="150" text-anchor="middle" font-size="12" font-weight="700" fill="#5a5f6e">×1000 м</text>
+    <path id="vysMetka" stroke="#d62828" stroke-width="6" stroke-linecap="round"/>
+    <line id="vysStrelka" x1="808" y1="168" stroke="#d62828" stroke-width="6" stroke-linecap="round"/>
+    <circle cx="808" cy="168" r="8" fill="#1b1f2a"/>
+    <rect x="748" y="276" width="120" height="40" rx="20" fill="#d62828"/>
+    <text x="808" y="304" text-anchor="middle" font-size="24" font-weight="800" fill="#fff">800 м</text>
   </g>
   <g id="metkaTros" opacity="0">
     <rect x="530" y="70" width="400" height="56" rx="28" fill="#1f9d55"/>
@@ -138,8 +158,26 @@ const posleOtc = [380, 452], posleZap = [580, 452];
 const naOtcL = [466, 410], posleOtcL = [394, 462], naZapR = [494, 410], posleZapR = [566, 462];
 const glaza = [480, 326];
 
+// циферблат высотника: оборот — 4000 м, 0 сверху, по часовой
+const VYS_C = [808, 168];
+const vysTochka = (m, r) => { const a = m / 4000 * 2 * Math.PI; return [VYS_C[0] + r * Math.sin(a), VYS_C[1] - r * Math.cos(a)]; };
+const vysDuga = (m1, m2, r) => `M${vysTochka(m1, r)} A${r} ${r} 0 0 1 ${vysTochka(m2, r)}`;
+document.getElementById('vysKrasnoe').setAttribute('d', vysDuga(0, 1000, 70));
+document.getElementById('vysZheltoe').setAttribute('d', vysDuga(1000, 1500, 70));
+document.getElementById('vysRiski').innerHTML = Array.from({ length: 40 }, (_, i) => {
+  const m = i * 100, dl = m % 500 ? 6 : 12;
+  return `<line x1="${vysTochka(m, 82)[0]}" y1="${vysTochka(m, 82)[1]}" x2="${vysTochka(m, 82 - dl)[0]}" y2="${vysTochka(m, 82 - dl)[1]}" stroke-width="${m % 500 ? 2 : 3}"/>`;
+}).join('');
+document.getElementById('vysCifry').innerHTML = [0, 1, 2, 3].map(k => { const q = vysTochka(k * 1000, 50); return `<text x="${q[0]}" y="${q[1] + 8}">${k}</text>`; }).join('');
+document.getElementById('vysMetka').setAttribute('d', `M${vysTochka(800, 88)} L${vysTochka(800, 62)}`);
+const vysKonec = vysTochka(800, 60);
+document.getElementById('vysStrelka').setAttribute('x2', vysKonec[0]); document.getElementById('vysStrelka').setAttribute('y2', vysKonec[1]);
+
+// вступление с высотником: вся раскладка сдвинута на SDVIG секунд
+const SDVIG = 1.8;
+const naVysotnik = [552, 292];
 const SHAGI = [
-  [0,    '',  'Отказ основного купола', 'Высота позволяет? Действуем по порядку.'],
+  [-SDVIG, '', 'Отказ! Первым делом — высота', 'Смотрю на высотник: 800 м — действую по порядку'],
   [2.2,  '1', 'Смотрю на отцепку, беру обеими руками', 'Красная ручка — справа на груди'],
   [4.4,  '2', 'Взгляд — на кольцо запасного', 'Держу его глазами, отцепку не отпускаю'],
   [6.4,  '3', 'Рывок отцепки — до конца', 'Тросики выходят полностью — основной уходит'],
@@ -147,7 +185,7 @@ const SHAGI = [
   [10.6, '5', 'Рывок запасного — до конца', 'Запасной раскрывается'],
   [13.2, '6', 'Проверяю запасной', 'Наполнен? Устойчив? Управляем? — беру управление'],
 ];
-const DLINA = 17.5;
+const DLINA = 17.5 + SDVIG;
 
 function ruka(id, kist, plecho, k) {
   const lokot = [lerp(plecho[0], k[0], .5) + (plecho[0] < 480 ? -18 : 18), lerp(plecho[1], k[1], .5) + 6];
@@ -186,6 +224,7 @@ function tros(id, put, k, ruchka, visit) {
 }
 
 function kadr(t) {
+  t -= SDVIG;
   // шаг и подписи
   let shag = SHAGI[0];
   for (const s of SHAGI) if (t >= s[0]) shag = s;
@@ -219,6 +258,7 @@ function kadr(t) {
   kR = P(kR, naZapR, otrezok(t, 8.6, 9.3));
   kR = P(kR, posleZapR, otrezok(t, 10.7, 11.0));
   kR = P(kR, naStropahR, otrezok(t, 13.6, 14.4));
+  kL = P(kL, naVysotnik, otrezok(t, -1.5, -0.9));
   kL = P(kL, naOtcL, otrezok(t, 2.6, 3.4));
   kL = P(kL, posleOtcL, otrezok(t, 6.5, 7.0));
   kL = P(kL, naZap, otrezok(t, 8.6, 9.3));
@@ -226,6 +266,8 @@ function kadr(t) {
   kL = P(kL, naStropahL, otrezok(t, 13.6, 14.4));
   ruka('rukaR', 'kistR', plechoR, kR);
   ruka('rukaL', 'kistL', plechoL, kL);
+  $('vysotnikRuka').setAttribute('cx', kL[0] - 4); $('vysotnikRuka').setAttribute('cy', kL[1] + 14);
+  $('lupaVys').setAttribute('opacity', otrezok(t, -1.0, -0.7) * (1 - otrezok(t, 1.9, 2.2)));
   const sdvig = otrezok(t, 6.5, 7.0), padNow = t < 8.5
     ? [naOtc[0] + (kR[0] - naOtc[0]) * sdvig, naOtc[1] + (kR[1] - naOtc[1]) * sdvig]
     : [posleOtc[0], posleOtc[1] + 120 * otrezok(t, 8.5, 9.0)];
@@ -247,7 +289,8 @@ function kadr(t) {
 
   // взгляд: на отцепку, на кольцо запасного, вверх — ушёл ли основной, вверх — на запасной
   let cel = null;
-  if (t >= 2.3 && t < 4.4) cel = [453, 402];
+  if (t >= -1.1 && t < 2.0) cel = [naVysotnik[0] - 4, naVysotnik[1] + 14];
+  else if (t >= 2.3 && t < 4.4) cel = [453, 402];
   else if (t >= 4.4 && t < 9.4) cel = [507, 402];
   else if (t >= 9.4 && t < 10.4) cel = [480, 150];
   else if (t >= 12.0) cel = [480, 152];
