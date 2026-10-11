@@ -19,7 +19,7 @@
 
 | Файл | Что на ролике | Лицензия | Автор | Источник |
 |---|---|---|---|---|
-| `aff-posadka` | посадка на пляж, вид от первого лица (отрезок 33,5–41,5 с) | CC BY 3.0 | Philip Thomas | https://commons.wikimedia.org/wiki/File:Skydive_landing_on_a_beach.webm |
+| `aff-posadka` | посадка на пляж, вид от первого лица (отрезок 33,5–41,5 с); **на странице не стоит** — отработка не видна, файл оставлен | CC BY 3.0 | Philip Thomas | https://commons.wikimedia.org/wiki/File:Skydive_landing_on_a_beach.webm |
 
 ## Блок «Отказы парашюта»
 
