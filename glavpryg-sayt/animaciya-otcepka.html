@@ -134,14 +134,16 @@ const plechoR = [440, 368], plechoL = [520, 368];
 const naStropahR = [432, 300], naStropahL = [528, 300];
 const naOtc = [453, 402], naZap = [507, 402];
 const posleOtc = [380, 452], posleZap = [580, 452];
+// вторая рука ложится рядом с первой: обе руки на кольце
+const naOtcL = [466, 410], posleOtcL = [394, 462], naZapR = [494, 410], posleZapR = [566, 462];
 const glaza = [480, 326];
 
 const SHAGI = [
   [0,    '',  'Отказ основного купола', 'Высота позволяет? Действуем по порядку.'],
-  [2.2,  '1', 'Смотрю на отцепку и беру её', 'Красная ручка — справа на груди'],
+  [2.2,  '1', 'Смотрю на отцепку, беру обеими руками', 'Красная ручка — справа на груди'],
   [4.4,  '2', 'Взгляд — на кольцо запасного', 'Держу его глазами, отцепку не отпускаю'],
   [6.4,  '3', 'Рывок отцепки — до конца', 'Тросики выходят полностью — основной уходит'],
-  [8.4,  '4', 'Беру кольцо запасного', 'Убеждаюсь, что основной ушёл'],
+  [8.4,  '4', 'Кольцо запасного — обеими руками', 'Взялся — и только потом смотрю: основной ушёл?'],
   [10.6, '5', 'Рывок запасного — до конца', 'Запасной раскрывается'],
   [13.2, '6', 'Проверяю запасной', 'Наполнен? Устойчив? Управляем? — беру управление'],
 ];
@@ -214,13 +216,21 @@ function kadr(t) {
   let kR = naStropahR, kL = naStropahL;
   kR = P(kR, naOtc, otrezok(t, 2.6, 3.4));
   kR = P(kR, posleOtc, otrezok(t, 6.5, 7.0));
+  kR = P(kR, naZapR, otrezok(t, 8.6, 9.3));
+  kR = P(kR, posleZapR, otrezok(t, 10.7, 11.0));
   kR = P(kR, naStropahR, otrezok(t, 13.6, 14.4));
-  kL = P(kL, naZap, otrezok(t, 8.6, 9.4));
+  kL = P(kL, naOtcL, otrezok(t, 2.6, 3.4));
+  kL = P(kL, posleOtcL, otrezok(t, 6.5, 7.0));
+  kL = P(kL, naZap, otrezok(t, 8.6, 9.3));
   kL = P(kL, posleZap, otrezok(t, 10.7, 11.0));
   kL = P(kL, naStropahL, otrezok(t, 13.6, 14.4));
   ruka('rukaR', 'kistR', plechoR, kR);
   ruka('rukaL', 'kistL', plechoL, kL);
-  const sdvig = otrezok(t, 6.5, 7.0), padNow = [naOtc[0] + (kR[0] - naOtc[0]) * sdvig, naOtc[1] + (kR[1] - naOtc[1]) * sdvig];
+  const sdvig = otrezok(t, 6.5, 7.0), padNow = t < 8.5
+    ? [naOtc[0] + (kR[0] - naOtc[0]) * sdvig, naOtc[1] + (kR[1] - naOtc[1]) * sdvig]
+    : [posleOtc[0], posleOtc[1] + 120 * otrezok(t, 8.5, 9.0)];
+  const brosheno = 1 - otrezok(t, 8.5, 8.9);
+  $('ruchkaOtc').setAttribute('opacity', brosheno); $('trosiki').setAttribute('opacity', brosheno);
   $('ruchkaOtc').setAttribute('transform', `translate(${padNow[0] - naOtc[0]} ${padNow[1] - naOtc[1]})`);
   const vyhod = zazhat((t - 6.5) / 0.5), visit = otrezok(t, 7.1, 7.7);
   tros('tros1', TROSY[0], vyhod, padNow, visit);
@@ -238,8 +248,8 @@ function kadr(t) {
   // взгляд: на отцепку, на кольцо запасного, вверх — ушёл ли основной, вверх — на запасной
   let cel = null;
   if (t >= 2.3 && t < 4.4) cel = [453, 402];
-  else if (t >= 4.4 && t < 8.6) cel = [507, 402];
-  else if (t >= 8.6 && t < 10.3) cel = [480, 150];
+  else if (t >= 4.4 && t < 9.4) cel = [507, 402];
+  else if (t >= 9.4 && t < 10.4) cel = [480, 150];
   else if (t >= 12.0) cel = [480, 152];
   $('vzglyad').setAttribute('opacity', cel ? 1 : 0);
   if (cel) {
@@ -257,7 +267,7 @@ function kadr(t) {
   $('ryvok').setAttribute('d', ryvok || 'M0 0');
   $('ryvok').setAttribute('opacity', ryvok ? 1 : 0);
 
-  $('metkaUshel').setAttribute('opacity', otrezok(t, 9.3, 9.6) * (1 - otrezok(t, 10.4, 10.6)));
+  $('metkaUshel').setAttribute('opacity', otrezok(t, 9.7, 10.0) * (1 - otrezok(t, 10.4, 10.6)));
 
   // запасной: вытяжной вылетает из-за спины, купол наполняется
   const vyl = otrezok(t, 10.8, 11.4), napoln = otrezok(t, 11.3, 12.6);
