@@ -57,12 +57,13 @@
 | `otk-dva` | два купола | настоящий случай, обрезан средний кадр серии | CC BY-SA 3.0 | Dmitry A. Mottl | https://commons.wikimedia.org/wiki/File:Malfunctioned_chute.jpg |
 | `otk-dver-foto` | раскрытие у двери | кадр из ролика ATSB | CC BY 4.0 | ATSB | https://commons.wikimedia.org/wiki/File:Premature_parachute_opening_over_Tully_Airport.webm |
 
-### Галерея «Отказы на фото и видео»
+### Блок «Отказы» с вкладками
 
-Отдельный блок в конце страницы: девять плиток, по щелчку кадр выводится на
-большой экран с подписью и источником. Ролики — `otk-otcepka`, `otk-dver`,
-`otk-ruchka`; снимки — шесть фото из таблицы выше (без `otk-dver-foto`: этот
-случай показан роликом). Новых файлов нет, условия те же.
+Отдельный блок в конце страницы по образцу «Наших фотографий»: вкладки
+«Частичный» (`otk-otcepka`, `otk-chastichnyy`, `otk-zakrutka`, `otk-slayder`,
+`otk-klevanta`), «Полный» (`otk-polnyy`, `otk-ruchka`), «Особые случаи»
+(`otk-dva`, `otk-dver`, `otk-dver-foto`). Под крупным кадром — подпись и
+источник. Новых файлов нет, условия те же.
 
 - **CC BY-SA 4.0:** обработанный ролик `otk-ruchka` распространяется на тех же
   условиях.
