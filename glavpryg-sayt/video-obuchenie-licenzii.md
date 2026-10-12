@@ -56,14 +56,43 @@
 | `otk-polnyy` | полный отказ | вытяжной парашют при нормальном раскрытии | CC BY-SA 4.0 | Lawyerwebb | https://commons.wikimedia.org/wiki/File:Pilot_chute_inflated_bfore_collapse.jpg |
 | `otk-dva` | два купола | настоящий случай, обрезан средний кадр серии | CC BY-SA 3.0 | Dmitry A. Mottl | https://commons.wikimedia.org/wiki/File:Malfunctioned_chute.jpg |
 | `otk-dver-foto` | раскрытие у двери | кадр из ролика ATSB | CC BY 4.0 | ATSB | https://commons.wikimedia.org/wiki/File:Premature_parachute_opening_over_Tully_Airport.webm |
+| `otk-zakrutka-2` | закрутка строп | настоящая закрутка сразу после раскрытия | CC BY-SA 3.0 | Greg Bulla | https://en.wikipedia.org/wiki/File:ParachuteTwist2.jpg |
+| `otk-biplan` | два купола, «биплан» | показательная «этажерка» на авиашоу, не отказ (в подписи сказано) | CC BY-SA 4.0 | Sergei Kazantsev | https://commons.wikimedia.org/wiki/File:Этажерка.JPG |
+| `otk-daunpleyn` | два купола, «даунплейн» | номер команды Leap Frogs, не отказ (в подписи сказано); 900×600, без обрезки | общественное достояние | U.S. Navy, Dave Kaylor | https://commons.wikimedia.org/wiki/File:US_Navy_070701-N-8110K-007_Two_members_of_the_Navy_Parachute_Team_Leap_Frogs_perform_their_trademark_downplane_maneuver_while_performing_for_the_first_time_in_history_at_Boston%27s_Fenway_Park.jpg |
 
-### Блок «Отказы» с вкладками
+### Ролики USPA (YouTube)
 
-Отдельный блок в конце страницы по образцу «Наших фотографий»: вкладки
-«Частичный» (`otk-zakrutka`, `otk-slayder`,
-`otk-klevanta`), «Полный» (`otk-polnyy`, `otk-chastichnyy`), «Особые случаи»
-(`otk-dva`, `otk-dver`, `otk-dver-foto`). Под крупным кадром — подпись и
-источник. Новых файлов нет, условия те же.
+Учебная серия «Malfunctions» американской ассоциации парашютистов, список —
+https://www.uspa.org/vrvideos. На сайт не копируются: встраиваются плеером
+`youtube-nocookie.com`, который грузится только по нажатию; до этого видно
+превью с `i.ytimg.com`. Встраивание разрешено владельцем (oEmbed отвечает 200).
+Ролики на английском — в подписи сказано.
+
+| Кадр в блоке | Ролик USPA | YouTube |
+|---|---|---|
+| Закрутка с вращением | 11 Line Twist | `GEqbTMRseik` |
+| Перехлёст | 01 Line Over | `d1HmyO1-Xn8` |
+| Купол не наполняется («колбаса») | 08 Streamer, Endless Snivel | `mweIHAETmNw` |
+| Порыв купола и обрыв строп | 09 Torn Canopy and Broken Lines | `gS3t_MCYNV8` |
+| Вытяжной лёг на купол | 10 Pilot Chute Over the Nose | `XlFgF_8NfaI` |
+| Вытяжной в следе | 02 Pilot Chute in Tow | `nzu_QoUjy_M` |
+| Купол не вышел из камеры | 03 Bag Lock | `8zYYkzqB62A` |
+| «Подкова», которую освободили | 04 Horse Shoe clearable | `AE0zxm2f6Yk` |
+| «Подкова», которую не освободить | 05 Horse Shoe unclearable | `YGh4pS7rokU` |
+| Два купола: «биплан» | 06 Two Out biplane | `PodMf7JRsQU` |
+| Два купола: «веер» | 07 Two Out side by side | `zZPoE4ry-4w` |
+
+### Блок «Разборы» с вкладками
+
+Стоит в секции «Отказы парашюта», после «Отказ: отцепка и запасной». Вкладки:
+«Частичный» — 9 кадров, «Полный» — 4, «Особые случаи» — 9; снимки, свой ролик
+`otk-dver` и ролики USPA. Под крупным кадром — подпись, источник и разбор
+кадра: «Как выглядит», «Почему бывает», «Что делать».
+
+Описания и порядок действий — по USPA SIM, раздел 5, и учебной серии USPA
+«Malfunctions». Внизу блока об этом есть примечание: высота принятия решения
+у USPA для учащихся — 760 м (2 500 футов); на прыжке действуют по порядку,
+которому учит инструктор.
 
 - **CC BY-SA 4.0:** обработанный ролик `otk-ruchka` распространяется на тех же
   условиях.
