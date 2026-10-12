@@ -1,9 +1,12 @@
 #!/usr/bin/env python3
 """Плакаты отказов: геометрия в ImageMagick, обработка в G'MIC и ImageMagick.
 
-Запуск: python3 plakaty.py [папка-вывода]  (нужны пакеты imagemagick и gmic)
+Запуск: python plakaty.py [папка-вывода]  (нужны пакеты imagemagick и gmic, в python — opencv)
+Последний шаг — nebo.py: ровное небо без вмятин и складок бумаги.
 """
 import math, os, subprocess, sys, tempfile
+import cv2
+from nebo import Nebo
 
 SRC='/home/mokeeva/main/exchange/otkazy-yadisk/photo_2026-10-12_12-'
 OUT=sys.argv[1] if len(sys.argv)>1 else os.path.dirname(os.path.abspath(__file__))
@@ -57,4 +60,7 @@ for i,(n,(tl,tr,br,bl,_)) in enumerate(sorted(U.items()),1):
                '-resize',f'{round(W*1.03)}x{round(H*1.03)}^','-gravity','center','-extent',f'{W}x{H}',
                '-unsharp','0x1.2+0.7+0.02','-strip','-quality','90',
                f'{OUT}/plakat-{i:02d}.jpg')
+    # 4. ровное небо
+    put=f'{OUT}/plakat-{i:02d}.jpg'
+    cv2.imwrite(put, Nebo(cv2.imread(put))[0], [cv2.IMWRITE_JPEG_QUALITY, 90])
     print(f'plakat-{i:02d}.jpg ← {n}')
