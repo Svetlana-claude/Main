@@ -22,7 +22,7 @@
       <path d="M0 0L10 5L0 10z" fill="#ffd400"/>
     </marker>
   </defs>
-  <rect width="960" height="720" fill="url(#nebo)"/>
+  <rect id="fonNeba" width="960" height="720" fill="url(#nebo)"/>
   <g id="kamera">
   <!-- облака -->
   <g fill="#fff" opacity=".55">
@@ -200,6 +200,18 @@ const DLINA = 17.5 + SDVIG;
 // Ролик на телефоне занимает ≈ 300 px в ширину — мелкий шрифт кадра 960 px там не читается.
 const MOB = /[?&]mob\b/.test(location.search);
 const NIZ = 565;  // на телефоне ноги парашютиста стоят на верхнем крае плашки
+// Широкий кадр (?mob&shir) — для полного экрана повёрнутого телефона: 1560×720 (≈ 2,17 : 1, как экран телефона
+// лёжа). Сцена та же, небо и плашка продлены в стороны на 300 px, метки отодвинуты к краям; всё важное — в средних
+// 1280 px, чтобы на экране поуже (16 : 9) обрезка краёв ничего не задела
+const SHIR = MOB && /[?&]shir\b/.test(location.search);
+const KRAY = SHIR ? 300 : 0;
+if (SHIR) {
+  const s = $('s');
+  s.setAttribute('width', 960 + 2 * KRAY); s.setAttribute('viewBox', `${-KRAY} 0 ${960 + 2 * KRAY} 720`);
+  for (const id of ['fonNeba', 'plashka']) { $(id).setAttribute('x', -KRAY); $(id).setAttribute('width', 960 + 2 * KRAY); }
+  // облака по краям, чтобы продлённое небо не было пустым
+  $('kamera').insertAdjacentHTML('afterbegin', '<g fill="#fff" opacity=".55"><ellipse cx="-130" cy="380" rx="120" ry="26"/><ellipse cx="-80" cy="366" rx="64" ry="20"/><ellipse cx="1080" cy="560" rx="130" ry="26"/><ellipse cx="1030" cy="546" rx="70" ry="20"/></g>');
+}
 if (MOB) {
   $('trevoga').setAttribute('display', 'none'); $('trevogaMob').removeAttribute('display');
   $('plashka').setAttribute('y', 560); $('plashka').setAttribute('height', 160);
@@ -209,7 +221,10 @@ if (MOB) {
   $('nomerKrug').setAttribute('r', 32); $('nomerKrug').setAttribute('cy', 616);
   $('nomer').setAttribute('font-size', 36); $('nomer').setAttribute('y', 629);
   // метки — крупнее, от своего края, чтобы не уйти за кадр
-  const krupnee = (id, x, y, k) => $(id).setAttribute('transform', `translate(${x} ${y}) scale(${k}) translate(${-x} ${-y})`);
+  // в широком кадре метки отходят к краям: тревога и проверка — влево, высотник и метки — вправо
+  const SDV = SHIR ? { trevogaMob: -150, proverka: -160, metkaUshel: 150, metkaTros: 150, lupaVys: 150, lupa: 150 } : {};
+  const krupnee = (id, x, y, k) => $(id).setAttribute('transform', `translate(${SDV[id] || 0} 0) translate(${x} ${y}) scale(${k}) translate(${-x} ${-y})`);
+  krupnee('trevogaMob', 0, 0, 1); krupnee('lupa', 0, 0, 1);
   krupnee('metkaUshel', 890, 70, 1.3); krupnee('metkaTros', 930, 70, 1.25);
   krupnee('proverka', 40, 200, 1.25); krupnee('lupaVys', 932, 22, 1.15);
 }

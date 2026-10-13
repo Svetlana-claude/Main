@@ -4,7 +4,8 @@
         glavpryg-sayt/animaciya-otcepka.html /var/www/glavpryg/public/video/otk-otcepka-mob [--mob]
 
 Кадры снимаются playwright'ом по времени, а не записью экрана: ролик ровный при любой скорости машины.
---mob — телефонная версия анимации (?mob в адресе страницы).
+--mob — телефонная версия анимации (?mob в адресе страницы); --shir — она же широким кадром для
+полного экрана повёрнутого телефона (?mob&shir).
 """
 import argparse
 import pathlib
@@ -19,13 +20,14 @@ ap = argparse.ArgumentParser()
 ap.add_argument('html')
 ap.add_argument('vyhod', help='путь без расширения: рядом лягут .mp4 и .jpg')
 ap.add_argument('--mob', action='store_true')
+ap.add_argument('--shir', action='store_true')
 ap.add_argument('--oblozhka', type=float, default=3.0, help='секунда кадра для обложки')
 a = ap.parse_args()
 
-url = pathlib.Path(a.html).resolve().as_uri() + ('?mob' if a.mob else '')
+url = pathlib.Path(a.html).resolve().as_uri() + ('?mob&shir' if a.shir else '?mob' if a.mob else '')
 with tempfile.TemporaryDirectory() as papka, sync_playwright() as pw:
     b = pw.chromium.launch()
-    s = b.new_page(viewport={'width': 960, 'height': 720})
+    s = b.new_page(viewport={'width': 1600, 'height': 720})
     s.goto(url, wait_until='networkidle')
     s.evaluate('document.fonts.ready')
     dlina = s.evaluate('DLINA')
