@@ -23,6 +23,7 @@
     </marker>
   </defs>
   <rect width="960" height="720" fill="url(#nebo)"/>
+  <g id="kamera">
   <!-- облака -->
   <g fill="#fff" opacity=".55">
     <ellipse cx="150" cy="520" rx="110" ry="26"/><ellipse cx="210" cy="505" rx="70" ry="22"/>
@@ -78,6 +79,7 @@
 
   <!-- рывок -->
   <path id="ryvok" stroke="#ffd400" stroke-width="7" fill="none" marker-end="url(#strelka)" opacity="0"/>
+  </g>
 
   <!-- метки на сцене -->
   <g id="metkaUshel" opacity="0">
@@ -133,9 +135,16 @@
     <rect x="30" y="30" width="330" height="56" rx="28" fill="#d62828"/>
     <text x="195" y="67" text-anchor="middle" font-size="26" font-weight="800" fill="#fff">Отказ! Купол не держит</text>
   </g>
+  <!-- телефонная версия тревоги: «Отказ!» крупно, под ним пояснение -->
+  <g id="trevogaMob" opacity="0" display="none">
+    <rect x="30" y="26" width="196" height="68" rx="16" fill="#d62828"/>
+    <text x="128" y="76" text-anchor="middle" font-size="46" font-weight="800" fill="#fff">Отказ!</text>
+    <rect x="30" y="102" width="292" height="48" rx="14" fill="#d62828"/>
+    <text x="176" y="136" text-anchor="middle" font-size="29" font-weight="800" fill="#fff">Купол не держит</text>
+  </g>
 
   <!-- нижняя плашка: номер шага и действие -->
-  <rect x="0" y="600" width="960" height="120" fill="#31384D"/>
+  <rect id="plashka" x="0" y="600" width="960" height="120" fill="#31384D"/>
   <circle id="nomerKrug" cx="76" cy="660" r="36" fill="url(#oranzh)"/>
   <text id="nomer" x="76" y="674" text-anchor="middle" font-size="38" font-weight="800" fill="#fff"></text>
   <text id="podpis" x="132" y="652" font-size="32" font-weight="800" fill="#fff"></text>
@@ -187,6 +196,30 @@ const SHAGI = [
 ];
 const DLINA = 17.5 + SDVIG;
 
+// Телефонная версия (?mob): сцена крупнее, подпись внизу по центру и крупнее, надписи крупнее.
+// Ролик на телефоне занимает ≈ 300 px в ширину — мелкий шрифт кадра 960 px там не читается.
+const MOB = /[?&]mob\b/.test(location.search);
+const NIZ = 565;  // на телефоне ноги парашютиста стоят на верхнем крае плашки
+if (MOB) {
+  $('trevoga').setAttribute('display', 'none'); $('trevogaMob').removeAttribute('display');
+  $('plashka').setAttribute('y', 560); $('plashka').setAttribute('height', 160);
+  $('podpis').setAttribute('font-size', 46); $('podpis').setAttribute('y', 632);
+  $('podpis2').setAttribute('font-size', 32); $('podpis2').setAttribute('y', 690);
+  $('podpis2').setAttribute('text-anchor', 'middle'); $('podpis2').setAttribute('x', 480);
+  $('nomerKrug').setAttribute('r', 32); $('nomerKrug').setAttribute('cy', 616);
+  $('nomer').setAttribute('font-size', 36); $('nomer').setAttribute('y', 629);
+  // метки — крупнее, от своего края, чтобы не уйти за кадр
+  const krupnee = (id, x, y, k) => $(id).setAttribute('transform', `translate(${x} ${y}) scale(${k}) translate(${-x} ${-y})`);
+  krupnee('metkaUshel', 890, 70, 1.3); krupnee('metkaTros', 930, 70, 1.25);
+  krupnee('proverka', 40, 200, 1.25); krupnee('lupaVys', 932, 22, 1.15);
+}
+// подпись по ширине кадра: длинная строка ужимается, а не уходит за край
+function vlezt(el, razmer, shir) {
+  el.setAttribute('font-size', razmer);
+  const d = el.getComputedTextLength();
+  if (d > shir) el.setAttribute('font-size', (razmer * shir / d).toFixed(1));
+}
+
 function ruka(id, kist, plecho, k) {
   const lokot = [lerp(plecho[0], k[0], .5) + (plecho[0] < 480 ? -18 : 18), lerp(plecho[1], k[1], .5) + 6];
   $(id).setAttribute('d', `M${plecho} L${lokot} L${k}`);
@@ -233,6 +266,19 @@ function kadr(t) {
   $('podpis').textContent = shag[2];
   $('podpis2').textContent = shag[3];
   $('trevoga').setAttribute('opacity', t < 6.6 ? 1 : 0);
+  $('trevogaMob').setAttribute('opacity', t < 6.6 ? 1 : 0);
+  if (MOB) {
+    // номер шага и заголовок — одной группой по центру
+    const kr = shag[1] ? 80 : 0;
+    vlezt($('podpis'), 46, 900 - kr);
+    vlezt($('podpis2'), 32, 900);
+    const x0 = 480 - ($('podpis').getComputedTextLength() + kr) / 2;
+    $('nomerKrug').setAttribute('cx', x0 + 32); $('nomer').setAttribute('x', x0 + 32);
+    $('podpis').setAttribute('x', x0 + kr);
+    // камера: крупно до раскрытия запасного, затем отъезжает, чтобы купол был в кадре
+    const k = lerp(1.33, 1, otrezok(t, 9.4, 11.0));
+    $('kamera').setAttribute('transform', `translate(480 ${NIZ}) scale(${k}) translate(-480 -601)`);
+  }
 
   // основной: сложенный купол болтается, после отцепки улетает вверх-влево
   const uhod = otrezok(t, 7.0, 8.3);
