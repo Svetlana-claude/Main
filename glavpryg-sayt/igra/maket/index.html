@@ -1,0 +1,621 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
+<meta name="robots" content="noindex">
+<meta name="theme-color" content="#0b1d33">
+<title>Точно в круг — игра Главпрыга (макет)</title>
+<style>
+  :root { --orange:#ff7a1a; --ink:#0b1d33; --glass:rgba(11,29,51,.62); }
+  * { box-sizing:border-box; -webkit-tap-highlight-color:transparent; }
+  html,body { margin:0; height:100%; background:var(--ink); color:#fff; overflow:hidden;
+    font:600 16px/1.3 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;
+    touch-action:none; user-select:none; -webkit-user-select:none; overscroll-behavior:none; }
+  #igra { position:fixed; inset:0; width:100%; height:100%; image-rendering:pixelated; display:block; }
+  .hud { position:fixed; pointer-events:none; }
+  /* высотомер */
+  #vysotomer { left:max(10px,env(safe-area-inset-left)); top:10px; width:min(19vh,128px); }
+  #vysotomer svg { width:100%; display:block; filter:drop-shadow(0 2px 4px rgba(0,0,0,.5)); }
+  #vys-cifra { margin-top:4px; text-align:center; font:800 clamp(14px,3.6vh,22px)/1 ui-monospace,monospace;
+    background:var(--glass); border-radius:8px; padding:4px 0; }
+  /* колдун */
+  #koldun { right:max(10px,env(safe-area-inset-right)); top:10px; width:min(21vh,140px);
+    background:var(--glass); border-radius:14px; padding:6px; text-align:center; }
+  #koldun svg { width:100%; display:block; }
+  #veter-cifra { font:800 clamp(12px,3.2vh,19px)/1 system-ui; margin-top:2px; white-space:nowrap; }
+  #soobshenie { left:50%; top:12px; transform:translateX(-50%); max-width:52vw; text-align:center;
+    background:var(--glass); border-radius:12px; padding:6px 14px; font-size:clamp(13px,3.6vh,22px);
+    opacity:0; transition:opacity .25s; }
+  #soobshenie.vidno { opacity:1; }
+  #soobshenie.trevoga { background:rgba(200,30,30,.82); }
+  /* кнопки */
+  .knopka { position:fixed; bottom:max(14px,env(safe-area-inset-bottom)); width:min(26vh,150px); height:min(26vh,150px);
+    border-radius:50%; border:3px solid rgba(255,255,255,.7); background:rgba(11,29,51,.45); color:#fff;
+    font:900 clamp(26px,8vh,52px)/1 system-ui; display:flex; align-items:center; justify-content:center;
+    touch-action:none; cursor:pointer; }
+  .knopka:focus-visible { outline:3px solid var(--orange); outline-offset:3px; }
+  .knopka.nazhata { background:rgba(255,122,26,.75); border-color:#fff; }
+  #k-levo { left:max(14px,env(safe-area-inset-left)); }
+  #k-pravo { right:max(14px,env(safe-area-inset-right)); }
+  #k-raskryt { left:50%; transform:translateX(-50%); width:auto; height:auto; padding:14px 26px; border-radius:16px;
+    font-size:clamp(16px,4.6vh,26px); background:rgba(200,30,30,.8); display:none; }
+  #k-raskryt.vidno { display:flex; }
+  /* экраны */
+  .ekran { position:fixed; inset:0; display:none; align-items:center; justify-content:center; padding:12px;
+    background:rgba(11,29,51,.78); backdrop-filter:blur(3px); z-index:5; }
+  .ekran.vidno { display:flex; }
+  .karta { background:#10294a; border:2px solid rgba(255,255,255,.15); border-radius:18px; padding:clamp(12px,3vh,24px);
+    max-width:760px; width:100%; max-height:100%; overflow:auto; text-align:center; }
+  .karta h1 { margin:0 0 4px; font-size:clamp(22px,6vh,40px); letter-spacing:.5px; }
+  .karta h1 b { color:var(--orange); }
+  .karta p { margin:6px 0; font-weight:500; font-size:clamp(13px,3.4vh,17px); opacity:.9; }
+  .urovni { display:flex; flex-wrap:wrap; gap:6px; justify-content:center; margin:10px 0; }
+  .urovni button { min-width:72px; padding:8px 6px; border-radius:10px; border:2px solid rgba(255,255,255,.25);
+    background:#173a63; color:#fff; font:700 14px/1.15 system-ui; cursor:pointer; }
+  .urovni button[aria-pressed="true"] { background:var(--orange); border-color:#fff; }
+  .urovni small { display:block; font-weight:500; opacity:.85; }
+  .glavnaya { margin-top:8px; padding:12px 34px; border-radius:14px; border:0; background:var(--orange); color:#fff;
+    font:900 clamp(18px,5vh,26px)/1 system-ui; cursor:pointer; }
+  .vtorostep { margin:8px 4px 0; padding:10px 18px; border-radius:12px; border:2px solid rgba(255,255,255,.4);
+    background:transparent; color:#fff; font:700 16px system-ui; cursor:pointer; }
+  button:focus-visible { outline:3px solid #fff; outline-offset:2px; }
+  .ochki { font:900 clamp(40px,14vh,84px)/1 system-ui; color:var(--orange); margin:4px 0; }
+  .razbor { text-align:left; margin:8px auto; max-width:460px; font-weight:500; font-size:clamp(13px,3.3vh,16px); }
+  .razbor div { display:flex; justify-content:space-between; gap:10px; border-bottom:1px dashed rgba(255,255,255,.15); padding:3px 0; }
+  .stat { font-size:13px; opacity:.75; margin-top:8px; font-weight:500; }
+  .bonus { margin-top:8px; padding:8px; border-radius:10px; background:rgba(255,122,26,.18); font-weight:600; font-size:14px; }
+  #povorot { z-index:9; text-align:center; }
+  #povorot .ikonka { font-size:64px; animation:krut 1.6s infinite ease-in-out; }
+  @keyframes krut { 50% { transform:rotate(90deg); } }
+  @media (orientation:portrait) and (pointer:coarse) { #povorot { display:flex; } }
+</style>
+</head>
+<body>
+<canvas id="igra" aria-label="Игровое поле: вид сверху на аэродром Большое Грызлово"></canvas>
+
+<div class="hud" id="vysotomer" aria-hidden="true">
+  <svg viewBox="-60 -60 120 120">
+    <circle r="57" fill="#111" stroke="#bbb" stroke-width="3"/>
+    <!-- красный сектор 0–1000 м, жёлтый 1000–1500 м (шкала 0–4000 м на полный круг) -->
+    <path id="sektor-kr" fill="#c62828"/><path id="sektor-zh" fill="#f2b705"/>
+    <circle r="40" fill="#111"/>
+    <g id="shkala" fill="#fff" font-size="13" font-weight="800" text-anchor="middle"></g>
+    <line id="strelka" x1="0" y1="8" x2="0" y2="-48" stroke="#fff" stroke-width="4" stroke-linecap="round"/>
+    <circle r="5" fill="#fff"/>
+  </svg>
+  <div id="vys-cifra">3000 м</div>
+</div>
+
+<div class="hud" id="koldun" aria-hidden="true">
+  <svg viewBox="-50 -50 100 100">
+    <circle r="46" fill="none" stroke="rgba(255,255,255,.25)" stroke-width="2"/>
+    <g id="kompas"><text y="-34" text-anchor="middle" font-size="13" font-weight="900" fill="#ff7a1a">С</text></g>
+    <g id="konus">
+      <line x1="0" y1="34" x2="0" y2="18" stroke="#ddd" stroke-width="3"/>
+      <!-- конус: широкий конец у мачты, тонкий показывает, куда дует ветер -->
+      <path d="M-10 18 L10 18 L8 6 L-8 6Z" fill="#ff7a1a"/><path d="M-8 6 L8 6 L6 -6 L-6 -6Z" fill="#fff"/>
+      <path d="M-6 -6 L6 -6 L4.5 -17 L-4.5 -17Z" fill="#ff7a1a"/><path d="M-4.5 -17 L4.5 -17 L3 -28 L-3 -28Z" fill="#fff"/>
+    </g>
+    <text id="shtil" y="5" text-anchor="middle" font-size="14" font-weight="800" fill="#fff" display="none">штиль</text>
+  </svg>
+  <div id="veter-cifra">0 м/с</div>
+</div>
+
+<div class="hud" id="soobshenie" role="status" aria-live="polite"></div>
+
+<button class="knopka" id="k-levo" aria-label="Влево">◀</button>
+<button class="knopka" id="k-raskryt" aria-label="Раскрыть парашют">РАСКРЫТЬ</button>
+<button class="knopka" id="k-pravo" aria-label="Вправо">▶</button>
+
+<section class="ekran vidno" id="e-start" aria-labelledby="zag-start">
+  <div class="karta">
+    <h1 id="zag-start">Точно <b>в круг</b></h1>
+    <p>Аэродром Большое Грызлово. Выброска на 3000 м — долети до площадки, раскройся не ниже 900 м, построй заход «коробочкой» по ветру и приземлись в круг.</p>
+    <div class="urovni" id="urovni" role="group" aria-label="Уровень сложности"></div>
+    <button class="glavnaya" id="b-start">Прыгать!</button>
+    <p class="stat" id="stat-start"></p>
+    <p class="stat">Телефон — две кнопки по краям, обе вместе — торможение. Компьютер — ← →, вместе или ↓ — торможение, пробел — раскрыть.</p>
+  </div>
+</section>
+
+<section class="ekran" id="e-itog" aria-labelledby="zag-itog">
+  <div class="karta">
+    <h1 id="zag-itog">Итог</h1>
+    <div class="ochki" id="itog-ochki">0</div>
+    <div class="razbor" id="itog-razbor"></div>
+    <div class="bonus" id="itog-bonus"></div>
+    <button class="glavnaya" id="b-eshe">Ещё прыжок</button><br>
+    <button class="vtorostep" id="b-dalshe">Следующий уровень</button>
+    <button class="vtorostep" id="b-menu">Уровни</button>
+  </div>
+</section>
+
+<section class="ekran" id="povorot" aria-live="assertive">
+  <div><div class="ikonka" aria-hidden="true">📱</div><p>Поверните телефон горизонтально</p></div>
+</section>
+
+<script>
+'use strict';
+// ───────── Мир: метры, ноль — центр круга, x на восток, y на юг ─────────
+// Границы слоёв выдаёт сборка карты (igra/tools/sobrat-kartu.py) → assets/world.json
+const MIR = { dal:[-1958,-2112,1993,2936], blizh:[-322,-446,523,761], maska:[-1958,-2112,0.2] };
+
+// Уровни: ветер у земли и разброс точки выброски
+const UROVNI = [
+  { veter:0,  razbros:80,  podskazka:true },
+  { veter:2,  razbros:120, podskazka:true },
+  { veter:4,  razbros:160, podskazka:true },
+  { veter:5,  razbros:200, podskazka:false },
+  { veter:7,  razbros:250, podskazka:false },
+  { veter:9,  razbros:300, podskazka:false },
+  { veter:12, razbros:350, podskazka:false },
+  { veter:15, razbros:400, podskazka:false },
+];
+
+// Физика по учебнику AFF: свободное падение ≈50 м/с; купол — полный режим 9–10 м/с,
+// средний 3–4 м/с; 360° — около 5 с с потерей 50–70 м.
+const F = {
+  vysVybroski:3000, padenie:50, trekFF:8, povorotFF:80,
+  kupolGor:10, kupolVert:5, tormozGor:4, tormozVert:3, povorot:65, povorotVert:8,
+  podushkaVys:6, raskrytieMin:900, zapasnoy:350, raskrytieDlit:2.5,
+  // ускорение игрового времени: падение и спуск под куполом идут быстрее настоящих
+  uskFF:2, uskKupol:2.5, uskNizko:1.5,
+};
+// запасное поле: к западу от дороги (уточнить у инструктора)
+const ZAPASNOE = [[-820,-120],[-230,-180],[-170,500],[-760,560]];
+
+// ───────── Холст ─────────
+const holst = document.getElementById('igra');
+const ctx = holst.getContext('2d');
+const VYS_VNUTR = 360;               // внутреннее разрешение — «приставочный» пиксель
+let SH = 640, VY = 360;
+function razmer() {
+  const k = innerWidth / innerHeight;
+  VY = VYS_VNUTR; SH = Math.round(VY * k);
+  holst.width = SH; holst.height = VY;
+}
+addEventListener('resize', razmer); razmer();
+
+// ───────── Загрузка ─────────
+function kartinka(src) { return new Promise((ok, osh) => { const i = new Image(); i.onload = () => ok(i); i.onerror = osh; i.src = src; }); }
+let imgDal, imgBlizh, maskaDannye, maskaW, maskaH;
+const zagruzka = Promise.all([kartinka('assets/karta-dal.webp'), kartinka('assets/karta-blizh.webp'), kartinka('assets/maska.png')])
+  .then(([d, b, m]) => {
+    imgDal = d; imgBlizh = b;
+    const c = document.createElement('canvas'); c.width = maskaW = m.width; c.height = maskaH = m.height;
+    const cx = c.getContext('2d'); cx.drawImage(m, 0, 0);
+    maskaDannye = cx.getImageData(0, 0, maskaW, maskaH).data;
+  });
+// что под точкой: 0 поле, 1 лес, 2 вода
+function grunt(x, y) {
+  if (!maskaDannye) return 0;
+  const mx = Math.floor((x - MIR.maska[0]) * MIR.maska[2]), my = Math.floor((y - MIR.maska[1]) * MIR.maska[2]);
+  if (mx < 0 || my < 0 || mx >= maskaW || my >= maskaH) return 0;
+  const v = maskaDannye[(my * maskaW + mx) * 4];
+  return v > 150 ? 2 : v > 50 ? 1 : 0;
+}
+function vMnogougolnike(x, y, p) {
+  let vnutri = false;
+  for (let i = 0, j = p.length - 1; i < p.length; j = i++) {
+    const [xi, yi] = p[i], [xj, yj] = p[j];
+    if ((yi > y) !== (yj > y) && x < (xj - xi) * (y - yi) / (yj - yi) + xi) vnutri = !vnutri;
+  }
+  return vnutri;
+}
+
+// ───────── Управление ─────────
+const nazh = { levo:false, pravo:false, vniz:false };
+const kL = document.getElementById('k-levo'), kP = document.getElementById('k-pravo'), kR = document.getElementById('k-raskryt');
+function privyazat(el, klyuch) {
+  const vkl = e => { e.preventDefault(); nazh[klyuch] = true; el.classList.add('nazhata'); el.setPointerCapture?.(e.pointerId); };
+  const vykl = e => { nazh[klyuch] = false; el.classList.remove('nazhata'); };
+  el.addEventListener('pointerdown', vkl);
+  ['pointerup','pointercancel','lostpointercapture'].forEach(t => el.addEventListener(t, vykl));
+  el.addEventListener('contextmenu', e => e.preventDefault());
+}
+privyazat(kL, 'levo'); privyazat(kP, 'pravo');
+kR.addEventListener('pointerdown', e => { e.preventDefault(); raskryt(); });
+addEventListener('keydown', e => {
+  if (e.repeat) return;
+  if (e.code === 'ArrowLeft' || e.code === 'KeyA') nazh.levo = true;
+  else if (e.code === 'ArrowRight' || e.code === 'KeyD') nazh.pravo = true;
+  else if (e.code === 'ArrowDown' || e.code === 'KeyS') nazh.vniz = true;
+  else if (e.code === 'Space' || e.code === 'ArrowUp') { if (s && s.faza === 'padenie') { e.preventDefault(); raskryt(); } }
+  else return;
+  e.preventDefault();
+});
+addEventListener('keyup', e => {
+  if (e.code === 'ArrowLeft' || e.code === 'KeyA') nazh.levo = false;
+  else if (e.code === 'ArrowRight' || e.code === 'KeyD') nazh.pravo = false;
+  else if (e.code === 'ArrowDown' || e.code === 'KeyS') nazh.vniz = false;
+});
+
+// ───────── Прогресс (макет: в браузере; в игре — личный кабинет) ─────────
+const hran = (() => { try { return JSON.parse(localStorage.getItem('glavpryg-igra') || '{}'); } catch { return {}; } })();
+hran.pryzhkov ??= 0; hran.pobed ??= 0; hran.seriya ??= 0; hran.luchshaya ??= 0; hran.rekord ??= 0; hran.uroven ??= 0;
+function sohranit() { try { localStorage.setItem('glavpryg-igra', JSON.stringify(hran)); } catch {} }
+
+// ───────── Состояние прыжка ─────────
+let s = null;
+const rad = g => g * Math.PI / 180;
+const vec = ug => [Math.sin(rad(ug)), -Math.cos(rad(ug))];     // 0° — на север, по часовой
+function norm180(a) { return ((a + 540) % 360) - 180; }
+
+function noviyPryzhok(nomer) {
+  const u = UROVNI[nomer];
+  const veterKuda = Math.random() * 360;                       // куда дует ветер
+  const W = u.veter;
+  const [wx, wy] = vec(veterKuda);
+  // точка выброски: против ветра от цели на величину ожидаемого сноса —
+  // в падении (≈44 с до 900 м) и под куполом, если ветер сильнее купола (≈180 с)
+  const snosFF = W * 1.15 * 44;
+  const snosKupol = Math.max(0, W * 1.075 - F.kupolGor) * 180;
+  const dal = Math.min(2000, snosFF + snosKupol + 250 * Math.max(0, 1 - W / 10));
+  const bok = (Math.random() * 2 - 1) * u.razbros, vdol = (Math.random() * 2 - 1) * u.razbros * 0.6;
+  let x = -wx * (dal + vdol) + -wy * bok, y = -wy * (dal + vdol) + wx * bok;
+  x = Math.max(-1800, Math.min(1800, x)); y = Math.max(-1950, Math.min(2750, y));
+  // круг захода — правый: все развороты правой клевантой, сторона захода — слева от направления ветра
+  const st = vec(veterKuda - 90);
+  const d3 = W <= 2 ? 135 : W <= 5 ? 100 : W <= 7 ? 50 : 0;
+  const tochki = [
+    { n:'I',   h:300, x:-wx*150 + st[0]*250, y:-wy*150 + st[1]*250 },
+    { n:'II',  h:200, x:st[0]*200,           y:st[1]*200 },
+    { n:'III', h:100, x:wx*d3,               y:wy*d3 },
+  ];
+  s = {
+    nomer, u, W, veterKuda, x, y, h:F.vysVybroski, kurs:veterKuda + 180, faza:'samolet', t:0,
+    vz:0, raskrytVys:null, zapasnoy:false, nizkoe:false, tochki, proydeny:[], razvorotNizko:false,
+    podushka:false, samoletT:0, soob:'', soobT:0, trevogaBylo:{},
+  };
+  pokazat('Самолёт на боевом курсе', 1.6);
+}
+
+function veterNa(h) {                                          // ветер крепчает с высотой
+  const k = s.W * (1 + 0.15 * Math.min(h, 1000) / 1000);
+  const [x, y] = vec(s.veterKuda);
+  return [x * k, y * k];
+}
+
+function raskryt() {
+  if (!s || s.faza !== 'padenie') return;
+  s.faza = 'raskrytie'; s.t = 0; s.raskrytVys = Math.round(s.h);
+  if (s.h < F.raskrytieMin) { s.nizkoe = true; pokazat('Низкое раскрытие! Норма — не ниже 900 м', 2.5, true); }
+  else pokazat('Раскрытие! Осмотрись — купол наполнен?', 2);
+}
+
+// ───────── Шаг симуляции ─────────
+function shag(dtReal) {
+  if (!s) return;
+  if (s.soobT > 0 && (s.soobT -= dtReal) <= 0) skrytSoob();
+  if (s.faza === 'samolet') {
+    s.samoletT += dtReal;
+    const sek = 3 - Math.floor(s.samoletT);
+    if (s.samoletT > 1.6 && sek > 0) pokazat(sek === 1 ? 'Пошёл!' : 'Приготовиться… ' + (sek - 1), 1);
+    if (s.samoletT >= 3) { s.faza = 'padenie'; s.vz = 15; kR.classList.add('vidno'); pokazat('Отделение! Прогнись, лети к площадке', 2); }
+    // самолёт летит против ветра по боевому курсу
+    const [kx, ky] = vec(s.kurs); s.x += kx * 30 * dtReal; s.y += ky * 30 * dtReal;
+    return;
+  }
+  if (s.faza === 'itog') return;
+  const usk = s.faza === 'padenie' ? F.uskFF : (s.h < 100 ? F.uskNizko : F.uskKupol);
+  const dt = dtReal * usk;
+  const L = nazh.levo, P = nazh.pravo, oba = (L && P) || nazh.vniz;
+
+  if (s.faza === 'padenie') {
+    s.vz = Math.min(F.padenie, s.vz + 9.8 * dt * 0.6);
+    if (!oba) { if (L) s.kurs -= F.povorotFF * dt; if (P) s.kurs += F.povorotFF * dt; }
+    const [kx, ky] = vec(s.kurs), [wx, wy] = veterNa(s.h);
+    s.x += (kx * F.trekFF + wx) * dt; s.y += (ky * F.trekFF + wy) * dt; s.h -= s.vz * dt;
+    if (s.h < 1600 && !s.trevogaBylo.r1) { s.trevogaBylo.r1 = 1; pokazat('1500 м — приготовься к раскрытию', 2); }
+    if (s.h < 1050 && !s.trevogaBylo.r2) { s.trevogaBylo.r2 = 1; pokazat('РАСКРЫВАЙСЯ!', 2, true); }
+    if (s.h <= F.zapasnoy) {
+      s.zapasnoy = true; s.faza = 'raskrytie'; s.t = 0; s.raskrytVys = F.zapasnoy;
+      pokazat('Сработал прибор — раскрыт запасной на 350 м', 3, true);
+    }
+  } else if (s.faza === 'raskrytie') {
+    s.t += dt;
+    const k = Math.min(1, s.t / F.raskrytieDlit);
+    const vz = F.padenie + (F.kupolVert - F.padenie) * k;
+    const [wx, wy] = veterNa(s.h);
+    s.x += wx * dt; s.y += wy * dt; s.h -= vz * dt * 0.5;
+    if (s.t >= F.raskrytieDlit) { s.faza = 'kupol'; kR.classList.remove('vidno'); }
+  } else if (s.faza === 'kupol') {
+    let gor = F.kupolGor, vert = F.kupolVert;
+    if (oba) { gor = F.tormozGor; vert = F.tormozVert; }
+    else if (L || P) { s.kurs += (P ? 1 : -1) * F.povorot * dt; vert = F.povorotVert; if (s.h < 15) s.razvorotNizko = true; }
+    // подушка: обе клеванты вниз у самой земли
+    if (oba && s.h < F.podushkaVys) { s.podushka = true; vert = 1.2; gor = 2; }
+    const [kx, ky] = vec(s.kurs), [wx, wy] = veterNa(s.h);
+    s.x += (kx * gor + wx) * dt; s.y += (ky * gor + wy) * dt; s.h -= vert * dt;
+    // контрольные точки коробочки
+    for (const t of s.tochki) {
+      if (!s.proydeny.includes(t.n) && Math.abs(s.h - t.h) < 25 && Math.hypot(s.x - t.x, s.y - t.y) < 90) {
+        s.proydeny.push(t.n); pokazat('Точка ' + t.n + ' — есть!', 1.5);
+      }
+    }
+    if (s.h < 420 && !s.trevogaBylo.k1) { s.trevogaBylo.k1 = 1; pokazat('400 м — только средний режим, к точке I', 2); }
+    if (s.h < 110 && !s.trevogaBylo.k2) { s.trevogaBylo.k2 = 1; pokazat('100 м — против ветра, по стрелке!', 2); }
+    if (s.h < 50 && !s.trevogaBylo.k3) { s.trevogaBylo.k3 = 1; pokazat('50 м — полная скорость, ноги вместе', 1.6); }
+    if (s.h <= 0) prizemlenie();
+  }
+}
+
+// ───────── Приземление и счёт ─────────
+function prizemlenie() {
+  s.h = 0; s.faza = 'itog';
+  kR.classList.remove('vidno');
+  const g = grunt(s.x, s.y), d = Math.hypot(s.x, s.y);
+  const razbor = [];
+  let ochki = 0, zag, pogib = false;
+  if (g === 1 || g === 2) {
+    pogib = true; zag = g === 2 ? 'Приводнение — погиб' : 'Посадка на лес — погиб';
+  } else {
+    let baza, zona;
+    if (d <= 50) { baza = 100; zona = 'Круг'; }
+    else if (d <= 100) { baza = 50; zona = 'Зона 1'; }
+    else if (d <= 150) { baza = 25; zona = 'Зона 2'; }
+    else if (vMnogougolnike(s.x, s.y, ZAPASNOE)) { baza = 5; zona = 'Запасное поле'; }
+    else { baza = 0; zona = 'Вне площадки'; }
+    zag = zona;
+    razbor.push([zona + ' · ' + Math.round(d) + ' м от центра', baza]);
+    ochki = baza;
+    if (s.zapasnoy) { ochki = Math.round(ochki * 0.25); razbor.push(['Не раскрылся — запасной на 350 м', '×0,25']); }
+    else if (s.nizkoe) { ochki = Math.round(ochki * 0.5); razbor.push(['Раскрытие ниже 900 м (' + s.raskrytVys + ' м)', '×0,5']); }
+    else razbor.push(['Раскрытие на ' + s.raskrytVys + ' м', 'норма']);
+    if (s.razvorotNizko) { ochki = Math.round(ochki * 0.5); razbor.push(['Приземление в развороте — опасно', '×0,5']); }
+    if (baza > 0) {
+      const protivVetra = Math.abs(norm180(s.kurs - (s.veterKuda + 180))) < 45;
+      if (s.W > 0 && protivVetra) { ochki += 5; razbor.push(['Против ветра', '+5']); }
+      if (s.podushka) { ochki += 10; razbor.push(['Подушка', '+10']); }
+      s.proydeny.forEach(n => { ochki += 5; razbor.push(['Точка ' + n + ' захода', '+5']); });
+    }
+  }
+  const pobeda = !pogib && !s.zapasnoy && ochki >= 50;
+  hran.pryzhkov++;
+  if (pobeda) { hran.pobed++; hran.seriya++; hran.luchshaya = Math.max(hran.luchshaya, hran.seriya); }
+  else hran.seriya = 0;
+  hran.rekord = Math.max(hran.rekord, ochki);
+  if (pobeda && s.nomer + 1 > hran.uroven) hran.uroven = Math.min(UROVNI.length - 1, s.nomer + 1);
+  sohranit();
+  setTimeout(() => pokazatItog(zag, ochki, razbor, pogib, pobeda), 900);
+}
+
+function pokazatItog(zag, ochki, razbor, pogib, pobeda) {
+  document.getElementById('zag-itog').textContent = zag;
+  document.getElementById('itog-ochki').textContent = pogib ? '✖' : ochki;
+  document.getElementById('itog-razbor').innerHTML = pogib
+    ? '<p>Лес и вода опасны. Запасную площадку намечают ещё на земле — и уходят на неё заранее.</p>'
+    : razbor.map(([a, b]) => `<div><span>${a}</span><b>${b}</b></div>`).join('');
+  const do3 = Math.max(0, 3 - hran.seriya);
+  document.getElementById('itog-bonus').textContent = pobeda
+    ? (do3 ? `Серия побед: ${hran.seriya}. Ещё ${do3} — и бонус на прыжок в Главпрыге!` : `Серия ${hran.seriya}! Бонус открыт — войдите в кабинет, чтобы забрать скидку.`)
+    : 'Победа — от 50 очков без запасного. Три победы подряд — бонус на прыжок.';
+  document.getElementById('b-dalshe').hidden = !(pobeda && s.nomer < UROVNI.length - 1);
+  document.getElementById('e-itog').classList.add('vidno');
+  document.getElementById('b-eshe').focus();
+}
+
+// ───────── Сообщения ─────────
+const elSoob = document.getElementById('soobshenie');
+function pokazat(tekst, sek, trevoga) {
+  elSoob.textContent = tekst; elSoob.classList.add('vidno'); elSoob.classList.toggle('trevoga', !!trevoga);
+  if (s) s.soobT = sek;
+}
+function skrytSoob() { elSoob.classList.remove('vidno'); }
+
+// ───────── Рисование ─────────
+function risovat() {
+  ctx.setTransform(1, 0, 0, 1, 0, 0);
+  ctx.fillStyle = '#6f7a42'; ctx.fillRect(0, 0, SH, VY);
+  if (!s || !imgDal) return;
+  // видимая высота кадра в метрах — от высоты: высоко видно весь район, у земли — площадку
+  const vidno = Math.max(90, Math.min(2600, s.h * 0.85 + 90));
+  const k = VY / vidno;
+  ctx.save();
+  ctx.translate(SH / 2, VY * 0.58);
+  ctx.rotate(-rad(s.kurs));
+  ctx.scale(k, k);
+  ctx.translate(-s.x, -s.y);
+  ctx.imageSmoothingEnabled = true;
+  const [a, b, c, d] = MIR.dal; ctx.drawImage(imgDal, a, b, c - a, d - b);
+  const [e, f, g, h] = MIR.blizh; ctx.drawImage(imgBlizh, e, f, g - e, h - f);
+  const px = 1 / k;                                            // метров в одном пикселе
+  // зоны
+  ctx.lineWidth = 2 * px;
+  ctx.strokeStyle = 'rgba(255,255,255,.55)'; ctx.setLineDash([6 * px, 5 * px]);
+  ctx.beginPath(); ctx.arc(0, 0, 150, 0, 7); ctx.stroke();
+  ctx.beginPath(); ctx.arc(0, 0, 100, 0, 7); ctx.stroke(); ctx.setLineDash([]);
+  ctx.fillStyle = 'rgba(255,255,255,.18)'; ctx.strokeStyle = '#fff';
+  ctx.beginPath(); ctx.arc(0, 0, 50, 0, 7); ctx.fill(); ctx.stroke();
+  ctx.fillStyle = '#e8c27a'; ctx.beginPath(); ctx.arc(0, 0, Math.max(2.5, 3 * px), 0, 7); ctx.fill();
+  // подписи зон — по правую руку от игрока, чтобы читались при любом курсе
+  if (vidno < 900) {
+    const [bx, by] = vec(s.kurs + 90);
+    ctx.font = `800 ${10 * px}px system-ui`; ctx.textAlign = 'center'; ctx.lineWidth = 3 * px; ctx.strokeStyle = 'rgba(0,0,0,.6)'; ctx.fillStyle = '#fff';
+    [[25, '100%'], [75, '50%'], [125, '25%']].forEach(([r, t]) => {
+      ctx.save(); ctx.translate(bx * r, by * r); ctx.rotate(rad(s.kurs)); ctx.strokeText(t, 0, 4 * px); ctx.fillText(t, 0, 4 * px); ctx.restore();
+    });
+  }
+  // запасное поле
+  ctx.strokeStyle = 'rgba(255,230,0,.6)'; ctx.setLineDash([4 * px, 4 * px]);
+  ctx.beginPath(); ZAPASNOE.forEach(([x, y], i) => i ? ctx.lineTo(x, y) : ctx.moveTo(x, y)); ctx.closePath(); ctx.stroke(); ctx.setLineDash([]);
+  // стрелка — направление приземления (против ветра)
+  if (s.W > 0) {
+    const [ax, ay] = vec(s.veterKuda + 180), bx = -ay, by = ax, o = 70;
+    ctx.save(); ctx.translate(-ay * o, ax * o); ctx.rotate(rad(s.veterKuda + 180));
+    ctx.fillStyle = '#ff7a1a'; ctx.beginPath();
+    ctx.moveTo(0, -22); ctx.lineTo(9, -8); ctx.lineTo(3, -8); ctx.lineTo(3, 18); ctx.lineTo(-3, 18); ctx.lineTo(-3, -8); ctx.lineTo(-9, -8);
+    ctx.closePath(); ctx.fill(); ctx.restore();
+  }
+  // подсказка: коробочка на младших уровнях
+  if (s.u.podskazka && s.faza !== 'samolet') {
+    const t = s.tochki;
+    ctx.strokeStyle = 'rgba(80,220,255,.85)'; ctx.lineWidth = 2.5 * px; ctx.setLineDash([8 * px, 6 * px]);
+    ctx.beginPath(); ctx.moveTo(t[0].x, t[0].y); ctx.lineTo(t[1].x, t[1].y); ctx.lineTo(t[2].x, t[2].y); ctx.lineTo(0, 0); ctx.stroke();
+    ctx.setLineDash([]);
+    ctx.font = `800 ${12 * px}px system-ui`; ctx.textAlign = 'center';
+    t.forEach(p => {
+      const ok = s.proydeny.includes(p.n);
+      ctx.fillStyle = ok ? '#3ddc84' : 'rgba(80,220,255,.95)';
+      ctx.beginPath(); ctx.arc(p.x, p.y, Math.max(12, 5 * px), 0, 7); ctx.fill();
+      ctx.save(); ctx.translate(p.x, p.y); ctx.rotate(rad(s.kurs));
+      ctx.fillStyle = '#fff'; ctx.strokeStyle = '#000'; ctx.lineWidth = 3 * px;
+      const tx = `${p.n} · ${p.h} м`; ctx.strokeText(tx, 0, -9 * px); ctx.fillText(tx, 0, -9 * px); ctx.restore();
+    });
+  }
+  ctx.restore();
+
+  // тень на земле — ниже 150 м, показывает снос
+  // игрок в центре кадра
+  ctx.save(); ctx.translate(SH / 2, VY * 0.58);
+  if (s.faza === 'samolet') risovatSamolet();
+  else if (s.faza === 'padenie') risovatPadenie();
+  else risovatKupol(s.faza === 'raskrytie' ? Math.min(1, s.t / F.raskrytieDlit) : 1);
+  ctx.restore();
+
+  // указатель на цель, если круг за кадром
+  const dx = -s.x, dy = -s.y, ug = rad(-s.kurs);
+  const sx = (dx * Math.cos(ug) - dy * Math.sin(ug)) * k, sy = (dx * Math.sin(ug) + dy * Math.cos(ug)) * k;
+  const cx = SH / 2 + sx, cy = VY * 0.58 + sy;
+  if (cx < 10 || cx > SH - 10 || cy < 10 || cy > VY - 10) {
+    const a2 = Math.atan2(sy, sx), r = Math.min(SH, VY) * 0.42;
+    const ex = SH / 2 + Math.cos(a2) * r * SH / VY * 0.75, ey = VY * 0.5 + Math.sin(a2) * r;
+    ctx.save(); ctx.translate(ex, ey); ctx.rotate(a2);
+    ctx.fillStyle = '#ff7a1a'; ctx.strokeStyle = '#fff'; ctx.lineWidth = 1.5;
+    ctx.beginPath(); ctx.moveTo(12, 0); ctx.lineTo(-6, -8); ctx.lineTo(-6, 8); ctx.closePath(); ctx.fill(); ctx.stroke();
+    ctx.rotate(-a2); ctx.fillStyle = '#fff'; ctx.font = '700 10px system-ui'; ctx.textAlign = 'center';
+    ctx.fillText(Math.round(Math.hypot(dx, dy)) + ' м', 0, 20); ctx.restore();
+  }
+}
+
+function risovatSamolet() {
+  // самолёт сверху, носом вверх (по курсу)
+  ctx.fillStyle = '#eef1f4'; ctx.strokeStyle = '#2a3b4f'; ctx.lineWidth = 1;
+  ctx.beginPath(); ctx.ellipse(0, 0, 5, 26, 0, 0, 7); ctx.fill(); ctx.stroke();
+  ctx.beginPath(); ctx.moveTo(-38, -4); ctx.lineTo(38, -4); ctx.lineTo(38, 3); ctx.lineTo(-38, 3); ctx.closePath(); ctx.fill(); ctx.stroke();
+  ctx.beginPath(); ctx.moveTo(-13, 20); ctx.lineTo(13, 20); ctx.lineTo(13, 24); ctx.lineTo(-13, 24); ctx.closePath(); ctx.fill(); ctx.stroke();
+  ctx.fillStyle = '#ff7a1a'; ctx.fillRect(-38, -4, 6, 7); ctx.fillRect(32, -4, 6, 7);
+  ctx.fillStyle = '#2a3b4f'; ctx.fillRect(-14, -9, 5, 10); ctx.fillRect(9, -9, 5, 10);
+}
+
+function risovatPadenie() {
+  // парашютист со спины, коробочка: руки и ноги согнуты
+  const t = performance.now() / 120, dr = Math.sin(t) * 0.8;
+  ctx.lineCap = 'round';
+  ctx.strokeStyle = '#1b3f8a'; ctx.lineWidth = 5;
+  ctx.beginPath(); ctx.moveTo(-5, -6); ctx.lineTo(-15, -12 + dr); ctx.lineTo(-13, -22 + dr); ctx.stroke();
+  ctx.beginPath(); ctx.moveTo(5, -6); ctx.lineTo(15, -12 - dr); ctx.lineTo(13, -22 - dr); ctx.stroke();
+  ctx.beginPath(); ctx.moveTo(-4, 9); ctx.lineTo(-11, 17 - dr); ctx.lineTo(-9, 25); ctx.stroke();
+  ctx.beginPath(); ctx.moveTo(4, 9); ctx.lineTo(11, 17 + dr); ctx.lineTo(9, 25); ctx.stroke();
+  ctx.fillStyle = '#ff7a1a'; ctx.beginPath(); ctx.ellipse(0, 1, 7, 12, 0, 0, 7); ctx.fill();
+  ctx.fillStyle = '#20252d'; ctx.fillRect(-5, -6, 10, 13);                 // ранец
+  ctx.fillStyle = '#fff'; ctx.beginPath(); ctx.arc(0, -15, 5, 0, 7); ctx.fill(); // шлем
+  ctx.fillStyle = '#ff7a1a'; ctx.fillRect(-1, -20, 2, 9);
+}
+
+function risovatKupol(k) {
+  const L = nazh.levo, P = nazh.pravo, oba = (L && P) || nazh.vniz;
+  const kren = s.faza === 'kupol' && !oba ? (P ? 0.12 : L ? -0.12 : 0) : 0;
+  ctx.rotate(kren);
+  const w = 16 + 48 * k, h = 6 + 14 * k;
+  // стропы к парашютисту
+  ctx.strokeStyle = 'rgba(255,255,255,.7)'; ctx.lineWidth = 0.7;
+  for (let i = 0; i <= 4; i++) { const x = -w / 2 + w * i / 4; ctx.beginPath(); ctx.moveTo(x, -18); ctx.lineTo(0, 8); ctx.stroke(); }
+  // купол: девять секций
+  ctx.fillStyle = s.zapasnoy ? '#f2f2f2' : '#ff7a1a'; ctx.strokeStyle = '#7a2e00'; ctx.lineWidth = 1;
+  ctx.beginPath(); ctx.roundRect(-w / 2, -18 - h, w, h, 4); ctx.fill(); ctx.stroke();
+  ctx.strokeStyle = 'rgba(0,0,0,.25)';
+  for (let i = 1; i < 9; i++) { const x = -w / 2 + w * i / 9; ctx.beginPath(); ctx.moveTo(x, -18 - h); ctx.lineTo(x, -18); ctx.stroke(); }
+  ctx.fillStyle = s.zapasnoy ? '#bbb' : '#fff'; ctx.fillRect(-w / 2, -18 - h, w * 0.22, h);
+  // клеванты: какая затянута
+  ctx.fillStyle = '#ff3d3d';
+  if (L || oba) ctx.fillRect(-w / 2 - 2, -18, 4, 4);
+  if (P || oba) ctx.fillRect(w / 2 - 2, -18, 4, 4);
+  // парашютист
+  ctx.fillStyle = '#1b3f8a'; ctx.beginPath(); ctx.ellipse(0, 12, 5, 8, 0, 0, 7); ctx.fill();
+  ctx.fillStyle = '#20252d'; ctx.fillRect(-4, 6, 8, 8);
+  ctx.fillStyle = '#fff'; ctx.beginPath(); ctx.arc(0, 4, 4, 0, 7); ctx.fill();
+}
+
+// ───────── Высотомер и колдун ─────────
+const NS = 'http://www.w3.org/2000/svg';
+(function shkala() {
+  const g = document.getElementById('shkala');
+  for (let i = 0; i < 4; i++) {
+    const a = rad(i * 90), t = document.createElementNS(NS, 'text');
+    t.setAttribute('x', Math.sin(a) * 30); t.setAttribute('y', -Math.cos(a) * 30 + 5); t.textContent = i;
+    g.appendChild(t);
+  }
+  const sektor = (id, ot, do_) => {
+    const a1 = rad(ot / 4000 * 360), a2 = rad(do_ / 4000 * 360), r = 52;
+    document.getElementById(id).setAttribute('d',
+      `M0 0 L${Math.sin(a1) * r} ${-Math.cos(a1) * r} A${r} ${r} 0 0 1 ${Math.sin(a2) * r} ${-Math.cos(a2) * r}Z`);
+  };
+  sektor('sektor-kr', 0, 1000); sektor('sektor-zh', 1000, 1500);
+})();
+const elStrelka = document.getElementById('strelka'), elVys = document.getElementById('vys-cifra');
+const elKonus = document.getElementById('konus'), elKompas = document.getElementById('kompas');
+const elVeter = document.getElementById('veter-cifra'), elShtil = document.getElementById('shtil');
+const STORONY = ['С','СВ','В','ЮВ','Ю','ЮЗ','З','СЗ'];
+function obnovitPribory() {
+  if (!s) return;
+  const h = Math.max(0, s.h);
+  elStrelka.setAttribute('transform', `rotate(${h / 4000 * 360})`);
+  elVys.textContent = Math.round(h) + ' м';
+  // в кадре север повёрнут на −курс; колдун показывает, куда дует ветер, относительно экрана
+  elKompas.setAttribute('transform', `rotate(${-s.kurs})`);
+  elKonus.setAttribute('transform', `rotate(${s.veterKuda - s.kurs})`);
+  elKonus.style.display = s.W ? '' : 'none'; elShtil.setAttribute('display', s.W ? 'none' : '');
+  const otkuda = STORONY[Math.round(((s.veterKuda + 180) % 360) / 45) % 8];
+  elVeter.textContent = s.W ? `${otkuda} ${s.W} м/с` : '0 м/с';
+}
+
+// ───────── Цикл ─────────
+let pred = 0, pauza = false;
+function kadr(t) {
+  const dt = Math.min(0.05, (t - pred) / 1000 || 0); pred = t;
+  if (!pauza) { shag(dt); risovat(); obnovitPribory(); }
+  requestAnimationFrame(kadr);
+}
+document.addEventListener('visibilitychange', () => { pauza = document.hidden; });
+
+// ───────── Экраны ─────────
+const elUrovni = document.getElementById('urovni');
+let vybran = Math.min(hran.uroven, UROVNI.length - 1);
+function spisokUrovney() {
+  elUrovni.innerHTML = '';
+  UROVNI.forEach((u, i) => {
+    const b = document.createElement('button');
+    b.innerHTML = `${i + 1}<small>${u.veter} м/с</small>`;
+    b.setAttribute('aria-pressed', i === vybran); b.setAttribute('aria-label', `Уровень ${i + 1}, ветер ${u.veter} метров в секунду`);
+    b.onclick = () => { vybran = i; spisokUrovney(); };
+    elUrovni.appendChild(b);
+  });
+  document.getElementById('stat-start').textContent = hran.pryzhkov
+    ? `Прыжков: ${hran.pryzhkov} · побед: ${hran.pobed} · серия: ${hran.seriya} (лучшая ${hran.luchshaya}) · рекорд: ${hran.rekord}`
+    : 'Первый прыжок — уровень 1, штиль и подсказка захода.';
+}
+spisokUrovney();
+function start(nomer) {
+  zagruzka.then(() => {
+    document.querySelectorAll('.ekran').forEach(e => e.id !== 'povorot' && e.classList.remove('vidno'));
+    noviyPryzhok(nomer);
+    // на телефоне — во весь экран и горизонтально, где браузер это позволяет
+    if (matchMedia('(pointer:coarse)').matches && document.documentElement.requestFullscreen && !document.fullscreenElement)
+      document.documentElement.requestFullscreen().then(() => screen.orientation?.lock?.('landscape')).catch(() => {});
+  });
+}
+document.getElementById('b-start').onclick = () => start(vybran);
+document.getElementById('b-eshe').onclick = () => start(s.nomer);
+document.getElementById('b-dalshe').onclick = () => { vybran = s.nomer + 1; start(vybran); };
+document.getElementById('b-menu').onclick = () => {
+  document.getElementById('e-itog').classList.remove('vidno'); vybran = Math.min(vybran, UROVNI.length - 1);
+  spisokUrovney(); document.getElementById('e-start').classList.add('vidno');
+};
+// фон стартового экрана — карта над площадкой
+zagruzka.then(() => { if (!s) { noviyPryzhok(0); s.faza = 'itog'; s.h = 1400; s.x = 0; s.y = 0; skrytSoob(); } });
+requestAnimationFrame(kadr);
+</script>
+</body>
+</html>
