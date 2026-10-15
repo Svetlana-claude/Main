@@ -1,0 +1,416 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@500;700;800&display=swap" rel="stylesheet">
+<style>
+  html, body { margin: 0; background: #31384D; }
+  svg { display: block; font-family: 'Inter', sans-serif; }
+</style>
+</head>
+<body>
+<svg id="s" width="960" height="720" viewBox="0 0 960 720" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient id="nebo" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#3d8fe0"/><stop offset="1" stop-color="#bfe1fb"/>
+    </linearGradient>
+    <linearGradient id="oranzh" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#ffb347"/><stop offset="1" stop-color="#f26a1b"/>
+    </linearGradient>
+    <clipPath id="lupaKrug"><circle cx="770" cy="330" r="136"/></clipPath>
+    <marker id="strelka" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="5" markerHeight="5" orient="auto-start-reverse">
+      <path d="M0 0L10 5L0 10z" fill="#ffd400"/>
+    </marker>
+  </defs>
+  <rect id="fonNeba" width="960" height="720" fill="url(#nebo)"/>
+  <g id="kamera">
+  <!-- облака -->
+  <g fill="#fff" opacity=".55">
+    <ellipse cx="150" cy="520" rx="110" ry="26"/><ellipse cx="210" cy="505" rx="70" ry="22"/>
+    <ellipse cx="820" cy="470" rx="120" ry="24"/><ellipse cx="760" cy="455" rx="60" ry="20"/>
+  </g>
+
+  <!-- основной купол с отказом: стропы и сложенный купол -->
+  <g id="osnovnoy">
+    <path id="osnStropaL" stroke="#5a5f6e" stroke-width="2" fill="none"/>
+    <path id="osnStropaR" stroke="#5a5f6e" stroke-width="2" fill="none"/>
+    <path id="osnKupol" fill="#e8452c" stroke="#a52a17" stroke-width="3"/>
+  </g>
+
+  <!-- запасной: вытяжной, стропы, купол -->
+  <g id="zapasnoy" opacity="0">
+    <g id="zapStropy" stroke="#5a5f6e" stroke-width="2" fill="none"></g>
+    <path id="zapKupol" fill="#ffffff" stroke="#31384D" stroke-width="3"/>
+    <circle id="zapVytyazhnoy" r="16" fill="#ffffff" stroke="#31384D" stroke-width="3"/>
+  </g>
+
+  <!-- парашютист -->
+  <g id="chelovek">
+    <!-- ноги -->
+    <path d="M466 470 L452 590 M494 470 L508 590" stroke="#31384D" stroke-width="22" stroke-linecap="round" fill="none"/>
+    <!-- корпус и подвесная система -->
+    <rect x="436" y="352" width="88" height="124" rx="26" fill="#31384D"/>
+    <path d="M450 356 L456 470 M510 356 L504 470 M444 446 L516 446" stroke="#f2a33a" stroke-width="7" fill="none" stroke-linecap="round"/>
+    <!-- тросики отцепки: от подушки к замкам на плечах -->
+    <g id="trosiki" stroke="#ffffff" stroke-width="5" stroke-linecap="round" fill="none">
+      <path id="tros1"/><path id="tros2"/>
+    </g>
+    <!-- подушка отцепки (справа на груди парашютиста — слева на экране) -->
+    <rect id="ruchkaOtc" x="440" y="392" width="26" height="20" rx="6" fill="#e8452c" stroke="#fff" stroke-width="2"/>
+    <!-- кольцо запасного (слева у парашютиста — справа на экране) -->
+    <rect id="ruchkaZap" x="494" y="392" width="26" height="20" rx="6" fill="#c9ced8" stroke="#fff" stroke-width="2"/>
+    <!-- руки -->
+    <path id="rukaR" stroke="#31384D" stroke-width="18" stroke-linecap="round" stroke-linejoin="round" fill="none"/>
+    <path id="rukaL" stroke="#31384D" stroke-width="18" stroke-linecap="round" stroke-linejoin="round" fill="none"/>
+    <circle id="kistR" r="12" fill="#f0c8a0"/>
+    <circle id="kistL" r="12" fill="#f0c8a0"/>
+    <!-- высотник на левой руке -->
+    <circle id="vysotnikRuka" r="9" fill="#ffffff" stroke="#111" stroke-width="4"/>
+    <!-- голова в шлеме -->
+    <circle cx="480" cy="322" r="32" fill="#ffffff" stroke="#31384D" stroke-width="4"/>
+    <rect x="458" y="312" width="44" height="14" rx="7" fill="#31384D"/>
+  </g>
+
+  <!-- взгляд -->
+  <g id="vzglyad" opacity="0">
+    <line id="vzLiniya" stroke="#ffd400" stroke-width="5" stroke-dasharray="10 8" marker-end="url(#strelka)"/>
+    <circle id="vzKrug" r="24" fill="none" stroke="#ffd400" stroke-width="5"/>
+  </g>
+
+  <!-- рывок -->
+  <path id="ryvok" stroke="#ffd400" stroke-width="7" fill="none" marker-end="url(#strelka)" opacity="0"/>
+  </g>
+
+  <!-- метки на сцене -->
+  <!-- крупно: замок на плече — тросик выходит из петли, свободный конец уходит -->
+  <g id="lupa" opacity="0">
+    <circle cx="770" cy="330" r="142" fill="#ffd400"/>
+    <g clip-path="url(#lupaKrug)">
+      <rect x="600" y="180" width="340" height="300" fill="#eef4fb"/>
+      <g id="lupaKonec">
+        <rect x="748" y="150" width="44" height="190" rx="6" fill="#f2a33a" stroke="#c97a14" stroke-width="3"/>
+        <circle cx="770" cy="330" r="22" fill="none" stroke="#8d94a5" stroke-width="7"/>
+        <ellipse cx="770" cy="294" rx="11" ry="20" fill="none" stroke="#31384D" stroke-width="7"/>
+      </g>
+      <rect x="752" y="352" width="36" height="140" rx="6" fill="#f2a33a" stroke="#c97a14" stroke-width="3"/>
+      <path d="M660 470 Q 690 380 742 336" stroke="#31384D" stroke-width="16" fill="none" stroke-linecap="round"/>
+      <path id="lupaTrosKontur" stroke="#31384D" stroke-width="13" fill="none" stroke-linecap="round"/>
+      <path id="lupaTros" stroke="#ffffff" stroke-width="7" fill="none" stroke-linecap="round"/>
+    </g>
+    <rect x="655" y="146" width="230" height="36" rx="18" fill="#31384D"/>
+    <text x="770" y="171" text-anchor="middle" font-size="19" font-weight="800" fill="#fff">крупно: замок на плече</text>
+  </g>
+  <!-- крупно в углу: высотник, стрелка на красной метке 800 м -->
+  <g id="lupaVys" opacity="0">
+    <rect x="684" y="26" width="248" height="28" rx="14" fill="#31384D"/>
+    <text x="808" y="46" text-anchor="middle" font-size="17" font-weight="800" fill="#fff">высотник на левой руке</text>
+    <circle cx="808" cy="168" r="100" fill="#ffd400"/>
+    <circle cx="808" cy="168" r="92" fill="#1b1f2a"/>
+    <circle cx="808" cy="168" r="84" fill="#ffffff"/>
+    <path id="vysKrasnoe" stroke="#d62828" stroke-width="14" fill="none"/>
+    <path id="vysZheltoe" stroke="#f2a33a" stroke-width="14" fill="none"/>
+    <g id="vysRiski" stroke="#1b1f2a" stroke-linecap="round"></g>
+    <g id="vysCifry" font-size="22" font-weight="800" fill="#1b1f2a" text-anchor="middle"></g>
+    <text x="808" y="150" text-anchor="middle" font-size="12" font-weight="700" fill="#5a5f6e">×1000 м</text>
+    <path id="vysMetka" stroke="#d62828" stroke-width="6" stroke-linecap="round"/>
+    <line id="vysStrelka" x1="808" y1="168" stroke="#d62828" stroke-width="6" stroke-linecap="round"/>
+    <circle cx="808" cy="168" r="8" fill="#1b1f2a"/>
+    <rect x="748" y="276" width="120" height="40" rx="20" fill="#d62828"/>
+    <text x="808" y="304" text-anchor="middle" font-size="24" font-weight="800" fill="#fff">800 м</text>
+  </g>
+  <g id="metkaTros" opacity="0">
+    <rect x="530" y="70" width="400" height="56" rx="28" fill="#1f9d55"/>
+    <text x="730" y="107" text-anchor="middle" font-size="26" font-weight="800" fill="#fff">Тросики вышли до конца ✓</text>
+  </g>
+  <g id="metkaKoncy" opacity="0">
+    <rect x="530" y="70" width="400" height="56" rx="28" fill="#1f9d55"/>
+    <text x="730" y="107" text-anchor="middle" font-size="26" font-weight="800" fill="#fff">Свободные концы ушли ✓</text>
+  </g>
+  <g id="proverka" opacity="0">
+    <g id="pr1" opacity="0"><rect x="40" y="200" width="250" height="52" rx="26" fill="#1f9d55"/><text x="165" y="235" text-anchor="middle" font-size="24" font-weight="800" fill="#fff">Наполнен ✓</text></g>
+    <g id="pr2" opacity="0"><rect x="40" y="266" width="250" height="52" rx="26" fill="#1f9d55"/><text x="165" y="301" text-anchor="middle" font-size="24" font-weight="800" fill="#fff">Устойчив ✓</text></g>
+    <g id="pr3" opacity="0"><rect x="40" y="332" width="250" height="52" rx="26" fill="#1f9d55"/><text x="165" y="367" text-anchor="middle" font-size="24" font-weight="800" fill="#fff">Управляем ✓</text></g>
+  </g>
+  <g id="trevoga" opacity="0">
+    <rect x="30" y="30" width="330" height="56" rx="28" fill="#d62828"/>
+    <text x="195" y="67" text-anchor="middle" font-size="26" font-weight="800" fill="#fff">Отказ! Купол не держит</text>
+  </g>
+  <!-- телефонная версия тревоги: «Отказ!» крупно, под ним пояснение -->
+  <g id="trevogaMob" opacity="0" display="none">
+    <rect x="30" y="26" width="196" height="68" rx="16" fill="#d62828"/>
+    <text x="128" y="76" text-anchor="middle" font-size="46" font-weight="800" fill="#fff">Отказ!</text>
+    <rect x="30" y="102" width="292" height="48" rx="14" fill="#d62828"/>
+    <text x="176" y="136" text-anchor="middle" font-size="29" font-weight="800" fill="#fff">Купол не держит</text>
+  </g>
+
+  <!-- нижняя плашка: номер шага и действие -->
+  <rect id="plashka" x="0" y="600" width="960" height="120" fill="#31384D"/>
+  <circle id="nomerKrug" cx="76" cy="660" r="36" fill="url(#oranzh)"/>
+  <text id="nomer" x="76" y="674" text-anchor="middle" font-size="38" font-weight="800" fill="#fff"></text>
+  <text id="podpis" x="132" y="652" font-size="32" font-weight="800" fill="#fff"></text>
+  <text id="podpis2" x="132" y="690" font-size="22" font-weight="500" fill="#c9d3e6"></text>
+</svg>
+<script>
+// Анимация «Отцепка и запасной»: всё рисуется функцией kadr(t), t — секунды.
+const $ = id => document.getElementById(id);
+const lerp = (a, b, k) => a + (b - a) * k;
+const zazhat = (x) => Math.max(0, Math.min(1, x));
+const plavno = (x) => { x = zazhat(x); return x * x * (3 - 2 * x); };
+const otrezok = (t, a, b) => plavno((t - a) / (b - a));
+const P = (a, b, k) => [lerp(a[0], b[0], k), lerp(a[1], b[1], k)];
+
+const plechoR = [440, 368], plechoL = [520, 368];
+const naStropahR = [432, 300], naStropahL = [528, 300];
+const naOtc = [453, 402], naZap = [507, 402];
+const posleOtc = [380, 452], posleZap = [580, 452];
+// вторая рука ложится рядом с первой: обе руки на кольце
+const naOtcL = [466, 410], posleOtcL = [394, 462], naZapR = [494, 410], posleZapR = [566, 462];
+const glaza = [480, 326];
+
+// циферблат высотника: оборот — 4000 м, 0 сверху, по часовой
+const VYS_C = [808, 168];
+const vysTochka = (m, r) => { const a = m / 4000 * 2 * Math.PI; return [VYS_C[0] + r * Math.sin(a), VYS_C[1] - r * Math.cos(a)]; };
+const vysDuga = (m1, m2, r) => `M${vysTochka(m1, r)} A${r} ${r} 0 0 1 ${vysTochka(m2, r)}`;
+document.getElementById('vysKrasnoe').setAttribute('d', vysDuga(0, 1000, 70));
+document.getElementById('vysZheltoe').setAttribute('d', vysDuga(1000, 1500, 70));
+document.getElementById('vysRiski').innerHTML = Array.from({ length: 40 }, (_, i) => {
+  const m = i * 100, dl = m % 500 ? 6 : 12;
+  return `<line x1="${vysTochka(m, 82)[0]}" y1="${vysTochka(m, 82)[1]}" x2="${vysTochka(m, 82 - dl)[0]}" y2="${vysTochka(m, 82 - dl)[1]}" stroke-width="${m % 500 ? 2 : 3}"/>`;
+}).join('');
+document.getElementById('vysCifry').innerHTML = [0, 1, 2, 3].map(k => { const q = vysTochka(k * 1000, 50); return `<text x="${q[0]}" y="${q[1] + 8}">${k}</text>`; }).join('');
+document.getElementById('vysMetka').setAttribute('d', `M${vysTochka(800, 88)} L${vysTochka(800, 62)}`);
+const vysKonec = vysTochka(800, 60);
+document.getElementById('vysStrelka').setAttribute('x2', vysKonec[0]); document.getElementById('vysStrelka').setAttribute('y2', vysKonec[1]);
+
+// вступление с высотником: вся раскладка сдвинута на SDVIG секунд
+const SDVIG = 1.8;
+const naVysotnik = [552, 292];
+// взгляд вверх (шаг 5): руки на кольце запасного, всё остальное стоит VVERH секунд
+const VVERH_S = 10.2, VVERH = 1.8;
+const SHAGI = [
+  [-SDVIG, '', 'Отказ! Первым делом — высота', 'Высотник: 800 м — выше 600, отцепляюсь по порядку'],
+  [2.2,  '1', 'Смотрю на отцепку, беру обеими руками', 'Правая основным хватом, левая сверху'],
+  [4.4,  '2', 'Взгляд — на кольцо запасного', 'Держу его глазами, отцепку не отпускаю'],
+  [6.4,  '3', 'Рывок отцепки — до конца', 'Глаза — на кольце запасного, тросики до конца'],
+  [8.4,  '4', 'Кольцо запасного — двумя руками', 'Глядя на него: левая — палец в кольце, правая помогает'],
+  [10.2, '5', 'Взялся — смотрю вверх', 'Свободные концы ушли? Ушли — дёргаю кольцо'],
+  [10.6 + VVERH, '6', 'Рывок запасного — до конца', 'Запасной раскрывается'],
+  [13.2 + VVERH, '7', 'Проверяю запасной', 'Наполнен? Устойчив? Управляем? — беру управление'],
+];
+const DLINA = 17.5 + VVERH + SDVIG;
+
+// Телефонная версия (?mob): сцена крупнее, подпись внизу по центру и крупнее, надписи крупнее.
+// Ролик на телефоне занимает ≈ 300 px в ширину — мелкий шрифт кадра 960 px там не читается.
+const MOB = /[?&]mob\b/.test(location.search);
+const NIZ = 565;  // на телефоне ноги парашютиста стоят на верхнем крае плашки
+// Широкий кадр (?mob&shir) — для полного экрана повёрнутого телефона: 1560×720 (≈ 2,17 : 1, как экран телефона
+// лёжа). Сцена та же, небо и плашка продлены в стороны на 300 px, метки отодвинуты к краям; всё важное — в средних
+// 1280 px, чтобы на экране поуже (16 : 9) обрезка краёв ничего не задела
+const SHIR = MOB && /[?&]shir\b/.test(location.search);
+const KRAY = SHIR ? 300 : 0;
+if (SHIR) {
+  const s = $('s');
+  s.setAttribute('width', 960 + 2 * KRAY); s.setAttribute('viewBox', `${-KRAY} 0 ${960 + 2 * KRAY} 720`);
+  for (const id of ['fonNeba', 'plashka']) { $(id).setAttribute('x', -KRAY); $(id).setAttribute('width', 960 + 2 * KRAY); }
+  // облака по краям, чтобы продлённое небо не было пустым
+  $('kamera').insertAdjacentHTML('afterbegin', '<g fill="#fff" opacity=".55"><ellipse cx="-130" cy="380" rx="120" ry="26"/><ellipse cx="-80" cy="366" rx="64" ry="20"/><ellipse cx="1080" cy="560" rx="130" ry="26"/><ellipse cx="1030" cy="546" rx="70" ry="20"/></g>');
+}
+if (MOB) {
+  $('trevoga').setAttribute('display', 'none'); $('trevogaMob').removeAttribute('display');
+  $('plashka').setAttribute('y', 560); $('plashka').setAttribute('height', 160);
+  $('podpis').setAttribute('font-size', 46); $('podpis').setAttribute('y', 632);
+  $('podpis2').setAttribute('font-size', 32); $('podpis2').setAttribute('y', 690);
+  $('podpis2').setAttribute('text-anchor', 'middle'); $('podpis2').setAttribute('x', 480);
+  $('nomerKrug').setAttribute('r', 32); $('nomerKrug').setAttribute('cy', 616);
+  $('nomer').setAttribute('font-size', 36); $('nomer').setAttribute('y', 629);
+  // метки — крупнее, от своего края, чтобы не уйти за кадр
+  // в широком кадре метки отходят к краям: тревога и проверка — влево, высотник и метки — вправо
+  const SDV = SHIR ? { trevogaMob: -150, proverka: -160, metkaTros: 150, metkaKoncy: 150, lupaVys: 150, lupa: 150 } : {};
+  const krupnee = (id, x, y, k) => $(id).setAttribute('transform', `translate(${SDV[id] || 0} 0) translate(${x} ${y}) scale(${k}) translate(${-x} ${-y})`);
+  krupnee('trevogaMob', 0, 0, 1); krupnee('lupa', 0, 0, 1);
+  krupnee('metkaTros', 930, 70, 1.25); krupnee('metkaKoncy', 930, 70, 1.25);
+  krupnee('proverka', 40, 200, 1.25); krupnee('lupaVys', 932, 22, 1.15);
+}
+// подпись по ширине кадра: длинная строка ужимается, а не уходит за край
+function vlezt(el, razmer, shir) {
+  el.setAttribute('font-size', razmer);
+  const d = el.getComputedTextLength();
+  if (d > shir) el.setAttribute('font-size', (razmer * shir / d).toFixed(1));
+}
+
+function ruka(id, kist, plecho, k) {
+  const lokot = [lerp(plecho[0], k[0], .5) + (plecho[0] < 480 ? -18 : 18), lerp(plecho[1], k[1], .5) + 6];
+  $(id).setAttribute('d', `M${plecho} L${lokot} L${k}`);
+  $(kist).setAttribute('cx', k[0]); $(kist).setAttribute('cy', k[1]);
+}
+
+// тросики: путь от подушки до замка на плече; при рывке хвост втягивается к подушке
+const TROSY = [[[453, 402], [446, 380], [450, 354]], [[453, 402], [482, 384], [512, 354]]];
+const dlinaPuti = put => put.slice(1).reduce((s, q, i) => s + Math.hypot(q[0] - put[i][0], q[1] - put[i][1]), 0);
+function tochkaNaPuti(put, d) {
+  for (let i = 1; i < put.length; i++) {
+    const a = put[i - 1], b = put[i], l = Math.hypot(b[0] - a[0], b[1] - a[1]);
+    if (d <= l) return P(a, b, d / l);
+    d -= l;
+  }
+  return put[put.length - 1];
+}
+function tros(id, put, k, ruchka, visit) {
+  const L = dlinaPuti(put), vnutri = L * (1 - k);
+  // внутри: от подушки до хвоста
+  let d = `M${put[0]}`, s = 0;
+  for (let i = 1; i < put.length; i++) {
+    const l = Math.hypot(put[i][0] - put[i - 1][0], put[i][1] - put[i - 1][1]);
+    if (s + l < vnutri) d += ` L${put[i]}`; else { d += ` L${tochkaNaPuti(put, vnutri)}`; break; }
+    s += l;
+  }
+  // снаружи: вытянутая часть идёт от ручки к подушке, потом свисает вниз
+  const k2 = Math.hypot(put[0][0] - ruchka[0], put[0][1] - ruchka[1]) || 1;
+  const nap = P([(put[0][0] - ruchka[0]) / k2, (put[0][1] - ruchka[1]) / k2], [put === TROSY[0] ? -.25 : .25, 1], visit);
+  const n = Math.hypot(nap[0], nap[1]) || 1;
+  const hvost = [ruchka[0] + nap[0] / n * L * k, ruchka[1] + nap[1] / n * L * k];
+  if (k >= 1) d = `M${ruchka} L${hvost}`;
+  else if (k > 0) d = `M${ruchka} L${hvost} ` + d;
+  $(id).setAttribute('d', d);
+}
+
+function kadr(t) {
+  t -= SDVIG;
+  // tr — время ролика (подписи, взгляд); t — время действий: на взгляде вверх оно стоит
+  const tr = t;
+  if (t > VVERH_S) t = Math.max(VVERH_S, t - VVERH);
+  // шаг и подписи
+  let shag = SHAGI[0];
+  for (const s of SHAGI) if (tr >= s[0]) shag = s;
+  $('nomer').textContent = shag[1];
+  $('nomerKrug').setAttribute('opacity', shag[1] ? 1 : 0);
+  $('podpis').textContent = shag[2];
+  $('podpis2').textContent = shag[3];
+  $('trevoga').setAttribute('opacity', t < 6.6 ? 1 : 0);
+  $('trevogaMob').setAttribute('opacity', t < 6.6 ? 1 : 0);
+  if (MOB) {
+    // номер шага и заголовок — одной группой по центру
+    const kr = shag[1] ? 80 : 0;
+    vlezt($('podpis'), 46, 900 - kr);
+    vlezt($('podpis2'), 32, 900);
+    const x0 = 480 - ($('podpis').getComputedTextLength() + kr) / 2;
+    $('nomerKrug').setAttribute('cx', x0 + 32); $('nomer').setAttribute('x', x0 + 32);
+    $('podpis').setAttribute('x', x0 + kr);
+    // камера: крупно до раскрытия запасного, затем отъезжает, чтобы купол был в кадре
+    const k = lerp(1.33, 1, otrezok(t, 10.2, 11.2));
+    $('kamera').setAttribute('transform', `translate(480 ${NIZ}) scale(${k}) translate(-480 -601)`);
+  }
+
+  // основной: сложенный купол болтается, после отцепки улетает вверх-влево
+  const uhod = otrezok(t, 7.0, 8.3);
+  const kach = Math.sin(t * 5) * 18 * (1 - uhod);
+  const vx = 480 + kach - uhod * 420, vy = 110 - uhod * 260;
+  // сложенный, трепещущий «колбасой» купол: края колышутся
+  let krL = [], krP = [];
+  for (let i = 0; i <= 8; i++) {
+    const y = vy - 70 + i * 21, sh = 26 - i * 1.5, v = Math.sin(t * 14 + i * 1.3) * 7;
+    krL.push(`${vx - sh + v} ${y}`); krP.push(`${vx + sh + v * .7} ${y}`);
+  }
+  const kupol = `M${krL.join(' L')} L${krP.reverse().join(' L')} Z`;
+  $('osnKupol').setAttribute('d', kupol);
+  const nizR = P([450, 360], [450 - 420, 360 - 260], uhod), nizL = P([510, 360], [510 - 420, 360 - 260], uhod);
+  $('osnStropaR').setAttribute('d', `M${nizR} L${vx - 12} ${vy + 100}`);
+  $('osnStropaL').setAttribute('d', `M${nizL} L${vx + 12} ${vy + 100}`);
+  $('osnovnoy').setAttribute('opacity', 1 - otrezok(t, 7.8, 8.3));
+
+  // руки
+  let kR = naStropahR, kL = naStropahL;
+  kR = P(kR, naOtc, otrezok(t, 2.6, 3.4));
+  kR = P(kR, posleOtc, otrezok(t, 6.5, 7.0));
+  kR = P(kR, naZapR, otrezok(t, 8.6, 9.3));
+  kR = P(kR, posleZapR, otrezok(t, 10.7, 11.0));
+  kR = P(kR, naStropahR, otrezok(t, 13.6, 14.4));
+  kL = P(kL, naVysotnik, otrezok(t, -1.5, -0.9));
+  kL = P(kL, naOtcL, otrezok(t, 2.6, 3.4));
+  kL = P(kL, posleOtcL, otrezok(t, 6.5, 7.0));
+  kL = P(kL, naZap, otrezok(t, 8.6, 9.3));
+  kL = P(kL, posleZap, otrezok(t, 10.7, 11.0));
+  kL = P(kL, naStropahL, otrezok(t, 13.6, 14.4));
+  ruka('rukaR', 'kistR', plechoR, kR);
+  ruka('rukaL', 'kistL', plechoL, kL);
+  $('vysotnikRuka').setAttribute('cx', kL[0] - 4); $('vysotnikRuka').setAttribute('cy', kL[1] + 14);
+  $('lupaVys').setAttribute('opacity', otrezok(t, -1.0, -0.7) * (1 - otrezok(t, 1.9, 2.2)));
+  const sdvig = otrezok(t, 6.5, 7.0), padNow = t < 8.5
+    ? [naOtc[0] + (kR[0] - naOtc[0]) * sdvig, naOtc[1] + (kR[1] - naOtc[1]) * sdvig]
+    : [posleOtc[0], posleOtc[1] + 120 * otrezok(t, 8.5, 9.0)];
+  const brosheno = 1 - otrezok(t, 8.5, 8.9);
+  $('ruchkaOtc').setAttribute('opacity', brosheno); $('trosiki').setAttribute('opacity', brosheno);
+  $('ruchkaOtc').setAttribute('transform', `translate(${padNow[0] - naOtc[0]} ${padNow[1] - naOtc[1]})`);
+  const vyhod = zazhat((t - 6.5) / 0.5), visit = otrezok(t, 7.1, 7.7);
+  tros('tros1', TROSY[0], vyhod, padNow, visit);
+  tros('tros2', TROSY[1], vyhod, padNow, visit);
+  // лупа: тросик протянут сквозь петлю; при рывке уходит в оболочку, петля свободна, конец улетает
+  $('lupa').setAttribute('opacity', otrezok(t, 5.6, 6.0) * (1 - otrezok(t, 8.2, 8.4)));
+  const putL = [[742, 336], [770, 296], [800, 262]];
+  const ostatok = dlinaPuti(putL) * (1 - vyhod);
+  const dTros = ostatok > 1 ? `M${putL[0]} L${tochkaNaPuti(putL, Math.min(ostatok, 48.6))}${ostatok > 48.6 ? ' L' + tochkaNaPuti(putL, ostatok) : ''}` : 'M0 0';
+  $('lupaTros').setAttribute('d', dTros); $('lupaTrosKontur').setAttribute('d', dTros);
+  $('lupaKonec').setAttribute('transform', `translate(${-60 * otrezok(t, 7.0, 7.6)} ${-260 * otrezok(t, 7.0, 7.6)})`);
+  $('metkaTros').setAttribute('opacity', otrezok(t, 7.0, 7.3) * (1 - otrezok(t, 7.6, 7.75)));
+  $('metkaKoncy').setAttribute('opacity', otrezok(tr, 10.8, 11.0) * (1 - otrezok(tr, 11.6, 11.75)));
+  $('ruchkaZap').setAttribute('transform', `translate(${(kL[0] - naZap[0]) * otrezok(t, 10.7, 11.0)} ${(kL[1] - naZap[1]) * otrezok(t, 10.7, 11.0)})`);
+
+  // взгляд: на отцепку, на кольцо запасного — и с него не уходит при рывке отцепки;
+  // взявшись за кольцо двумя руками — вверх: ушли ли свободные концы; снова на кольцо —
+  // рывок запасного; затем вверх — на запасной
+  let cel = null;
+  if (tr >= -1.1 && tr < 2.0) cel = [naVysotnik[0] - 4, naVysotnik[1] + 14];
+  else if (tr >= 2.3 && tr < 4.4) cel = [453, 402];
+  else if (tr >= 4.4 && tr < 10.3) cel = [507, 402];
+  else if (tr >= 10.3 && tr < 11.7) cel = [480, 150];
+  else if (tr >= 11.7 && tr < 10.8 + VVERH) cel = [507, 402];
+  else if (tr >= 12.0 + VVERH) cel = [480, 152];
+  $('vzglyad').setAttribute('opacity', cel ? 1 : 0);
+  if (cel) {
+    const dx = cel[0] - glaza[0], dy = cel[1] - glaza[1], d = Math.hypot(dx, dy);
+    const kon = [cel[0] - dx / d * 28, cel[1] - dy / d * 28];
+    $('vzLiniya').setAttribute('x1', glaza[0]); $('vzLiniya').setAttribute('y1', glaza[1]);
+    $('vzLiniya').setAttribute('x2', kon[0]); $('vzLiniya').setAttribute('y2', kon[1]);
+    $('vzKrug').setAttribute('cx', cel[0]); $('vzKrug').setAttribute('cy', cel[1]);
+  }
+
+  // стрелка рывка
+  let ryvok = '';
+  if (t >= 6.45 && t < 7.6) ryvok = `M${naOtc[0] - 10} ${naOtc[1] + 6} L${posleOtc[0] - 20} ${posleOtc[1] + 14}`;
+  if (t >= 10.65 && t < 11.8) ryvok = `M${naZap[0] + 10} ${naZap[1] + 6} L${posleZap[0] + 20} ${posleZap[1] + 14}`;
+  $('ryvok').setAttribute('d', ryvok || 'M0 0');
+  $('ryvok').setAttribute('opacity', ryvok ? 1 : 0);
+
+
+  // запасной: вытяжной вылетает из-за спины, купол наполняется
+  const vyl = otrezok(t, 10.8, 11.4), napoln = otrezok(t, 11.3, 12.6);
+  $('zapasnoy').setAttribute('opacity', t >= 10.8 ? 1 : 0);
+  const pc = P([480, 360], [480, 70], vyl);
+  $('zapVytyazhnoy').setAttribute('cx', pc[0]); $('zapVytyazhnoy').setAttribute('cy', pc[1]);
+  const shir = lerp(30, 360, napoln), vys = lerp(70, 64, napoln), verh = lerp(110, 120, napoln);
+  const lev = 480 - shir / 2, prav = 480 + shir / 2;
+  $('zapKupol').setAttribute('d', napoln > 0 || vyl >= 1
+    ? `M${lev} ${verh + vys} Q ${lev - 6} ${verh} ${lev + shir * .2} ${verh} L ${prav - shir * .2} ${verh} Q ${prav + 6} ${verh} ${prav} ${verh + vys} Z`
+    : 'M0 0');
+  let stropy = '';
+  if (vyl >= 1) {
+    for (let i = 0; i <= 4; i++) {
+      const x = lev + shir * i / 4;
+      stropy += `<path d="M${i < 2.5 ? '450 360' : '510 360'} L${x} ${verh + vys}"/>`;
+    }
+  } else if (t >= 10.8) {
+    stropy = `<path d="M480 360 L${pc[0]} ${pc[1]}"/>`;
+  }
+  $('zapStropy').innerHTML = stropy;
+
+  // проверка запасного
+  $('proverka').setAttribute('opacity', t >= 13.2 ? 1 : 0);
+  $('pr1').setAttribute('opacity', otrezok(t, 13.4, 13.7));
+  $('pr2').setAttribute('opacity', otrezok(t, 14.1, 14.4));
+  $('pr3').setAttribute('opacity', otrezok(t, 14.8, 15.1));
+}
+window.kadr = kadr; window.DLINA = DLINA;
+kadr(0);
+</script>
+</body>
+</html>
