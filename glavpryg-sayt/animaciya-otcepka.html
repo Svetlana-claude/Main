@@ -122,6 +122,10 @@
     <rect x="530" y="70" width="400" height="56" rx="28" fill="#1f9d55"/>
     <text x="730" y="107" text-anchor="middle" font-size="26" font-weight="800" fill="#fff">Тросики вышли до конца ✓</text>
   </g>
+  <g id="metkaKoncy" opacity="0">
+    <rect x="530" y="70" width="400" height="56" rx="28" fill="#1f9d55"/>
+    <text x="730" y="107" text-anchor="middle" font-size="26" font-weight="800" fill="#fff">Свободные концы ушли ✓</text>
+  </g>
   <g id="proverka" opacity="0">
     <g id="pr1" opacity="0"><rect x="40" y="200" width="250" height="52" rx="26" fill="#1f9d55"/><text x="165" y="235" text-anchor="middle" font-size="24" font-weight="800" fill="#fff">Наполнен ✓</text></g>
     <g id="pr2" opacity="0"><rect x="40" y="266" width="250" height="52" rx="26" fill="#1f9d55"/><text x="165" y="301" text-anchor="middle" font-size="24" font-weight="800" fill="#fff">Устойчив ✓</text></g>
@@ -181,16 +185,19 @@ document.getElementById('vysStrelka').setAttribute('x2', vysKonec[0]); document.
 // вступление с высотником: вся раскладка сдвинута на SDVIG секунд
 const SDVIG = 1.8;
 const naVysotnik = [552, 292];
+// взгляд вверх (шаг 5): руки на кольце запасного, всё остальное стоит VVERH секунд
+const VVERH_S = 10.2, VVERH = 1.8;
 const SHAGI = [
   [-SDVIG, '', 'Отказ! Первым делом — высота', 'Высотник: 800 м — выше 600, отцепляюсь по порядку'],
   [2.2,  '1', 'Смотрю на отцепку, беру обеими руками', 'Правая основным хватом, левая сверху'],
   [4.4,  '2', 'Взгляд — на кольцо запасного', 'Держу его глазами, отцепку не отпускаю'],
-  [6.4,  '3', 'Рывок отцепки — до конца', 'Взгляд — на кольце запасного, тросики до конца'],
-  [8.4,  '4', 'Кольцо запасного — двумя руками', 'Левая — палец в кольце, правая помогает'],
-  [10.6, '5', 'Рывок запасного — до конца', 'Запасной раскрывается'],
-  [13.2, '6', 'Проверяю запасной', 'Наполнен? Устойчив? Управляем? — беру управление'],
+  [6.4,  '3', 'Рывок отцепки — до конца', 'Глаза — на кольце запасного, тросики до конца'],
+  [8.4,  '4', 'Кольцо запасного — двумя руками', 'Глядя на него: левая — палец в кольце, правая помогает'],
+  [10.2, '5', 'Взялся — смотрю вверх', 'Свободные концы ушли? Ушли — дёргаю кольцо'],
+  [10.6 + VVERH, '6', 'Рывок запасного — до конца', 'Запасной раскрывается'],
+  [13.2 + VVERH, '7', 'Проверяю запасной', 'Наполнен? Устойчив? Управляем? — беру управление'],
 ];
-const DLINA = 17.5 + SDVIG;
+const DLINA = 17.5 + VVERH + SDVIG;
 
 // Телефонная версия (?mob): сцена крупнее, подпись внизу по центру и крупнее, надписи крупнее.
 // Ролик на телефоне занимает ≈ 300 px в ширину — мелкий шрифт кадра 960 px там не читается.
@@ -218,10 +225,10 @@ if (MOB) {
   $('nomer').setAttribute('font-size', 36); $('nomer').setAttribute('y', 629);
   // метки — крупнее, от своего края, чтобы не уйти за кадр
   // в широком кадре метки отходят к краям: тревога и проверка — влево, высотник и метки — вправо
-  const SDV = SHIR ? { trevogaMob: -150, proverka: -160, metkaTros: 150, lupaVys: 150, lupa: 150 } : {};
+  const SDV = SHIR ? { trevogaMob: -150, proverka: -160, metkaTros: 150, metkaKoncy: 150, lupaVys: 150, lupa: 150 } : {};
   const krupnee = (id, x, y, k) => $(id).setAttribute('transform', `translate(${SDV[id] || 0} 0) translate(${x} ${y}) scale(${k}) translate(${-x} ${-y})`);
   krupnee('trevogaMob', 0, 0, 1); krupnee('lupa', 0, 0, 1);
-  krupnee('metkaTros', 930, 70, 1.25);
+  krupnee('metkaTros', 930, 70, 1.25); krupnee('metkaKoncy', 930, 70, 1.25);
   krupnee('proverka', 40, 200, 1.25); krupnee('lupaVys', 932, 22, 1.15);
 }
 // подпись по ширине кадра: длинная строка ужимается, а не уходит за край
@@ -269,9 +276,12 @@ function tros(id, put, k, ruchka, visit) {
 
 function kadr(t) {
   t -= SDVIG;
+  // tr — время ролика (подписи, взгляд); t — время действий: на взгляде вверх оно стоит
+  const tr = t;
+  if (t > VVERH_S) t = Math.max(VVERH_S, t - VVERH);
   // шаг и подписи
   let shag = SHAGI[0];
-  for (const s of SHAGI) if (t >= s[0]) shag = s;
+  for (const s of SHAGI) if (tr >= s[0]) shag = s;
   $('nomer').textContent = shag[1];
   $('nomerKrug').setAttribute('opacity', shag[1] ? 1 : 0);
   $('podpis').textContent = shag[2];
@@ -287,7 +297,7 @@ function kadr(t) {
     $('nomerKrug').setAttribute('cx', x0 + 32); $('nomer').setAttribute('x', x0 + 32);
     $('podpis').setAttribute('x', x0 + kr);
     // камера: крупно до раскрытия запасного, затем отъезжает, чтобы купол был в кадре
-    const k = lerp(1.33, 1, otrezok(t, 9.4, 11.0));
+    const k = lerp(1.33, 1, otrezok(t, 10.2, 11.2));
     $('kamera').setAttribute('transform', `translate(480 ${NIZ}) scale(${k}) translate(-480 -601)`);
   }
 
@@ -342,15 +352,19 @@ function kadr(t) {
   $('lupaTros').setAttribute('d', dTros); $('lupaTrosKontur').setAttribute('d', dTros);
   $('lupaKonec').setAttribute('transform', `translate(${-60 * otrezok(t, 7.0, 7.6)} ${-260 * otrezok(t, 7.0, 7.6)})`);
   $('metkaTros').setAttribute('opacity', otrezok(t, 7.0, 7.3) * (1 - otrezok(t, 7.6, 7.75)));
+  $('metkaKoncy').setAttribute('opacity', otrezok(tr, 10.8, 11.0) * (1 - otrezok(tr, 11.6, 11.75)));
   $('ruchkaZap').setAttribute('transform', `translate(${(kL[0] - naZap[0]) * otrezok(t, 10.7, 11.0)} ${(kL[1] - naZap[1]) * otrezok(t, 10.7, 11.0)})`);
 
-  // взгляд: на отцепку, на кольцо запасного — и с него не уходит ни при рывке отцепки,
-  // ни до рывка запасного (вверх при отцепке не смотреть); затем вверх — на запасной
+  // взгляд: на отцепку, на кольцо запасного — и с него не уходит при рывке отцепки;
+  // взявшись за кольцо двумя руками — вверх: ушли ли свободные концы; снова на кольцо —
+  // рывок запасного; затем вверх — на запасной
   let cel = null;
-  if (t >= -1.1 && t < 2.0) cel = [naVysotnik[0] - 4, naVysotnik[1] + 14];
-  else if (t >= 2.3 && t < 4.4) cel = [453, 402];
-  else if (t >= 4.4 && t < 10.8) cel = [507, 402];
-  else if (t >= 12.0) cel = [480, 152];
+  if (tr >= -1.1 && tr < 2.0) cel = [naVysotnik[0] - 4, naVysotnik[1] + 14];
+  else if (tr >= 2.3 && tr < 4.4) cel = [453, 402];
+  else if (tr >= 4.4 && tr < 10.3) cel = [507, 402];
+  else if (tr >= 10.3 && tr < 11.7) cel = [480, 150];
+  else if (tr >= 11.7 && tr < 10.8 + VVERH) cel = [507, 402];
+  else if (tr >= 12.0 + VVERH) cel = [480, 152];
   $('vzglyad').setAttribute('opacity', cel ? 1 : 0);
   if (cel) {
     const dx = cel[0] - glaza[0], dy = cel[1] - glaza[1], d = Math.hypot(dx, dy);
