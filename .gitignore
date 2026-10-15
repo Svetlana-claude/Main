@@ -50,3 +50,6 @@ glavpryg-sayt/snimki/
 # Снимки макетов Figma — большие картинки, пересъёмка: glavpryg-sayt/makety/README.md
 glavpryg-sayt/makety/*.png
 glavpryg-sayt/makety/.kusok.png
+
+# 3d: токен Hugging Face
+3d/.env
