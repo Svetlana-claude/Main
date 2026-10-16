@@ -4,6 +4,9 @@
 
 const MESYACY = ["Январь", "Февраль", "Март", "Апрель", "Май", "Июнь", "Июль",
   "Август", "Сентябрь", "Октябрь", "Ноябрь", "Декабрь"];
+// Римские номера (вариант E) и «символы элементов» (вариант F)
+const RIM = ["I", "II", "III", "IV", "V", "VI", "VII", "VIII", "IX", "X", "XI", "XII"];
+const SIM = ["Ян", "Фв", "Мр", "Ап", "Ма", "Ин", "Ил", "Ав", "Сн", "Ок", "Нб", "Дк"];
 const DNI = ["Пн", "Вт", "Ср", "Чт", "Пт", "Сб", "Вс"];
 
 // Нерабочие праздничные дни и выходные, перенесённые на будни
@@ -51,15 +54,19 @@ function RisovatMesyac(el) {
     if (PRAZDNIKI.has(k)) klassy.push("prazd");
     yacheyki.push(`<span class="${klassy.join(" ")}">${d}</span>`);
   }
+  // Сетка заказчика всегда в шесть строк: пустые клетки добиваются до 42
+  if ("kletki" in el.dataset) while (yacheyki.length < 49) yacheyki.push('<span class="pust"></span>');
   const ikon = el.dataset.ikon
     ? `<svg class="mes-ikon" viewBox="0 0 240 90"><use href="#${el.dataset.ikon}"/></svg>` : "";
   const prim = PRIMECHANIYA[`${y}-${m}`] || "";
   el.innerHTML = `
     <div class="mes-zag">
+      <span class="mes-sim">${SIM[m - 1]}</span><span class="mes-rim">${RIM[m - 1]}</span>
       <span class="mes-nom">${String(m).padStart(2, "0")}</span>
       <span class="mes-imya">${MESYACY[m - 1]}</span>
       <span class="mes-god">${y}</span>${ikon}
     </div>
+    <div class="shapka-mes"><span>${MESYACY[m - 1]}</span><span>${y}</span></div>
     <div class="dni">${yacheyki.join("")}</div>
     <p class="prim">${prim}</p>`;
 }

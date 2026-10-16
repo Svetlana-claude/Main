@@ -7,3 +7,8 @@
 @font-face { font-family: "Manrope"; font-weight: 800; src: url(fonts/Manrope-ExtraBold.ttf); }
 @font-face { font-family: "Oswald"; font-weight: 500; src: url(fonts/Oswald-Medium.ttf); }
 @font-face { font-family: "Oswald"; font-weight: 700; src: url(fonts/Oswald-Bold.ttf); }
+@font-face { font-family: "Noto Sans"; font-weight: 300; src: url(fonts/NotoSans-Light.ttf); }
+@font-face { font-family: "Noto Sans"; font-weight: 400; src: url(fonts/NotoSans-Regular.ttf); }
+@font-face { font-family: "Noto Sans"; font-weight: 600; src: url(fonts/NotoSans-SemiBold.ttf); }
+@font-face { font-family: "Noto Sans"; font-weight: 700; src: url(fonts/NotoSans-Bold.ttf); }
+@font-face { font-family: "Caveat"; font-weight: 400 700; src: url(fonts/Caveat.ttf); }

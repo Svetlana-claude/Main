@@ -2,9 +2,10 @@
 <html lang="ru">
 <head>
 <meta charset="utf-8">
-<title>Aevit — квартальный календарь 2027, три варианта</title>
+<title>Aevit — квартальный календарь 2027, шесть вариантов</title>
 <link rel="stylesheet" href="fonts.css">
 <link rel="stylesheet" href="style.css">
+<link rel="stylesheet" href="style-2.css">
 </head>
 <body>
 
@@ -56,7 +57,7 @@
 
 <header class="titul">
   <h1>Aevit — квартальный календарь 2027</h1>
-  <p>Три варианта. Посыл общий — наноформула (SiO₂, Al₂O₃, C) защищает любой двигатель; героиня, янтарь масла и голубой знак-молекула переходят из календаря 2026.
+  <p>Шесть вариантов: A–C — первая подача, D–F — по сетке заказчика и новому рисунку героини. Посыл общий — наноформула (SiO₂, Al₂O₃, C) защищает любой двигатель; героиня, янтарь масла и голубой знак-молекула переходят из календаря 2026.
     На каждом варианте: шапка 297×210&nbsp;мм, три блока 297×148&nbsp;мм (декабрь 2026 — январь — февраль 2027), рекламная полоса 297×74&nbsp;мм.</p>
 </header>
 
@@ -241,6 +242,284 @@
     <div class="blok"><div class="pruzhina"></div><div class="mes" data-y="2027" data-m="2"></div></div>
     <div class="polosa">
       <div class="kosaya"></div>
+      <img class="tovary" src="../assets/tovary.png" alt="Нано мойка и Нано масло">
+      <div class="kontakty">
+        <p class="tel">+7 (495) 662-48-62</p>
+        <p class="adr">г. Подольск, мкр. Климовск, Фабричный проезд, д.&nbsp;4, офис&nbsp;312</p>
+        <p class="sayt">www.aevit.ru</p>
+      </div>
+      <img class="qr" src="../assets/qr.png" alt="QR-код">
+    </div>
+  </div>
+</section>
+
+<!-- Варианты D–F: по сетке заказчика («Календарные сетки 2027») и новому рисунку героини -->
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+  <defs>
+    <!-- Карандашная линия: лёгкое дрожание контура -->
+    <filter id="karandash" x="-5%" y="-5%" width="110%" height="110%">
+      <feTurbulence type="fractalNoise" baseFrequency=".8" numOctaves="2" seed="7" result="t"/>
+      <feDisplacementMap in="SourceGraphic" in2="t" scale="1.8" xChannelSelector="R" yChannelSelector="G"/>
+    </filter>
+    <pattern id="d-shtrih" width="3.2" height="3.2" patternUnits="userSpaceOnUse" patternTransform="rotate(38)">
+      <line x1="0" y1="0" x2="0" y2="3.2" stroke="#4a4a4a" stroke-width=".45"/>
+    </pattern>
+    <pattern id="d-shtrih2" width="2.4" height="2.4" patternUnits="userSpaceOnUse" patternTransform="rotate(-50)">
+      <line x1="0" y1="0" x2="0" y2="2.4" stroke="#4a4a4a" stroke-width=".4"/>
+    </pattern>
+    <linearGradient id="d-maslo" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#ffd25a"/><stop offset=".5" stop-color="#f29a16"/><stop offset="1" stop-color="#b8540a"/>
+    </linearGradient>
+    <!-- Соты графена для F -->
+    <pattern id="f-soty" width="17.32" height="30" patternUnits="userSpaceOnUse" patternTransform="scale(.5)">
+      <path d="M8.66,0 L17.32,5 L17.32,15 L8.66,20 L0,15 L0,5 Z M8.66,20 L8.66,30" fill="none" stroke="#6fe3ff" stroke-width=".5"/>
+    </pattern>
+  </defs>
+</svg>
+
+<!-- ============ ВАРИАНТ D. ЭСКИЗ ============ -->
+<section class="var var-d" id="var-d">
+  <h2 class="var-imya"><b>D</b> «Эскиз» — светлый, с карандашным рисунком</h2>
+  <div class="trio">
+    <div class="shapka">
+      <div class="bumaga"></div>
+      <div class="god">202<span>7</span></div>
+      <p class="pometka-god">квартальный календарь</p>
+      <img class="logo" src="../assets/logo-temnyy.png" alt="Aevit">
+      <div class="lozung">
+        <p class="l1">Любой двигатель</p>
+        <p class="l2">— под защитой нанокерамики</p>
+      </div>
+      <!-- двигатель карандашом, масло льётся из канистры — единственное цветное пятно -->
+      <svg class="dvigatel" viewBox="0 0 300 260" aria-hidden="true">
+        <g class="kar" filter="url(#karandash)">
+          <!-- клапанная крышка и горловина -->
+          <path d="M66,70 Q66,54 82,54 L188,54 Q204,54 204,70 Z"/>
+          <path d="M150,54 L150,40 L170,40 L170,54 M146,40 L174,40"/>
+          <!-- головка блока -->
+          <path d="M58,70 L212,70 L212,92 L58,92 Z"/>
+          <path d="M58,70 L212,70 L212,92 L58,92 Z" fill="url(#d-shtrih2)" opacity=".5"/>
+          <path d="M96,92 L96,82 M154,92 L154,82 M92,82 L100,82 M150,82 L158,82"/>
+          <!-- блок цилиндров в разрезе -->
+          <path d="M62,92 L52,196 M208,92 L218,196 M52,196 L218,196"/>
+          <path d="M62,92 L72,92 L64,196 L52,196 Z M198,92 L208,92 L218,196 L206,196 Z" fill="url(#d-shtrih)"/>
+          <path d="M74,92 L74,176 M118,92 L118,176 M132,92 L132,176 M176,92 L176,176"/>
+          <path d="M118,92 L132,92 L132,176 L118,176 Z" fill="url(#d-shtrih)"/>
+          <!-- поршни -->
+          <rect x="77" y="104" width="38" height="28" rx="2"/>
+          <path d="M77,110 L115,110 M77,114 L115,114"/>
+          <rect x="135" y="122" width="38" height="28" rx="2"/>
+          <path d="M135,128 L173,128 M135,132 L173,132"/>
+          <circle cx="96" cy="124" r="4"/><circle cx="154" cy="142" r="4"/>
+          <!-- шатуны и коленвал -->
+          <path d="M93,127 L118,208 M99,126 L124,207 M151,145 L128,212 M157,144 L134,214"/>
+          <circle cx="125" cy="214" r="24" stroke-dasharray="4 2.4" stroke-width="2.4"/>
+          <circle cx="125" cy="214" r="8"/>
+          <!-- поддон -->
+          <path d="M52,196 Q48,236 82,238 L168,238 Q222,236 218,196"/>
+          <path d="M60,214 Q62,232 84,232 L166,232 Q210,230 210,214" fill="url(#d-shtrih2)" opacity=".6"/>
+          <!-- шестерня ГРМ и ремень -->
+          <circle cx="32" cy="80" r="18" stroke-dasharray="3 2" stroke-width="2.6"/>
+          <circle cx="32" cy="80" r="6"/>
+          <circle cx="32" cy="214" r="13" stroke-dasharray="3 2" stroke-width="2.4"/>
+          <path d="M14,80 L19,214 M50,80 L45,214"/>
+          <!-- свечи -->
+          <path d="M96,54 L96,42 M154,54 L154,46 M92,42 L100,42"/>
+          <!-- канистра -->
+          <g transform="translate(222,4) rotate(-34)">
+            <path d="M0,10 Q0,0 10,0 L46,0 Q54,0 54,8 L54,62 Q54,70 46,70 L8,70 Q0,70 0,62 Z"/>
+            <path d="M14,0 L14,-8 Q14,-14 22,-14 L40,-14 Q48,-14 48,-6 L48,0 M22,-8 L40,-8"/>
+            <path d="M0,14 L-14,20 L-16,26 L0,24"/>
+            <path d="M8,22 L46,22 L46,56 L8,56 Z" fill="url(#d-shtrih)" opacity=".7"/>
+          </g>
+        </g>
+        <!-- струя масла и наночастицы -->
+        <path d="M219,34 C204,34 168,28 160,46" fill="none" stroke="url(#d-maslo)" stroke-width="6" stroke-linecap="round"/>
+        <path d="M217,33 C204,33 174,30 165,40" fill="none" stroke="#fff3c2" stroke-width="1" stroke-linecap="round" opacity=".8"/>
+        <circle cx="160" cy="50" r="2.4" fill="#f29a16"/><circle cx="158" cy="58" r="1.6" fill="#f29a16"/>
+        <path d="M78,105 L114,105 M136,123 L172,123 M55,197 L216,197" stroke="#f29a16" stroke-width="1.6" fill="none" opacity=".9"/>
+        <g fill="none" stroke="#12a9d8" stroke-width=".9">
+          <circle cx="196" cy="30" r="1.8"/><circle cx="184" cy="29" r="1.4"/><circle cx="174" cy="32" r="1.6"/>
+        </g>
+        <!-- пометки от руки -->
+        <g class="ruka">
+          <text x="234" y="104">нано-масло</text>
+          <path d="M232,98 Q214,70 192,40" class="strelka"/>
+          <text x="226" y="150">поршень и кольца —</text>
+          <text x="226" y="162">керамический слой</text>
+          <path d="M224,152 Q200,150 176,136" class="strelka"/>
+          <text x="164" y="256">меньше трения и износа</text>
+          <path d="M162,250 Q150,244 146,232" class="strelka"/>
+          <text x="60" y="30" class="formula">SiO₂ · Al₂O₃ · C</text>
+          <path d="M128,28 Q150,18 172,28" class="strelka"/>
+        </g>
+      </svg>
+      <!-- любой двигатель: техника наброском -->
+      <div class="tehnika">
+        <figure style="left:70mm;top:150mm;width:34mm"><svg viewBox="0 0 240 80"><use href="#t-samolet"/></svg><figcaption>авиа</figcaption></figure>
+        <figure style="left:112mm;top:144mm;width:30mm"><svg viewBox="0 0 200 70"><use href="#t-avto"/></svg><figcaption>авто</figcaption></figure>
+        <figure style="left:74mm;top:176mm;width:26mm"><svg viewBox="0 0 200 100"><use href="#t-moto"/></svg><figcaption>мото</figcaption></figure>
+        <figure style="left:110mm;top:176mm;width:32mm"><svg viewBox="0 0 220 70"><use href="#t-kater"/></svg><figcaption>вода</figcaption></figure>
+      </div>
+      <img class="geroinya-k" src="../assets/geroinya-2-karandash.png" alt="">
+      <img class="geroinya" src="../assets/geroinya-2.png" alt="Героиня Aevit">
+    </div>
+    <div class="blok"><div class="pruzhina"></div><div class="mes" data-y="2026" data-m="12" data-kletki data-ikon="t-vertolet"></div></div>
+    <div class="blok"><div class="pruzhina"></div><div class="mes" data-y="2027" data-m="1" data-kletki data-ikon="t-avto"></div></div>
+    <div class="blok"><div class="pruzhina"></div><div class="mes" data-y="2027" data-m="2" data-kletki data-ikon="t-samolet"></div></div>
+    <div class="polosa">
+      <img class="fon" src="../assets/maslo-karandash.jpg" alt="">
+      <img class="tovary" src="../assets/tovary.png" alt="Нано мойка и Нано масло">
+      <div class="kontakty">
+        <p class="tel">+7 (495) 662-48-62</p>
+        <p class="adr">г. Подольск, мкр. Климовск, Фабричный проезд, д.&nbsp;4, офис&nbsp;312</p>
+        <p class="sayt">www.aevit.ru</p>
+      </div>
+      <img class="qr" src="../assets/qr.png" alt="QR-код">
+    </div>
+  </div>
+</section>
+
+<!-- ============ ВАРИАНТ E. СИЛА ============ -->
+<section class="var var-e" id="var-e">
+  <h2 class="var-imya"><b>E</b> «Сила» — основная стилистика Aevit</h2>
+  <div class="trio">
+    <div class="shapka">
+      <img class="foto" src="../assets/maslo-vsplesk.jpg" alt="">
+      <div class="zatemn"></div>
+      <svg class="molekula" viewBox="0 0 200 200" aria-hidden="true">
+        <defs><filter id="e-svet"><feGaussianBlur stdDeviation="2.4" result="b"/><feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge></filter></defs>
+        <g filter="url(#e-svet)" fill="none" stroke="#5ff0ff" stroke-width="3.2">
+          <circle cx="100" cy="100" r="92" stroke-width="1.2" opacity=".55"/>
+          <circle cx="100" cy="100" r="80" stroke-width=".8" opacity=".35"/>
+          <path d="M100,62 L100,138 M64,138 L100,138"/>
+          <circle cx="100" cy="50" r="16"/><circle cx="100" cy="138" r="22"/><circle cx="52" cy="138" r="13"/>
+        </g>
+        <g class="mol-tekst" fill="#fff">
+          <text x="100" y="56" text-anchor="middle">SiO<tspan dy="4" font-size="9">2</tspan></text>
+          <text x="100" y="144" text-anchor="middle">Al<tspan dy="4" font-size="9">2</tspan><tspan dy="-4">O</tspan><tspan dy="4" font-size="9">3</tspan></text>
+          <text x="52" y="144" text-anchor="middle">C</text>
+        </g>
+      </svg>
+      <div class="god">202<span>7<svg class="kr"><use href="#kryuchok"/></svg></span></div>
+      <div class="lozung">
+        <p class="l1">Сила нанокерамики —<br>в&nbsp;каждом двигателе</p>
+        <p class="l2">SiO₂&nbsp;·&nbsp;Al₂O₃&nbsp;·&nbsp;C для авто, мото, авиа и&nbsp;водной техники</p>
+      </div>
+      <img class="geroinya" src="../assets/geroinya-2.png" alt="Героиня Aevit">
+      <img class="logo" src="../assets/logo-belyy.png" alt="Aevit">
+    </div>
+    <div class="blok"><div class="pruzhina"></div><div class="mes" data-y="2026" data-m="12"></div></div>
+    <div class="blok zerk"><div class="pruzhina"></div><div class="mes" data-y="2027" data-m="1"></div></div>
+    <div class="blok"><div class="pruzhina"></div><div class="mes" data-y="2027" data-m="2"></div></div>
+    <div class="polosa">
+      <img class="fon" src="../assets/maslo-vsplesk.jpg" alt="">
+      <img class="tovary" src="../assets/tovary.png" alt="Нано мойка и Нано масло">
+      <div class="kontakty">
+        <img class="qr" src="../assets/qr.png" alt="QR-код">
+        <div>
+          <p class="tel">+7 (495) 662-48-62</p>
+          <p class="adr">г. Подольск, мкр. Климовск, Фабричный проезд, д.&nbsp;4, офис&nbsp;312</p>
+          <p class="sayt">www.aevit.ru</p>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ============ ВАРИАНТ F. ХИМИЯ ЗАЩИТЫ ============ -->
+<section class="var var-f" id="var-f">
+  <h2 class="var-imya"><b>F</b> «Химия защиты» — формулы, молекулы и масло</h2>
+  <div class="trio">
+    <div class="shapka">
+      <svg class="fon" viewBox="0 0 297 210" aria-hidden="true">
+        <defs>
+          <radialGradient id="f-glub" cx="64%" cy="52%" r="72%">
+            <stop offset="0" stop-color="#0f2f52"/><stop offset=".55" stop-color="#081a30"/><stop offset="1" stop-color="#040b16"/>
+          </radialGradient>
+          <radialGradient id="f-kaplya" cx="38%" cy="32%" r="72%">
+            <stop offset="0" stop-color="#fff2b0"/><stop offset=".22" stop-color="#ffc23a"/><stop offset=".62" stop-color="#e2780c"/><stop offset="1" stop-color="#6a2604"/>
+          </radialGradient>
+          <radialGradient id="f-oreol" r="50%">
+            <stop offset=".6" stop-color="#ff9a1f" stop-opacity=".35"/><stop offset="1" stop-color="#ff9a1f" stop-opacity="0"/>
+          </radialGradient>
+          <radialGradient id="f-chast" cx="35%" cy="30%" r="70%">
+            <stop offset="0" stop-color="#e9fdff"/><stop offset=".5" stop-color="#5ff0ff"/><stop offset="1" stop-color="#0b6f8c"/>
+          </radialGradient>
+          <clipPath id="f-kaplya-clip"><circle cx="196" cy="112" r="50"/></clipPath>
+          <filter id="f-svet"><feGaussianBlur stdDeviation="1" result="b"/><feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge></filter>
+        </defs>
+        <rect width="297" height="210" fill="url(#f-glub)"/>
+        <rect width="297" height="210" fill="url(#f-soty)" opacity=".12"/>
+        <!-- капля масла с решёткой наночастиц -->
+        <circle cx="196" cy="112" r="74" fill="url(#f-oreol)"/>
+        <circle cx="196" cy="112" r="50" fill="url(#f-kaplya)"/>
+        <rect x="140" y="56" width="112" height="112" fill="url(#f-soty)" clip-path="url(#f-kaplya-clip)" opacity=".5"/>
+        <ellipse cx="180" cy="90" rx="16" ry="9" fill="#fff" opacity=".35" transform="rotate(-30 180 90)"/>
+        <g>
+          <circle cx="214" cy="128" r="5" fill="url(#f-chast)"/><circle cx="190" cy="138" r="3.6" fill="url(#f-chast)"/>
+          <circle cx="226" cy="104" r="3" fill="url(#f-chast)"/><circle cx="204" cy="94" r="2.4" fill="url(#f-chast)"/>
+          <circle cx="172" cy="122" r="2.8" fill="url(#f-chast)"/>
+        </g>
+        <g class="lin" filter="url(#f-svet)">
+          <!-- выноски от капли к молекулам -->
+          <path d="M231,77 L248,56 M228,148 L246,166" stroke-dasharray="1.6 1.4"/>
+          <!-- SiO2: тетраэдр -->
+          <g transform="translate(262,36)">
+            <path d="M0,-16 L-15,10 L15,10 Z M0,-16 L3,2 L-15,10 M3,2 L15,10"/>
+            <circle cx="3" cy="2" r="3.4" class="at-si"/>
+            <circle cx="0" cy="-16" r="2.4" class="at-o"/><circle cx="-15" cy="10" r="2.4" class="at-o"/><circle cx="15" cy="10" r="2.4" class="at-o"/>
+          </g>
+          <!-- Al2O3 -->
+          <g transform="translate(252,116) scale(.8)">
+            <path d="M2,-1 L10,-1 M2,1 L10,1 M14,0 L22,0 M26,0 L34,0 M38,-1 L46,-1 M38,1 L46,1"/>
+            <circle cx="0" cy="0" r="2.2" class="at-o"/><circle cx="12" cy="0" r="2.8" class="at-si"/><circle cx="24" cy="0" r="2.2" class="at-o"/>
+            <circle cx="36" cy="0" r="2.8" class="at-si"/><circle cx="48" cy="0" r="2.2" class="at-o"/>
+          </g>
+          <!-- C: соты графена -->
+          <g transform="translate(250,168)">
+            <path d="M0,0 l6,-3.5 l6,3.5 l0,7 l-6,3.5 l-6,-3.5 Z M12,0 l6,-3.5 l6,3.5 l0,7 l-6,3.5 l-6,-3.5 M6,10.5 l0,7 l6,3.5 l6,-3.5 l0,-7"/>
+          </g>
+          <!-- цепочка базового масла -->
+          <path d="M70,186 l7,-5 l7,5 l7,-5 l7,5 l7,-5 l7,5 l7,-5 l7,5"/>
+          <!-- кривая Штрибека -->
+          <g transform="translate(150,182)">
+            <path d="M0,0 L0,-22 M0,0 L54,0" />
+            <path d="M-1.6,-19 L0,-22 L1.6,-19 M51,-1.6 L54,0 L51,1.6"/>
+            <path d="M3,-19 C10,-17 14,-5 22,-4 C30,-3 40,-8 52,-13" class="krivaya-old" stroke-dasharray="1.6 1.4"/>
+            <path d="M3,-12 C10,-10 14,-3 22,-2.5 C30,-2 40,-6 52,-10" class="krivaya"/>
+          </g>
+        </g>
+        <g class="txt">
+          <text x="248" y="64" class="sm">SiO₂ · кремнезём</text>
+                    <text x="250" y="126" class="sm">Al₂O₃ · корунд</text>
+          <text x="250" y="198" class="sm">C · углерод</text>
+          <text x="70" y="196" class="sm">CₙH₂ₙ₊₂ — базовое масло</text>
+          <text x="140" y="148" class="sm" text-anchor="end">наночастицы керамики</text>
+          <text x="145" y="162" class="mk">μ</text>
+          <text x="207" y="187" class="mk">v</text>
+          <text x="150" y="196" class="sm">трение: без защиты · с Aevit</text>
+        </g>
+        <path d="M141,145 L170,124" class="lin tonk" fill="none" stroke-dasharray="1.6 1.4"/>
+      </svg>
+      <div class="element">
+        <span class="el-nom">2027</span>
+        <span class="el-sim">Ae</span>
+        <span class="el-imya">Aevit</span>
+        <span class="el-massa">нанокерамика</span>
+      </div>
+      <div class="zag">
+        <p class="z1">Химия защиты двигателя</p>
+        <p class="z2">SiO₂ + Al₂O₃ + C → керамический слой на&nbsp;трущихся деталях</p>
+      </div>
+      <img class="geroinya" src="../assets/geroinya-2.png" alt="Героиня Aevit">
+      <img class="logo" src="../assets/logo-belyy.png" alt="Aevit">
+    </div>
+    <div class="blok"><div class="pruzhina"></div><div class="mes" data-y="2026" data-m="12" data-kletki></div></div>
+    <div class="blok"><div class="pruzhina"></div><div class="mes" data-y="2027" data-m="1" data-kletki></div></div>
+    <div class="blok"><div class="pruzhina"></div><div class="mes" data-y="2027" data-m="2" data-kletki></div></div>
+    <div class="polosa">
+      <div class="soty"></div>
       <img class="tovary" src="../assets/tovary.png" alt="Нано мойка и Нано масло">
       <div class="kontakty">
         <p class="tel">+7 (495) 662-48-62</p>

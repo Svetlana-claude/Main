@@ -1,0 +1,176 @@
+/* Варианты D–F. Блоки месяцев — по сетке заказчика («Календарные сетки 2027»):
+   Noto Sans, название месяца слева, год справа, шесть строк клеток, выходные красным. */
+
+.mes-sim, .mes-rim, .shapka-mes { display: none; }
+
+/* ================= D. ЭСКИЗ ================= */
+.var-d { --grafit: #3a3a3a; --yantar: #d9780a; --krasn: #e3262f; }
+.var-d .shapka { background: #f7f3ea; color: var(--grafit); }
+.var-d .bumaga { inset: 0; background:
+  url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='400' height='400'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='.85' numOctaves='3' seed='2'/><feColorMatrix values='0 0 0 0 .35  0 0 0 0 .3  0 0 0 0 .25  0 0 0 .12 0'/></filter><rect width='100%25' height='100%25' filter='url(%23n)'/></svg>"),
+  radial-gradient(ellipse at 50% 45%, rgba(255,255,255,.7), rgba(222,212,192,.5)); }
+/* цифры года заштрихованы карандашом, «7» — цветом масла */
+.var-d .god { left: 13mm; top: 9mm; font: 800 31mm/1 "Unbounded", sans-serif; letter-spacing: -.02em;
+  color: transparent; -webkit-text-stroke: .35mm var(--grafit);
+  background: repeating-linear-gradient(45deg, rgba(58,58,58,.75) 0 .22mm, transparent .22mm 1.05mm);
+  -webkit-background-clip: text; background-clip: text; }
+.var-d .god span { color: var(--yantar); -webkit-text-stroke: 0; }
+.var-d .pometka-god { left: 16mm; top: 41mm; font: 600 7mm/1 "Caveat", cursive; color: #6a6a6a; transform: rotate(-3deg); }
+.var-d .logo { right: 14mm; top: 13mm; width: 58mm; }
+.var-d .lozung { right: 14mm; top: 38mm; text-align: right; }
+.var-d .l1 { font: 800 8.6mm/1.1 "Unbounded", sans-serif; color: var(--grafit); }
+.var-d .l2 { margin-top: .5mm; font: 700 9mm/1 "Caveat", cursive; color: var(--yantar); }
+.var-d .dvigatel { left: 152mm; top: 72mm; width: 138mm; height: 119.6mm; overflow: visible; }
+.var-d .kar { fill: none; stroke: var(--grafit); stroke-width: 1.15; stroke-linecap: round; stroke-linejoin: round; }
+.var-d .ruka text { font: 600 11px "Caveat", cursive; fill: #555; }
+.var-d .ruka .formula { font-size: 13px; font-weight: 700; fill: #12a9d8; }
+.var-d .strelka { fill: none; stroke: #777; stroke-width: .7; stroke-dasharray: 2 1.6; }
+.var-d .geroinya-k, .var-d .geroinya { left: 4mm; bottom: 3mm; height: 146mm; }
+.var-d .tehnika figure { position: absolute; }
+.var-d .tehnika svg { display: block; width: 100%; height: auto; overflow: visible; filter: url(#karandash); }
+.var-d .tehnika { --t-kuzov: none; --t-koleso: none; --t-disk: none; --t-steklo: none; --t-obvod: #4a4a4a; --t-tolsh: 2.2;
+  --t-steklo-obvod: var(--yantar); --t-rama: #4a4a4a; --t-rama-tolsh: 2.2; }
+.var-d .tehnika figcaption { font: 600 5mm/1 "Caveat", cursive; color: #666; text-align: center; }
+.var-d .geroinya-k { mix-blend-mode: multiply; opacity: .9; }
+/* героиня «дорисовывается»: сверху цвет, к ногам остаётся карандаш */
+.var-d .geroinya { -webkit-mask-image: linear-gradient(180deg, #000 0 54%, transparent 68%); mask-image: linear-gradient(180deg, #000 0 54%, transparent 68%); }
+
+.var-d .blok { background: #fff; }
+.var-d .mes { position: absolute; inset: 13mm 16mm 9mm; }
+.var-d .mes-zag { display: flex; align-items: center; height: 13mm; }
+.var-d .mes-nom { display: none; }
+.var-d .mes-imya { font: 700 9mm/1 "Noto Sans", sans-serif; color: #222; }
+.var-d .mes-god { order: 2; margin-left: auto; font: 400 6.5mm/1 "Noto Sans", sans-serif; color: #222; }
+.var-d .mes-ikon { order: 1; width: 28mm; height: 10.5mm; margin-left: 6mm; filter: url(#karandash);
+  --t-kuzov: none; --t-koleso: none; --t-disk: none; --t-steklo: none; --t-obvod: #555; --t-tolsh: 2.4;
+  --t-steklo-obvod: var(--yantar); --t-rama: #555; --t-rama-tolsh: 2.4; }
+.var-d .dni { position: absolute; left: 0; right: 0; top: 13mm; bottom: 7mm; grid-template-rows: 7mm repeat(6, 1fr); }
+.var-d .dni .dn { font: 600 3.2mm/7mm "Noto Sans", sans-serif; color: #333; }
+.var-d .dni .d, .var-d .dni .pust { display: flex; align-items: center; justify-content: center;
+  border-right: .25mm solid #c4c4c4; border-bottom: .25mm solid #c4c4c4; }
+.var-d .dni span:nth-child(7n+1):not(.dn) { border-left: .25mm solid #c4c4c4; }
+.var-d .dni span:nth-child(n+8):nth-child(-n+14) { border-top: .25mm solid #c4c4c4; }
+.var-d .dni .d { font: 400 8.6mm/1 "Noto Sans", sans-serif; color: #222; }
+.var-d .dni .vyh { color: var(--krasn); }
+.var-d .dni .rab { color: #222; }
+.var-d .dni .rab::before { color: var(--krasn); font-family: "Noto Sans", sans-serif; }
+.var-d .prim { left: 0; bottom: -1mm; font: 600 5.6mm/1 "Caveat", cursive; color: var(--yantar); }
+
+.var-d .polosa { background: #f7f3ea; }
+.var-d .polosa .fon { inset: 0; width: 100%; height: 100%; object-fit: cover; object-position: 50% 60%; opacity: .45; mix-blend-mode: multiply; }
+.var-d .polosa .tovary { left: 10mm; top: 4mm; height: 66mm; }
+.var-d .polosa .kontakty { left: 76mm; top: 14mm; padding: 3mm 5mm; background: rgba(247,243,234,.82); }
+.var-d .polosa .tel { font: 800 10.5mm/1.1 "Unbounded", sans-serif; color: var(--grafit); }
+.var-d .polosa .adr { margin-top: 2mm; font: 400 4mm/1.3 "Noto Sans", sans-serif; color: #555; }
+.var-d .polosa .sayt { margin-top: .5mm; font: 700 7.5mm/1 "Caveat", cursive; color: var(--yantar); }
+.var-d .polosa .qr { right: 14mm; top: 13mm; width: 48mm; background: #fff; padding: 1.2mm; outline: .4mm solid #888; outline-offset: 1.6mm; }
+
+/* ================= E. СИЛА ================= */
+.var-e { --goluboy: #12a9d8; }
+.var-e .shapka { background: #07090c; }
+.var-e .foto { right: 0; top: 0; height: 100%; width: 236mm; object-fit: cover; object-position: 40% 50%; }
+.var-e .zatemn { inset: 0; background:
+  linear-gradient(90deg, #07090c 0%, rgba(7,9,12,.9) 20%, rgba(7,9,12,.25) 55%, rgba(7,9,12,.05) 75%),
+  linear-gradient(0deg, rgba(7,9,12,.92) 0%, rgba(7,9,12,.5) 30%, rgba(7,9,12,0) 52%),
+  linear-gradient(180deg, rgba(7,9,12,.75) 0%, rgba(7,9,12,0) 26%); }
+.var-e .god { right: 14mm; top: 12mm; font: 800 28mm/1 "Unbounded", sans-serif; color: #fff; letter-spacing: -.02em; }
+.var-e .god span { color: #3fe0ff; position: relative; }
+.var-e .god .kr { position: absolute; left: 3mm; top: 29mm; width: 24mm; height: 20mm; color: #3fe0ff; }
+.var-e .molekula { right: 12mm; top: 70mm; width: 72mm; height: 72mm; }
+.var-e .mol-tekst { font: 600 15px "Unbounded", sans-serif; }
+.var-e .lozung { left: 86mm; top: 150mm; width: 140mm; color: #fff; }
+.var-e .l1 { font: 800 8.6mm/1.12 "Unbounded", sans-serif; }
+.var-e .l2 { margin-top: 3mm; font: 400 4.2mm/1.4 "Noto Sans", sans-serif; color: #b9e9f3; }
+.var-e .geroinya { left: 4mm; bottom: 3mm; height: 176mm; filter: drop-shadow(0 0 5mm rgba(255,120,20,.35)); }
+.var-e .logo { right: 14mm; bottom: 13mm; width: 62mm; }
+
+.var-e .blok { border-bottom: 3mm solid; border-image: linear-gradient(90deg, #4a2406, #e08a13 40%, #ffcf5a 60%, #4a2406) 1; }
+.var-e .mes { position: absolute; inset: 13mm 16mm 9mm; }
+.var-e .mes-zag { position: absolute; left: 0; top: 0; bottom: 0; width: 70mm; display: flex; flex-direction: column; justify-content: center; }
+.var-e .zerk .mes-zag { left: auto; right: 0; text-align: right; }
+.var-e .mes-nom, .var-e .mes-imya { display: none; }
+.var-e .mes-rim { display: block; font: 800 30mm/1 "Unbounded", sans-serif; color: var(--goluboy); letter-spacing: -.03em; }
+.var-e .mes-god { display: block; margin-top: 2mm; font: 600 10mm/1 "Unbounded", sans-serif; color: var(--goluboy); }
+/* сетка заказчика, «настольная»: месяц и год над сеткой, линия под днями недели, без клеток */
+.var-e .dni { position: absolute; right: 0; top: 14mm; bottom: 8mm; width: 178mm; grid-template-rows: 8mm repeat(6, 1fr); }
+.var-e .zerk .dni { right: auto; left: 0; }
+.var-e .dni::before { content: ""; position: absolute; left: 0; right: 0; top: 8mm; border-top: .3mm solid #bdbdbd; }
+.var-e .dni .dn { font: 600 3.4mm/8mm "Noto Sans", sans-serif; color: #555; }
+.var-e .dni .dn.vyh { color: var(--goluboy); }
+.var-e .dni .d { display: flex; align-items: center; justify-content: center; font: 700 9.6mm/1 "Noto Sans", sans-serif; color: #1a1a1c; }
+.var-e .dni .vyh { color: var(--goluboy); }
+.var-e .dni .rab { color: #1a1a1c; }
+.var-e .dni .rab::before { color: var(--goluboy); }
+.var-e .dni .prazd::after { bottom: .6mm; }
+.var-e .shapka-mes { display: flex; position: absolute; right: 0; top: 0; width: 178mm; justify-content: space-between; font: 700 7mm/1 "Noto Sans", sans-serif; color: #1a1a1c; }
+.var-e .zerk .shapka-mes { right: auto; left: 0; }
+.var-e .shapka-mes span:last-child { font-weight: 400; }
+.var-e .prim { left: 0; bottom: -2mm; font: 400 3.4mm "Noto Sans", sans-serif; color: #4a2406; }
+.var-e .zerk .prim { left: auto; right: 0; }
+
+.var-e .polosa { background: #0b0b0d; }
+.var-e .polosa .fon { inset: 0; width: 100%; height: 100%; object-fit: cover; object-position: 50% 30%; opacity: .5; }
+.var-e .polosa .tovary { left: 10mm; top: 4mm; height: 66mm; filter: drop-shadow(0 2mm 3mm rgba(0,0,0,.5)); }
+.var-e .kontakty { left: 70mm; right: 0; top: 14mm; height: 46mm; background: rgba(8,8,10,.86);
+  display: flex; align-items: center; gap: 8mm; padding: 0 12mm 0 8mm; color: #fff; }
+.var-e .kontakty .qr { position: static; width: 34mm; background: #fff; padding: 1mm; }
+.var-e .tel { font: 800 11mm/1.1 "Unbounded", sans-serif; }
+.var-e .adr { margin-top: 2mm; font: 400 3.9mm/1.35 "Noto Sans", sans-serif; text-transform: uppercase; letter-spacing: .03em; color: #ddd; }
+.var-e .sayt { margin-top: 1mm; font: 600 4.2mm "Unbounded", sans-serif; color: #3fe0ff; }
+
+/* ================= F. ХИМИЯ ЗАЩИТЫ ================= */
+.var-f { --tush: #0a2540; --goluboy: #6fe3ff; --krasn: #e3262f; }
+.var-f .shapka { background: #040b16; color: #fff; }
+.var-f .fon { inset: 0; width: 100%; height: 100%; }
+.var-f .lin { fill: none; stroke: var(--goluboy); stroke-width: .5; stroke-linecap: round; stroke-linejoin: round; }
+.var-f .lin.tonk { stroke-width: .3; }
+.var-f .at-si { fill: #5ff0ff; stroke: none; }
+.var-f .at-o { fill: #ff9a1f; stroke: none; }
+.var-f .krivaya { stroke: #ffb12b; stroke-width: .9; }
+.var-f .krivaya-old { stroke: #8aa4bf; }
+.var-f .txt text { font-family: "Noto Sans", sans-serif; fill: #cfeaf5; }
+.var-f .txt .sm { font-size: 3.2px; }
+.var-f .txt .mk { font-size: 4.4px; font-style: italic; fill: #fff; }
+.var-f .element { left: 14mm; top: 14mm; width: 46mm; height: 54mm; border: .5mm solid var(--goluboy);
+  background: rgba(111,227,255,.07); padding: 3mm; display: flex; flex-direction: column; font-family: "Noto Sans", sans-serif; }
+.var-f .el-nom { font-size: 4.4mm; font-weight: 600; color: var(--goluboy); }
+.var-f .el-sim { margin-top: 1mm; font-size: 24mm; font-weight: 700; line-height: 1; }
+.var-f .el-imya { margin-top: 1.5mm; font-size: 5mm; font-weight: 600; }
+.var-f .el-massa { margin-top: auto; font-size: 3.2mm; color: #ffcf8a; letter-spacing: .04em; }
+.var-f .zag { left: 68mm; top: 15mm; width: 170mm; }
+.var-f .z1 { font: 800 9.4mm/1.1 "Unbounded", sans-serif; }
+.var-f .z2 { margin-top: 3mm; width: 165mm; font: 400 4.6mm/1.4 "Noto Sans", sans-serif; color: #ffcf8a; }
+.var-f .logo { left: 69mm; top: 48mm; width: 46mm; }
+.var-f .geroinya { left: 4mm; bottom: 3mm; height: 116mm; filter: drop-shadow(0 0 4mm rgba(111,227,255,.25)); }
+
+.var-f .blok { background:
+  url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='34.64' height='60' viewBox='0 0 17.32 30'><path d='M8.66,0 L17.32,5 L17.32,15 L8.66,20 L0,15 L0,5 Z M8.66,20 L8.66,30' fill='none' stroke='%230a2540' stroke-opacity='.06' stroke-width='.4'/></svg>"), #fff; }
+.var-f .mes { position: absolute; inset: 13mm 16mm 9mm; }
+.var-f .mes-zag { position: absolute; left: 0; top: 7mm; bottom: 7mm; width: 58mm; border: .6mm solid var(--tush);
+  padding: 3.5mm; display: flex; flex-direction: column; font-family: "Noto Sans", sans-serif; color: var(--tush); }
+.var-f .mes-nom { order: -1; font-size: 6mm; font-weight: 600; color: #0b7fa6; }
+.var-f .mes-sim { display: block; order: 0; margin-top: 2mm; font-size: 32mm; font-weight: 700; line-height: 1; }
+.var-f .mes-imya { order: 1; margin-top: 3mm; font-size: 7mm; font-weight: 700; }
+.var-f .mes-god { order: 2; margin-top: auto; font-size: 5mm; color: #0b7fa6; }
+.var-f .dni { position: absolute; left: 66mm; right: 0; top: 0; bottom: 7mm; grid-template-rows: 7mm repeat(6, 1fr); }
+.var-f .dni .dn { font: 600 3.2mm/7mm "Noto Sans", sans-serif; color: var(--tush); }
+.var-f .dni .dn.vyh { color: var(--krasn); }
+.var-f .dni .d, .var-f .dni .pust { display: flex; align-items: center; justify-content: center;
+  border-right: .25mm solid #b9c7d6; border-bottom: .25mm solid #b9c7d6; }
+.var-f .dni span:nth-child(7n+1):not(.dn) { border-left: .25mm solid #b9c7d6; }
+.var-f .dni span:nth-child(n+8):nth-child(-n+14) { border-top: .25mm solid #b9c7d6; }
+.var-f .dni .d { font: 400 8.4mm/1 "Noto Sans", sans-serif; color: var(--tush); }
+.var-f .dni .vyh { color: var(--krasn); }
+.var-f .dni .rab { color: var(--tush); }
+.var-f .dni .rab::before { color: var(--krasn); font-family: "Noto Sans", sans-serif; }
+.var-f .prim { left: 66mm; bottom: -1mm; font: 400 3.4mm "Noto Sans", sans-serif; color: var(--tush); }
+
+.var-f .polosa { background: radial-gradient(ellipse at 70% 50%, #0f2f52, #040b16 70%); color: #fff; }
+.var-f .polosa .soty { inset: 0; opacity: .5; background:
+  url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='34.64' height='60' viewBox='0 0 17.32 30'><path d='M8.66,0 L17.32,5 L17.32,15 L8.66,20 L0,15 L0,5 Z M8.66,20 L8.66,30' fill='none' stroke='%236fe3ff' stroke-opacity='.25' stroke-width='.4'/></svg>"); }
+.var-f .polosa .tovary { left: 10mm; top: 4mm; height: 66mm; }
+.var-f .polosa .kontakty { left: 78mm; top: 15mm; }
+.var-f .polosa .tel { font: 800 10.5mm/1.1 "Unbounded", sans-serif; }
+.var-f .polosa .adr { margin-top: 2mm; font: 400 4mm/1.3 "Noto Sans", sans-serif; color: #cfeaf5; }
+.var-f .polosa .sayt { margin-top: 1mm; font: 600 4.6mm "Unbounded", sans-serif; color: var(--goluboy); }
+.var-f .polosa .qr { right: 14mm; top: 13mm; width: 48mm; background: #fff; padding: 1.2mm; outline: .4mm solid var(--goluboy); outline-offset: 1.6mm; }
