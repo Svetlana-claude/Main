@@ -1,0 +1,9 @@
+/* Шрифты лежат рядом, макет открывается без интернета (все — OFL) */
+@font-face { font-family: "Unbounded"; font-weight: 400; src: url(fonts/Unbounded-Regular.ttf); }
+@font-face { font-family: "Unbounded"; font-weight: 600; src: url(fonts/Unbounded-SemiBold.ttf); }
+@font-face { font-family: "Unbounded"; font-weight: 800; src: url(fonts/Unbounded-ExtraBold.ttf); }
+@font-face { font-family: "Manrope"; font-weight: 400; src: url(fonts/Manrope-Regular.ttf); }
+@font-face { font-family: "Manrope"; font-weight: 600; src: url(fonts/Manrope-SemiBold.ttf); }
+@font-face { font-family: "Manrope"; font-weight: 800; src: url(fonts/Manrope-ExtraBold.ttf); }
+@font-face { font-family: "Oswald"; font-weight: 500; src: url(fonts/Oswald-Medium.ttf); }
+@font-face { font-family: "Oswald"; font-weight: 700; src: url(fonts/Oswald-Bold.ttf); }
