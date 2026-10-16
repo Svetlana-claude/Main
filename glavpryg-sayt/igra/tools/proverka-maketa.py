@@ -4,7 +4,8 @@
     python proverka-maketa.py <адрес index.html> <каталог снимков> [уровни: 0,5,7]
 
 Автопилот ведёт к цели в падении, раскрывается на 1000 м и под куполом
-держит курс на круг, на 5 м делает подушку. Печатает итог прыжка.
+держит курс на круг (ниже 45 м не крутит — иначе сваливание),
+на 5,5 м жмёт подушку. Печатает итог прыжка.
 """
 import sys, time
 from playwright.sync_api import sync_playwright
@@ -20,10 +21,12 @@ AVTOPILOT = """() => {
     const vbok = s.x * -wy + s.y * wx;                        // смещение поперёк ветра
     kurs = s.veterKuda + 180 + Math.max(-40, Math.min(40, vbok / 5));
   }
-  const d = ((kurs - s.kurs) % 360 + 540) % 360 - 180;
-  nazh.levo = d < -8; nazh.pravo = d > 8; nazh.vniz = false;
+  // купол отвечает с запаздыванием — упреждаем по угловой скорости
+  const d = ((kurs - s.kurs - (s.om || 0) * 0.9) % 360 + 540) % 360 - 180;
+  const nizko = s.faza === 'kupol' && s.h < 45;
+  nazh.levo = !nizko && d < -10; nazh.pravo = !nizko && d > 10; nazh.vniz = false;
   if (s.faza === 'padenie' && s.h < (s.W > 7 ? 920 : 1000)) raskryt();
-  if (s.faza === 'kupol' && s.h < 5) { nazh.levo = nazh.pravo = false; nazh.vniz = true; }
+  nazh.podushka = s.faza === 'kupol' && s.h < 5.5;
   return s.faza + ' ' + Math.round(s.h) + ' ' + Math.round(Math.hypot(s.x, s.y));
 }"""
 oshibki = []

@@ -42,6 +42,16 @@
   #k-raskryt { left:50%; transform:translateX(-50%); width:auto; height:auto; padding:14px 26px; border-radius:16px;
     font-size:clamp(16px,4.6vh,26px); background:rgba(200,30,30,.8); display:none; }
   #k-raskryt.vidno { display:flex; }
+  #k-raskryt.podushka { background:rgba(11,29,51,.6); border-color:#ffb74c; }
+  #k-raskryt.podushka.nazhata { background:rgba(255,122,26,.85); }
+  /* режим купола под высотомером: полный — средний — подушка */
+  #rezhim { margin-top:6px; width:max-content; min-width:100%; display:none; flex-direction:column; gap:3px; font:800 clamp(10px,2.6vh,13px)/1 system-ui; }
+  #rezhim.vidno { display:flex; }
+  #rezhim span { background:var(--glass); border-radius:6px; padding:4px 6px; text-align:center; opacity:.45; white-space:nowrap; }
+  #rezhim span.akt { opacity:1; background:var(--orange); }
+  #rezhim span.sval { display:none; background:#c62828; opacity:1; animation:migat .5s infinite alternate; }
+  #rezhim.svalivanie span.sval { display:block; }
+  @keyframes migat { to { opacity:.4; } }
   /* экраны */
   .ekran { position:fixed; inset:0; display:none; align-items:center; justify-content:center; padding:12px;
     background:rgba(11,29,51,.78); backdrop-filter:blur(3px); z-index:5; }
@@ -86,6 +96,7 @@
     <circle r="5" fill="#fff"/>
   </svg>
   <div id="vys-cifra">3000 м</div>
+  <div id="rezhim"><span data-r="0">ПОЛНЫЙ</span><span data-r="1">СРЕДНИЙ</span><span data-r="2">ПОДУШКА</span><span class="sval">СВАЛИВАНИЕ</span></div>
 </div>
 
 <div class="hud" id="koldun" aria-hidden="true">
@@ -117,7 +128,7 @@
     <div class="urovni" id="urovni" role="group" aria-label="Уровень сложности"></div>
     <button class="glavnaya" id="b-start">Прыгать!</button>
     <p class="stat" id="stat-start"></p>
-    <p class="stat">Телефон — две кнопки по краям, обе вместе — торможение. Компьютер — ← →, вместе или ↓ — торможение, пробел — раскрыть.</p>
+    <p class="stat">Телефон — кнопки по краям: одна — разворот, обе — средний режим; под куполом средняя кнопка — подушка. Компьютер — ← →, вместе или ↓ — средний режим, пробел — раскрыть, под куполом — подушка.</p>
   </div>
 </section>
 
@@ -157,10 +168,17 @@ const UROVNI = [
 
 // Физика по учебнику AFF: свободное падение ≈50 м/с; купол — полный режим 9–10 м/с,
 // средний 3–4 м/с; 360° — около 5 с с потерей 50–70 м.
+// Купол отвечает с запаздыванием: клеванты затягиваются руками не мгновенно
+// (klevantaVniz/Vverh — доля хода в секунду), разворот и скорость набираются плавно
+// (tau… — постоянные времени, с игрового времени).
 const F = {
-  padenie:50, trekFF:8, povorotFF:80,
-  kupolGor:10, kupolVert:5, tormozGor:4, tormozVert:3, povorot:65, povorotVert:8,
-  podushkaVys:6, raskrytieMin:900, zapasnoy:350, raskrytieDlit:2.5,
+  padenie:50, trekFF:8, povorotFF:55, tauFF:0.5,
+  kupolGor:10, kupolVert:5, tormozGor:4, tormozVert:3, glubGor:1.5, glubVert:4,
+  povorot:42, povorotVert:3.5, tauPovorot:0.9, tauGor:1.2, tauVert:1.2, podemnaya:1.0,
+  klevantaVniz:1.5, klevantaVverh:1.8,
+  // сваливание: глубокое торможение дольше glubDo с; резкий разворот ниже rezkoNizhe м дольше rezkoDo с
+  glubDo:2.5, rezkoNizhe:40, rezkoDolya:0.6, rezkoDo:0.4, svalDlit:2.2, svalVert:13, zhestko:7, myagko:2.5,
+  raskrytieMin:900, zapasnoy:350, raskrytieDlit:2.5,
   // ускорение игрового времени: падение и спуск под куполом идут быстрее настоящих
   uskFF:2, uskKupol:2.5, uskNizko:1.5,
 };
@@ -220,7 +238,7 @@ function vMnogougolnike(x, y, p) {
 }
 
 // ───────── Управление ─────────
-const nazh = { levo:false, pravo:false, vniz:false };
+const nazh = { levo:false, pravo:false, vniz:false, podushka:false };
 const kL = document.getElementById('k-levo'), kP = document.getElementById('k-pravo'), kR = document.getElementById('k-raskryt');
 function privyazat(el, klyuch) {
   const vkl = e => { e.preventDefault(); nazh[klyuch] = true; el.classList.add('nazhata'); el.setPointerCapture?.(e.pointerId); };
@@ -230,13 +248,26 @@ function privyazat(el, klyuch) {
   el.addEventListener('contextmenu', e => e.preventDefault());
 }
 privyazat(kL, 'levo'); privyazat(kP, 'pravo');
-kR.addEventListener('pointerdown', e => { e.preventDefault(); raskryt(); });
+// средняя кнопка: в падении — «Раскрыть», под куполом — «Подушка» (держать)
+kR.addEventListener('pointerdown', e => {
+  e.preventDefault();
+  if (s && s.faza === 'kupol') { nazh.podushka = true; kR.classList.add('nazhata'); kR.setPointerCapture?.(e.pointerId); }
+  else raskryt();
+});
+['pointerup','pointercancel','lostpointercapture'].forEach(t => kR.addEventListener(t, () => { nazh.podushka = false; kR.classList.remove('nazhata'); }));
+kR.addEventListener('contextmenu', e => e.preventDefault());
+function knopkaPodushka(da) {
+  kR.classList.toggle('podushka', da); kR.textContent = da ? 'ПОДУШКА' : 'РАСКРЫТЬ';
+  kR.setAttribute('aria-label', da ? 'Подушка — держать у самой земли' : 'Раскрыть парашют');
+}
 addEventListener('keydown', e => {
   if (e.repeat) return;
   if (e.code === 'ArrowLeft' || e.code === 'KeyA') nazh.levo = true;
   else if (e.code === 'ArrowRight' || e.code === 'KeyD') nazh.pravo = true;
   else if (e.code === 'ArrowDown' || e.code === 'KeyS') nazh.vniz = true;
-  else if (e.code === 'Space' || e.code === 'ArrowUp') { if (s && s.faza === 'padenie') { e.preventDefault(); raskryt(); } }
+  else if (e.code === 'Space' || e.code === 'ArrowUp') {
+    if (s && s.faza === 'padenie') raskryt(); else if (s && s.faza === 'kupol') nazh.podushka = true; else return;
+  }
   else return;
   e.preventDefault();
 });
@@ -244,6 +275,7 @@ addEventListener('keyup', e => {
   if (e.code === 'ArrowLeft' || e.code === 'KeyA') nazh.levo = false;
   else if (e.code === 'ArrowRight' || e.code === 'KeyD') nazh.pravo = false;
   else if (e.code === 'ArrowDown' || e.code === 'KeyS') nazh.vniz = false;
+  else if (e.code === 'Space' || e.code === 'ArrowUp') nazh.podushka = false;
 });
 
 // ───────── Прогресс (макет: в браузере; в игре — личный кабинет) ─────────
@@ -291,6 +323,8 @@ function noviyPryzhok(nomer) {
   s = {
     nomer, u, W, veterKuda, obl, tuchi, tuchiSdvig:[0, 0], x, y, h:obl.vys, kurs:veterKuda + 180, faza:'samolet', t:0,
     vz:0, raskrytVys:null, zapasnoy:false, nizkoe:false, tochki, proydeny:[], razvorotNizko:false,
+    // купол: ход клевант 0…1, угловая скорость, скорость вперёд и вниз, сваливание
+    dL:0, dP:0, om:0, v:F.kupolGor, vzK:F.kupolVert, vzTek:0, svalT:0, svalBylo:false, glubT:0, rezkoT:0, rezhim:0,
     podushka:false, samoletT:0, soob:'', soobT:0, trevogaBylo:{},
   };
   pokazat(obl.kromka ? `${obl.imya}, кромка ${obl.kromka} м — выброска на ${obl.vys} м` : `Ясно — выброска на ${obl.vys} м`, 2.6);
@@ -321,7 +355,7 @@ function shag(dtReal) {
     s.samoletT += dtReal;
     if (s.samoletT > 2.6 && s.samoletT - dtReal <= 2.6) pokazat('Приготовиться…', 1.5);
     if (s.samoletT > 4 && s.samoletT - dtReal <= 4) pokazat('Пошёл!', 1);
-    if (s.samoletT >= 4.6) { s.faza = 'padenie'; s.vz = 15; kR.classList.add('vidno'); pokazat('Отделение! Прогнись, лети к площадке', 2); }
+    if (s.samoletT >= 4.6) { s.faza = 'padenie'; s.vz = 15; knopkaPodushka(false); kR.classList.add('vidno'); pokazat('Отделение! Прогнись, лети к площадке', 2); }
     // самолёт летит против ветра по боевому курсу
     const [kx, ky] = vec(s.kurs); s.x += kx * 30 * dtReal; s.y += ky * 30 * dtReal;
     return;
@@ -333,7 +367,9 @@ function shag(dtReal) {
 
   if (s.faza === 'padenie') {
     s.vz = Math.min(F.padenie, s.vz + 9.8 * dt * 0.6);
-    if (!oba) { if (L) s.kurs -= F.povorotFF * dt; if (P) s.kurs += F.povorotFF * dt; }
+    // в падении поворот тоже набирается не сразу
+    s.om += ((oba ? 0 : (P ? 1 : 0) - (L ? 1 : 0)) * F.povorotFF - s.om) * Math.min(1, dt / F.tauFF);
+    s.kurs += s.om * dt;
     const [kx, ky] = vec(s.kurs), [wx, wy] = veterNa(s.h);
     s.x += (kx * F.trekFF + wx) * dt; s.y += (ky * F.trekFF + wy) * dt; s.h -= s.vz * dt;
     if (s.h < 1600 && !s.trevogaBylo.r1) { s.trevogaBylo.r1 = 1; pokazat('1500 м — приготовься к раскрытию', 2); }
@@ -348,15 +384,50 @@ function shag(dtReal) {
     const vz = F.padenie + (F.kupolVert - F.padenie) * k;
     const [wx, wy] = veterNa(s.h);
     s.x += wx * dt; s.y += wy * dt; s.h -= vz * dt * 0.5;
-    if (s.t >= F.raskrytieDlit) { s.faza = 'kupol'; kR.classList.remove('vidno'); }
+    if (s.t >= F.raskrytieDlit) { s.faza = 'kupol'; s.om = 0; knopkaPodushka(true); }
   } else if (s.faza === 'kupol') {
-    let gor = F.kupolGor, vert = F.kupolVert;
-    if (oba) { gor = F.tormozGor; vert = F.tormozVert; }
-    else if (L || P) { s.kurs += (P ? 1 : -1) * F.povorot * dt; vert = F.povorotVert; if (s.h < 15) s.razvorotNizko = true; }
-    // подушка: обе клеванты вниз у самой земли
-    if (oba && s.h < F.podushkaVys) { s.podushka = true; vert = 1.2; gor = 2; }
+    // клеванты: куда тянет игрок — подушка до упора, обе кнопки — средний режим, одна — разворот
+    const cel = nazh.podushka ? [1, 1] : oba ? [0.5, 0.5] : [L ? 1 : 0, P ? 1 : 0];
+    const hod = (d, c) => d + Math.max(-F.klevantaVverh * dtReal, Math.min(F.klevantaVniz * dtReal, c - d));
+    s.dL = hod(s.dL, cel[0]); s.dP = hod(s.dP, cel[1]);
+    const b = Math.min(s.dL, s.dP), tr = s.dP - s.dL;               // торможение и перекос клевант
+    s.rezhim = b > 0.75 ? 2 : b > 0.25 ? 1 : 0;
+    let vCel, vzCel, omCel;
+    if (s.svalT > 0) {
+      // сваливание: купол теряет поступательную скорость, падает и не слушается
+      s.svalT -= dt;
+      if (s.svalT <= 0 && b > 0.3) s.svalT = 0.05;                  // пока клеванты не отпущены — купол не восстановится
+      if (s.svalT <= 0) pokazat('Купол восстановился — набирай скорость', 1.5);
+      vCel = 0; vzCel = F.svalVert; omCel = s.om * 0.6 + Math.sin(s.t * 9) * 25;
+    } else {
+      vCel = b <= 0.5 ? F.kupolGor - (F.kupolGor - F.tormozGor) * b * 2 : F.tormozGor - (F.tormozGor - F.glubGor) * (b - 0.5) * 2;
+      vzCel = b <= 0.5 ? F.kupolVert - (F.kupolVert - F.tormozVert) * b * 2 : F.tormozVert + (F.glubVert - F.tormozVert) * (b - 0.5) * 2;
+      omCel = F.povorot * tr * (1 - 0.4 * b);
+      const q = Math.abs(s.om) / F.povorot;                          // насколько резко разворачивается
+      vzCel += F.povorotVert * q * (1 - b);
+      if (q > 0.3 && s.h < 15) s.razvorotNizko = true;
+      // глубокое торможение дольше нескольких секунд — сваливание (у самой земли это уже подушка)
+      s.glubT = b > 0.85 && s.h > 3 ? s.glubT + dt : 0;
+      // резкий разворот у земли — сваливание
+      s.rezkoT = s.h < F.rezkoNizhe && q > F.rezkoDolya ? s.rezkoT + dt : Math.max(0, s.rezkoT - dt);
+      if (s.glubT > F.glubDo || s.rezkoT > F.rezkoDo) {
+        s.svalT = F.svalDlit; s.svalBylo = true; s.glubT = s.rezkoT = 0;
+        pokazat(s.h < F.rezkoNizhe && b < 0.85 ? 'СВАЛИВАНИЕ! Резкий разворот у земли — отпусти клеванты' : 'СВАЛИВАНИЕ! Перетянул клеванты — отпусти', 2.5, true);
+      }
+    }
+    s.t += dt;
+    s.om += (omCel - s.om) * Math.min(1, dt / F.tauPovorot);
+    s.kurs += s.om * dt;
+    const dv = (vCel - s.v) * Math.min(1, dt / (s.svalT > 0 ? 0.3 : F.tauGor));
+    s.v += dv;
+    // подушка: гашение скорости вперёд переходит в подъёмную силу и снижает вертикальную —
+    // работает только с полной скорости и только пока скорость гасится (≈ 4–6 м над землёй)
+    s.vzK += (vzCel - s.vzK) * Math.min(1, dt / (s.svalT > 0 ? 0.5 : F.tauVert)) - (s.svalT > 0 ? 0 : F.podemnaya * Math.max(0, -dv));
+    s.vzK = Math.max(0.2, s.vzK);
+    s.vzTek = s.vzK;
     const [kx, ky] = vec(s.kurs), [wx, wy] = veterNa(s.h);
-    s.x += (kx * gor + wx) * dt; s.y += (ky * gor + wy) * dt; s.h -= vert * dt;
+    s.x += (kx * s.v + wx) * dt; s.y += (ky * s.v + wy) * dt; s.h -= s.vzTek * dt;
+    if (s.h < 3 && b > 0.6) s.podushka = true;
     // контрольные точки коробочки
     for (const t of s.tochki) {
       if (!s.proydeny.includes(t.n) && Math.abs(s.h - t.h) < 25 && Math.hypot(s.x - t.x, s.y - t.y) < 90) {
@@ -366,6 +437,8 @@ function shag(dtReal) {
     if (s.h < 420 && !s.trevogaBylo.k1) { s.trevogaBylo.k1 = 1; pokazat('400 м — только средний режим, к точке I', 2); }
     if (s.h < 110 && !s.trevogaBylo.k2) { s.trevogaBylo.k2 = 1; pokazat('100 м — против ветра, по стрелке!', 2); }
     if (s.h < 50 && !s.trevogaBylo.k3) { s.trevogaBylo.k3 = 1; pokazat('50 м — полная скорость, ноги вместе', 1.6); }
+    if (s.h < 14 && !s.trevogaBylo.k4) { s.trevogaBylo.k4 = 1; pokazat('Готовь подушку! Жми у самой земли', 1.4); }
+    if (s.u.podskazka && s.h < 6.5 && !s.trevogaBylo.k5) { s.trevogaBylo.k5 = 1; pokazat('ПОДУШКА — сейчас!', 1.2); }
     if (s.h <= 0) prizemlenie();
   }
 }
@@ -373,12 +446,17 @@ function shag(dtReal) {
 // ───────── Приземление и счёт ─────────
 function prizemlenie() {
   s.h = 0; s.faza = 'itog';
-  kR.classList.remove('vidno');
+  kR.classList.remove('vidno'); knopkaPodushka(false); nazh.podushka = false;
+  const vKas = s.vzTek, zhestko = s.svalT > 0 || vKas > F.zhestko;
   const g = grunt(s.x, s.y), d = Math.hypot(s.x, s.y);
   const razbor = [];
-  let ochki = 0, zag, pogib = false;
+  let ochki = 0, zag, pogib = false, pochemu = '';
   if (g === 1 || g === 2) {
     pogib = true; zag = g === 2 ? 'Прыжок не засчитан — вода' : 'Прыжок не засчитан — лес';
+    pochemu = 'Посадка на лес и воду — особый случай, а не цель прыжка. Запасную площадку намечают ещё на земле и уходят на неё заранее, если до основной не долететь.';
+  } else if (zhestko) {
+    pogib = true; zag = 'Прыжок не засчитан — жёсткое приземление';
+    pochemu = `Касание на ${vKas.toFixed(1)} м/с${s.svalT > 0 ? ' в сваливании' : ''}. У земли — без резких разворотов, клеванты не перетягивать; подушка — плавно и только у самой земли, с полной скорости.`;
   } else {
     let baza, zona;
     if (d <= 50) { baza = 100; zona = 'Круг'; }
@@ -397,7 +475,9 @@ function prizemlenie() {
     if (baza > 0) {
       const protivVetra = Math.abs(norm180(s.kurs - (s.veterKuda + 180))) < 45;
       if (s.W > 0 && protivVetra) { ochki += 5; razbor.push(['Против ветра', '+5']); }
-      if (s.podushka) { ochki += 10; razbor.push(['Подушка', '+10']); }
+      if (s.podushka && vKas <= F.myagko) { ochki += 10; razbor.push(['Подушка · касание ' + vKas.toFixed(1) + ' м/с', '+10']); }
+      else razbor.push(['Касание ' + vKas.toFixed(1) + ' м/с' + (s.podushka ? ' — подушка не вовремя' : ' — без подушки'), '']);
+      if (s.svalBylo) razbor.push(['Было сваливание купола', '']);
       s.proydeny.forEach(n => { ochki += 5; razbor.push(['Точка ' + n + ' захода', '+5']); });
     }
   }
@@ -408,14 +488,14 @@ function prizemlenie() {
   hran.rekord = Math.max(hran.rekord, ochki);
   if (pobeda && s.nomer + 1 > hran.uroven) hran.uroven = Math.min(UROVNI.length - 1, s.nomer + 1);
   sohranit();
-  setTimeout(() => pokazatItog(zag, ochki, razbor, pogib, pobeda), 900);
+  setTimeout(() => pokazatItog(zag, ochki, razbor, pogib, pobeda, pochemu), 900);
 }
 
-function pokazatItog(zag, ochki, razbor, pogib, pobeda) {
+function pokazatItog(zag, ochki, razbor, pogib, pobeda, pochemu) {
   document.getElementById('zag-itog').textContent = zag;
   document.getElementById('itog-ochki').textContent = ochki;
   document.getElementById('itog-razbor').innerHTML = pogib
-    ? '<p>Посадка на лес и воду — особый случай, а не цель прыжка. Запасную площадку намечают ещё на земле и уходят на неё заранее, если до основной не долететь.</p>'
+    ? `<p>${pochemu}</p>`
     : razbor.map(([a, b]) => `<div><span>${a}</span><b>${b}</b></div>`).join('');
   const do3 = Math.max(0, 3 - hran.seriya);
   document.getElementById('itog-bonus').textContent = pobeda
@@ -581,10 +661,10 @@ function risovatPadenie() {
 }
 
 function risovatKupol(k) {
-  const L = nazh.levo, P = nazh.pravo, oba = (L && P) || nazh.vniz;
-  const kren = s.faza === 'kupol' && !oba ? (P ? 0.12 : L ? -0.12 : 0) : 0;
-  ctx.rotate(kren);
-  const w = 16 + 48 * k, h = 6 + 14 * k;
+  // крен — по настоящей угловой скорости купола; в сваливании купол складывается и болтается
+  const sval = s.faza === 'kupol' && s.svalT > 0;
+  ctx.rotate(s.faza === 'kupol' ? s.om / F.povorot * 0.2 + (sval ? Math.sin(s.t * 14) * 0.15 : 0) : 0);
+  const w = (16 + 48 * k) * (sval ? 0.6 + 0.1 * Math.sin(s.t * 11) : 1), h = (6 + 14 * k) * (sval ? 0.5 : 1);
   // стропы к парашютисту
   ctx.strokeStyle = 'rgba(255,255,255,.7)'; ctx.lineWidth = 0.7;
   for (let i = 0; i <= 4; i++) { const x = -w / 2 + w * i / 4; ctx.beginPath(); ctx.moveTo(x, -18); ctx.lineTo(0, 8); ctx.stroke(); }
@@ -594,10 +674,10 @@ function risovatKupol(k) {
   ctx.strokeStyle = 'rgba(0,0,0,.25)';
   for (let i = 1; i < 9; i++) { const x = -w / 2 + w * i / 9; ctx.beginPath(); ctx.moveTo(x, -18 - h); ctx.lineTo(x, -18); ctx.stroke(); }
   ctx.fillStyle = s.zapasnoy ? '#bbb' : '#fff'; ctx.fillRect(-w / 2, -18 - h, w * 0.22, h);
-  // клеванты: какая затянута
+  // клеванты: насколько затянута каждая
   ctx.fillStyle = '#ff3d3d';
-  if (L || oba) ctx.fillRect(-w / 2 - 2, -18, 4, 4);
-  if (P || oba) ctx.fillRect(w / 2 - 2, -18, 4, 4);
+  if (s.dL > 0.05) ctx.fillRect(-w / 2 - 2, -18, 4, 2 + 7 * s.dL);
+  if (s.dP > 0.05) ctx.fillRect(w / 2 - 2, -18, 4, 2 + 7 * s.dP);
   // парашютист
   ctx.fillStyle = '#1b3f8a'; ctx.beginPath(); ctx.ellipse(0, 12, 5, 8, 0, 0, 7); ctx.fill();
   ctx.fillStyle = '#20252d'; ctx.fillRect(-4, 6, 8, 8);
@@ -646,7 +726,15 @@ function obnovitPribory() {
   const gradusy = Math.round((s.veterKuda + 180) % 360);           // откуда дует, как в метеосводке
   elVeter.textContent = s.W ? `${otkuda} ${gradusy}° · ${s.W} м/с` : '0 м/с';
   elOblaka.textContent = s.obl.kromka ? `☁ кромка ${s.obl.kromka} м` : 'ясно';
+  // режим купола
+  const kupol = s.faza === 'kupol';
+  elRezhim.classList.toggle('vidno', kupol);
+  if (kupol) {
+    elRezhim.classList.toggle('svalivanie', s.svalT > 0);
+    elRezhimy.forEach((e, i) => e.classList.toggle('akt', i === s.rezhim && !(s.svalT > 0)));
+  }
 }
+const elRezhim = document.getElementById('rezhim'), elRezhimy = [...elRezhim.querySelectorAll('[data-r]')];
 
 // ───────── Цикл ─────────
 let pred = 0, pauza = false;
