@@ -1,0 +1,14 @@
+{
+  "name": "Точно в круг — игра Главпрыга",
+  "short_name": "Точно в круг",
+  "start_url": "index.html",
+  "scope": "./",
+  "display": "fullscreen",
+  "orientation": "landscape",
+  "background_color": "#0b1d33",
+  "theme_color": "#0b1d33",
+  "icons": [
+    { "src": "assets/ikonka-192.png", "sizes": "192x192", "type": "image/png" },
+    { "src": "assets/ikonka-512.png", "sizes": "512x512", "type": "image/png" }
+  ]
+}

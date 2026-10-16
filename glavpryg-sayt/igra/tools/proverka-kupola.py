@@ -37,7 +37,8 @@ def proverit(uslovie, chto):
 
 with sync_playwright() as p:
     b = p.chromium.launch()
-    s = b.new_page(viewport={'width': 844, 'height': 390})
+    # сенсорный экран: средняя кнопка «Подушка» есть только на телефоне и планшете
+    s = b.new_context(viewport={'width': 844, 'height': 390}, is_mobile=True, has_touch=True).new_page()
     s.on('pageerror', lambda e: oshibki.append(str(e)))
     s.on('console', lambda m: m.type == 'error' and oshibki.append(m.text))
     s.goto(adres); s.wait_for_timeout(800)

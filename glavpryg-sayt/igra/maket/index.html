@@ -5,6 +5,13 @@
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
 <meta name="robots" content="noindex">
 <meta name="theme-color" content="#0b1d33">
+<!-- с экрана «Домой» игра открывается без панелей браузера (единственный способ на iPhone) -->
+<link rel="manifest" href="manifest.json">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Точно в круг">
+<link rel="apple-touch-icon" href="assets/ikonka-192.png">
 <title>Точно в круг — игра Главпрыга (макет)</title>
 <style>
   :root { --orange:#ff7a1a; --ink:#0b1d33; --glass:rgba(11,29,51,.62); }
@@ -27,6 +34,23 @@
     display:flex; align-items:center; justify-content:center; padding:0; touch-action:manipulation; }
   #k-zakryt:hover { background:rgba(200,30,30,.85); }
   #k-zakryt:focus-visible { outline:3px solid var(--orange); outline-offset:3px; }
+  /* «свернуть / развернуть» — под крестиком */
+  #k-ekran { position:fixed; right:max(10px,env(safe-area-inset-right)); top:calc(10px + min(11vh,46px) + 8px); z-index:10;
+    width:min(11vh,46px); height:min(11vh,46px); border-radius:50%; border:2px solid rgba(255,255,255,.7);
+    background:var(--glass); color:#fff; cursor:pointer; display:flex; align-items:center; justify-content:center;
+    padding:0; touch-action:manipulation; }
+  #k-ekran[hidden] { display:none; }
+  #k-ekran svg { width:55%; height:55%; }
+  #k-ekran:hover { background:rgba(255,122,26,.75); }
+  #k-ekran:focus-visible { outline:3px solid var(--orange); outline-offset:3px; }
+  /* экранные кнопки — только на сенсорных экранах (телефон, планшет); на компьютере — клавиатура */
+  html:not(.sensor) .knopka { display:none !important; }
+  #klavishi { left:50%; bottom:max(12px,env(safe-area-inset-bottom)); transform:translateX(-50%); display:none;
+    background:var(--glass); border-radius:10px; padding:6px 14px; font-size:14px; white-space:nowrap; }
+  html:not(.sensor) #klavishi.vidno { display:block; }
+  #klavishi kbd { font:800 13px ui-monospace,monospace; border:1px solid rgba(255,255,255,.5); border-radius:4px; padding:0 5px; }
+  #ios-sovet { display:none; }
+  html.ios #ios-sovet { display:block; }
   #koldun { right:calc(max(10px,env(safe-area-inset-right)) + min(11vh,46px) + 8px); top:10px; min-width:min(21vh,140px);
     background:var(--glass); border-radius:14px; padding:6px 8px; text-align:center; }
   #koldun svg { width:min(21vh,140px); display:block; margin:0 auto; }
@@ -125,6 +149,12 @@
 <div class="hud" id="soobshenie" role="status" aria-live="polite"></div>
 
 <button id="k-zakryt" type="button" aria-label="Закрыть игру" title="Закрыть игру">✕</button>
+<button id="k-ekran" type="button" aria-label="Свернуть — показать браузер" title="Свернуть — показать браузер" hidden>
+  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" aria-hidden="true">
+    <path id="ikonka-ekran" d="M9 4v5H4M15 4v5h5M9 20v-5H4M15 20v-5h5"/>
+  </svg>
+</button>
+<div class="hud" id="klavishi" aria-hidden="true"></div>
 <button class="knopka" id="k-levo" aria-label="Влево">◀</button>
 <button class="knopka" id="k-raskryt" aria-label="Раскрыть парашют">РАСКРЫТЬ</button>
 <button class="knopka" id="k-pravo" aria-label="Вправо">▶</button>
@@ -137,6 +167,7 @@
     <button class="glavnaya" id="b-start">Прыгать!</button>
     <p class="stat" id="stat-start"></p>
     <p class="stat">Телефон — кнопки по краям: одна — разворот, обе — средний режим; под куполом средняя кнопка — подушка. Компьютер — ← →, вместе или ↓ — средний режим, пробел — раскрыть, под куполом — подушка.</p>
+    <p class="stat" id="ios-sovet">На iPhone во весь экран: «Поделиться» → «На экран „Домой“» и запускать игру со значка.</p>
   </div>
 </section>
 
@@ -268,6 +299,43 @@ function knopkaPodushka(da) {
   kR.classList.toggle('podushka', da); kR.textContent = da ? 'ПОДУШКА' : 'РАСКРЫТЬ';
   kR.setAttribute('aria-label', da ? 'Подушка — держать у самой земли' : 'Раскрыть парашют');
 }
+// ───────── Полный экран ─────────
+// Во встроенном окне страницы /igra во весь экран разворачивается окно страницы, отдельно — сама игра.
+// «Свернуть» выходит из полного экрана (снова видны адресная строка и браузер), «Развернуть» — обратно.
+const elEkran = document.getElementById('k-ekran'), elIkonkaEkran = document.getElementById('ikonka-ekran');
+let svernutoRukami = false;
+function dokEkrana() { try { return window.top.document; } catch { return document; } }
+function chtoRazvorachivat() { try { if (window.frameElement) return window.frameElement.parentElement; } catch {} return document.documentElement; }
+function vPolnomEkrane() { const d = dokEkrana(); return !!(d.fullscreenElement || d.webkitFullscreenElement); }
+function razvernut() {
+  const el = chtoRazvorachivat(), f = el.requestFullscreen || el.webkitRequestFullscreen;
+  if (!f) return Promise.reject(new Error('нет полного экрана'));
+  return Promise.resolve(f.call(el, { navigationUI: 'hide' }))
+    .then(() => screen.orientation?.lock?.('landscape').catch(() => {}));   // держать горизонтально
+}
+function svernut() { const d = dokEkrana(); const f = d.exitFullscreen || d.webkitExitFullscreen; if (f) Promise.resolve(f.call(d)).catch(() => {}); }
+function obnovitKnopkuEkrana() {
+  const v = vPolnomEkrane(), t = v ? 'Свернуть — показать браузер' : 'Во весь экран';
+  // свернули во встроенном окне — браузер после выхода из полного экрана мог прокрутить страницу; возвращаем окно игры в кадр
+  if (!v) try { window.frameElement?.scrollIntoView({ block: 'start' }); } catch {}
+  elIkonkaEkran.setAttribute('d', v ? 'M9 4v5H4M15 4v5h5M9 20v-5H4M15 20v-5h5' : 'M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5');
+  elEkran.setAttribute('aria-label', t); elEkran.title = t;
+}
+{
+  const el = chtoRazvorachivat();
+  elEkran.hidden = !(el.requestFullscreen || el.webkitRequestFullscreen);   // iPhone не умеет — кнопку не показываем
+  [document, dokEkrana()].forEach(d => ['fullscreenchange', 'webkitfullscreenchange'].forEach(t => d.addEventListener(t, obnovitKnopkuEkrana)));
+  obnovitKnopkuEkrana();
+}
+elEkran.addEventListener('click', () => {
+  if (vPolnomEkrane()) { svernutoRukami = true; svernut(); }
+  else { svernutoRukami = false; razvernut().catch(() => {}); }
+});
+// сенсорный экран — показываем кнопки управления; на компьютере их нет
+if (matchMedia('(any-pointer:coarse)').matches || navigator.maxTouchPoints > 0) document.documentElement.classList.add('sensor');
+addEventListener('pointerdown', e => { if (e.pointerType === 'touch') document.documentElement.classList.add('sensor'); }, true);
+if (/iPhone|iPod/.test(navigator.userAgent) && !navigator.standalone) document.documentElement.classList.add('ios');
+
 // Крестик: во встроенном окне просим страницу закрыть игру, отдельно — возвращаемся на /igra
 document.getElementById('k-zakryt').addEventListener('click', () => {
   if (window.parent !== window) { window.parent.postMessage({ igra: 'zakryt' }, location.origin); return; }
@@ -632,6 +700,7 @@ function risovat() {
 
 // роза ветров с градусами, как на снимке учебника: стороны света и деления через 30°
 function risovatRozu(px) {
+  if (ROZA.r / px < 24) return;                                // издалека роза мелкая — подписи слипаются, не рисуем
   const { x, y, r } = ROZA;
   ctx.save(); ctx.translate(x, y);
   ctx.strokeStyle = '#fff'; ctx.lineWidth = Math.max(1.6, 2 * px);
@@ -741,6 +810,10 @@ function obnovitPribory() {
   const gradusy = Math.round((s.veterKuda + 180) % 360);           // откуда дует, как в метеосводке
   elVeter.textContent = s.W ? `${otkuda} ${gradusy}° · ${s.W} м/с` : '0 м/с';
   elOblaka.textContent = s.obl.kromka ? `☁ кромка ${s.obl.kromka} м` : 'ясно';
+  // подсказка клавиш на компьютере
+  const kl = s.faza === 'padenie' ? '<kbd>←</kbd> <kbd>→</kbd> поворот · <kbd>пробел</kbd> раскрыть'
+    : s.faza === 'kupol' ? '<kbd>←</kbd> <kbd>→</kbd> разворот · <kbd>↓</kbd> средний режим · <kbd>пробел</kbd> подушка' : '';
+  if (elKlavishi.dataset.t !== kl) { elKlavishi.dataset.t = kl; elKlavishi.innerHTML = kl; elKlavishi.classList.toggle('vidno', !!kl); }
   // режим купола
   const kupol = s.faza === 'kupol';
   elRezhim.classList.toggle('vidno', kupol);
@@ -749,6 +822,7 @@ function obnovitPribory() {
     elRezhimy.forEach((e, i) => e.classList.toggle('akt', i === s.rezhim && !(s.svalT > 0)));
   }
 }
+const elKlavishi = document.getElementById('klavishi');
 const elRezhim = document.getElementById('rezhim'), elRezhimy = [...elRezhim.querySelectorAll('[data-r]')];
 
 // ───────── Цикл ─────────
@@ -781,9 +855,8 @@ function start(nomer) {
   zagruzka.then(() => {
     document.querySelectorAll('.ekran').forEach(e => e.id !== 'povorot' && e.classList.remove('vidno'));
     noviyPryzhok(nomer);
-    // на телефоне — во весь экран и горизонтально, где браузер это позволяет
-    if (matchMedia('(pointer:coarse)').matches && document.documentElement.requestFullscreen && !document.fullscreenElement)
-      document.documentElement.requestFullscreen().then(() => screen.orientation?.lock?.('landscape')).catch(() => {});
+    // на телефоне и планшете — во весь экран и горизонтально, если игрок сам не свернул
+    if (document.documentElement.classList.contains('sensor') && !svernutoRukami && !vPolnomEkrane()) razvernut().catch(() => {});
   });
 }
 document.getElementById('b-start').onclick = () => start(vybran);
