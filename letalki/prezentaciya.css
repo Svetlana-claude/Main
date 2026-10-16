@@ -1,0 +1,117 @@
+/* Мини-презентация: альбомный лист A4, один слайд — одна страница.
+   Поля совпадают с полями md2pdf, иначе слайд не попадёт в кадр. */
+@page { size: A4 landscape; margin: 18mm 16mm 20mm; }
+
+:root {
+  --tyomnyy: #0e1b2b;
+  --tekst: #1d2836;
+  --seryy: #6b7a8c;
+  --liniya: #d9e1ea;
+  --fon: #f4f7fa;
+  --p33: #1677c4;          /* проект «33» — синий */
+  --p33-svet: #e5f1fb;
+  --drk: #d9481f;          /* «Твин Дракен» — огненный */
+  --drk-svet: #fdece6;
+}
+
+html { font-size: 10pt; color: var(--tekst); }
+body { margin: 0; }
+/* Первый `# ` исходника нужен md2pdf для заголовка и подписи внизу, на слайдах он не нужен */
+body > h1:first-child { display: none; }
+
+.slide { height: 168mm; box-sizing: border-box; position: relative;
+         break-after: page; display: flex; flex-direction: column; }
+.slide:last-child { break-after: auto; }
+
+.metka { font-size: 8pt; letter-spacing: 0.18em; text-transform: uppercase;
+         color: var(--seryy); margin: 0 0 2mm; }
+.slide h2 { font-size: 19pt; color: var(--tyomnyy); border: 0; padding: 0;
+            margin: 0 0 6mm; line-height: 1.15; }
+.slide h2 small { font-size: 11pt; color: var(--seryy); font-weight: normal; }
+
+/* ── Обложка ── */
+.oblozhka { background: var(--tyomnyy); color: #fff; border-radius: 4mm;
+            padding: 16mm 16mm 12mm; }
+.oblozhka .metka { color: #8fa3ba; }
+.oblozhka h1 { color: #fff; font-size: 30pt; margin: 4mm 0 3mm; line-height: 1.1; }
+.oblozhka h1 .p33 { color: #5fb2f2; }
+.oblozhka h1 .drk { color: #ff8a5c; }
+.oblozhka .podzag { font-size: 12pt; color: #c6d2df; margin: 0 0 auto; }
+.oblozhka .para { display: flex; gap: 8mm; margin-top: 10mm; }
+.oblozhka .kartochka { flex: 1; border-radius: 3mm; padding: 6mm 7mm;
+                       background: rgba(255,255,255,0.06); border-top: 2mm solid; }
+.oblozhka .kartochka.p33 { border-color: #5fb2f2; }
+.oblozhka .kartochka.drk { border-color: #ff8a5c; }
+.oblozhka .kartochka b { display: block; font-size: 15pt; color: #fff; margin-bottom: 1.5mm; }
+.oblozhka .kartochka span { color: #c6d2df; font-size: 9.5pt; }
+.oblozhka .kartochka .start { display: block; margin-top: 3mm; font-size: 8.5pt;
+                              letter-spacing: 0.1em; text-transform: uppercase; color: #8fa3ba; }
+
+/* ── Две колонки проектов ── */
+.dve { display: flex; gap: 7mm; flex: 1; }
+.kol { flex: 1; border-radius: 3mm; padding: 6mm 7mm; display: flex; flex-direction: column; }
+.kol.p33 { background: var(--p33-svet); }
+.kol.drk { background: var(--drk-svet); }
+.kol h3 { margin: 0 0 3mm; font-size: 14pt; }
+.kol.p33 h3 { color: var(--p33); }
+.kol.drk h3 { color: var(--drk); }
+.kol p { margin: 0 0 3mm; line-height: 1.5; }
+.cel { margin-top: auto; background: #fff; border-radius: 2mm; padding: 3.5mm 4.5mm; }
+.cel .metka { margin-bottom: 1mm; }
+.cel b { font-size: 11pt; color: var(--tyomnyy); }
+
+/* ── Главное в цифрах ── */
+.cifry { display: grid; grid-template-columns: repeat(4, 1fr); gap: 4mm; margin-bottom: 9mm; }
+.ryad-imya { font-size: 12pt; font-weight: bold; margin: 2mm 0 3.5mm; }
+.ryad-imya.p33 { color: var(--p33); }
+.ryad-imya.drk { color: var(--drk); }
+.plitka { border-radius: 2.5mm; padding: 7mm 6mm 6mm; min-height: 36mm; box-sizing: border-box; background: var(--fon);
+          border-left: 1.4mm solid; }
+.plitka.p33 { border-color: var(--p33); }
+.plitka.drk { border-color: var(--drk); }
+.plitka .znach { font-size: 22pt; white-space: nowrap; font-weight: bold; color: var(--tyomnyy); line-height: 1.1; }
+.plitka .znach i { font-style: normal; font-size: 10pt; color: var(--seryy); font-weight: normal; }
+.plitka .chto { font-size: 9.5pt; color: var(--seryy); margin-top: 2mm; }
+.plitka .cel-pok { font-size: 9.5pt; margin-top: 2.5mm; color: var(--tekst); }
+
+/* ── Таблица сравнения ── */
+table.sravnenie { font-size: 9pt; margin: 0; border-collapse: separate; border-spacing: 0; }
+table.sravnenie th, table.sravnenie td { border: 0; border-bottom: 0.5pt solid var(--liniya);
+                                         padding: 1.5mm 3mm; }
+table.sravnenie thead th { font-size: 10.5pt; color: #fff; padding: 2.6mm 3mm; }
+table.sravnenie thead th.param { background: var(--tyomnyy); border-radius: 2mm 0 0 0; width: 27%; }
+table.sravnenie thead th.p33 { background: var(--p33); width: 36.5%; }
+table.sravnenie thead th.drk { background: var(--drk); border-radius: 0 2mm 0 0; }
+table.sravnenie td:first-child { color: var(--seryy); }
+table.sravnenie td.z { font-weight: bold; color: var(--tyomnyy); }
+table.sravnenie td.z span { font-weight: normal; color: var(--seryy); }
+table.sravnenie tr.gruppa td { background: var(--fon); font-size: 7.8pt; letter-spacing: 0.14em;
+                               text-transform: uppercase; color: var(--tyomnyy); font-weight: bold;
+                               padding: 1.6mm 3mm; }
+.cel-znak { display: inline-block; font-size: 7.8pt; font-weight: normal; border-radius: 1mm;
+            padding: 0.2mm 1.5mm; margin-left: 1mm; white-space: nowrap; }
+.p33 .cel-znak, td.p33 .cel-znak { background: var(--p33-svet); color: var(--p33); }
+td.drk .cel-znak { background: var(--drk-svet); color: var(--drk); }
+.snoska { font-size: 8pt; color: var(--seryy); margin: 3mm 0 0; }
+
+/* ── Состояние работ ── */
+.shagi { list-style: none; padding: 0; margin: 0; }
+.shagi li { position: relative; padding: 0 0 2.4mm 8mm; margin: 0; line-height: 1.4; font-size: 9.3pt; }
+.shagi li::before { content: ""; position: absolute; left: 0.6mm; top: 1.2mm; width: 3mm; height: 3mm;
+                    border-radius: 50%; }
+.shagi li::after { content: ""; position: absolute; left: 1.95mm; top: 4.6mm; bottom: -0.6mm;
+                   border-left: 0.6pt solid #b8c6d4; }
+.shagi li:last-child::after { display: none; }
+.p33 .shagi li::before { background: var(--p33); }
+.drk .shagi li::before { background: var(--drk); }
+.shagi li.plan::before { background: #fff; border: 0.9mm solid; box-sizing: border-box; }
+.p33 .shagi li.plan::before { border-color: var(--p33); }
+.drk .shagi li.plan::before { border-color: var(--drk); }
+.shagi li.plan { font-weight: bold; color: var(--tyomnyy); }
+.shagi li.plan em { display: block; font-style: normal; font-size: 7.8pt; letter-spacing: 0.14em;
+                    text-transform: uppercase; color: var(--seryy); font-weight: bold; }
+.kol .start { font-size: 8.5pt; color: var(--seryy); margin: -2mm 0 4mm; }
+.legenda { font-size: 8pt; color: var(--seryy); margin-top: 3mm; }
+.legenda span { display: inline-block; width: 2.6mm; height: 2.6mm; border-radius: 50%;
+                background: var(--seryy); vertical-align: -0.3mm; margin: 0 1mm 0 4mm; }
+.legenda span.kolco { background: #fff; border: 0.7mm solid var(--seryy); box-sizing: border-box; }

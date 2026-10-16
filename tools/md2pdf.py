@@ -106,7 +106,10 @@ def Build(source, target, css_file=None, title=None, footer=None):
             page.goto(Path(tmp.name).as_uri(), wait_until="load")
             page.evaluate("document.fonts.ready.then(() => 1)")
             page.wait_for_timeout(300)
+            # Размер листа берётся из `@page` стилей: так проект может перейти
+            # на альбомный лист (`size: A4 landscape`) для слайдов
             page.pdf(path=str(target), format="A4", print_background=True,
+                     prefer_css_page_size=True,
                      display_header_footer=True, header_template="<span></span>",
                      footer_template=footer_html,
                      margin={"top": "18mm", "bottom": "20mm",
