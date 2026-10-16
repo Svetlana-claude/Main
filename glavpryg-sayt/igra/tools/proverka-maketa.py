@@ -3,7 +3,7 @@
 
     python proverka-maketa.py <адрес index.html> <каталог снимков> [уровни: 0,5,7]
 
-Автопилот ведёт к цели в падении, раскрывается на 1000 м и под куполом
+Автопилот ведёт к цели в падении (поворот и движение вперёд), раскрывается на 1000 м и под куполом
 держит курс на круг (ниже 45 м не крутит — иначе сваливание),
 на 5,5 м жмёт подушку. Печатает итог прыжка.
 """
@@ -25,6 +25,7 @@ AVTOPILOT = """() => {
   const d = ((kurs - s.kurs - (s.om || 0) * 0.9) % 360 + 540) % 360 - 180;
   const nizko = s.faza === 'kupol' && s.h < 45;
   nazh.levo = !nizko && d < -10; nazh.pravo = !nizko && d > 10; nazh.vniz = false;
+  nazh.vverh = s.faza === 'padenie' && Math.abs(d) < 30;            // в падении — движение вперёд к цели
   if (s.faza === 'padenie' && s.h < (s.W > 7 ? 920 : 1000)) raskryt();
   nazh.podushka = s.faza === 'kupol' && s.h < 5.5;
   return s.faza + ' ' + Math.round(s.h) + ' ' + Math.round(Math.hypot(s.x, s.y));
