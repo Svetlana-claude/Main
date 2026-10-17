@@ -411,26 +411,41 @@ function knopkaPodushka(da) {
 // «Свернуть» выходит из полного экрана (снова видны адресная строка и браузер), «Развернуть» — обратно.
 const elEkran = document.getElementById('k-ekran'), elIkonkaEkran = document.getElementById('ikonka-ekran');
 let svernutoRukami = false;
+// iPhone полного экрана для страниц не даёт: во встроенном окне страница сама растягивает окно игры
+// на весь экран и просит смахнуть вверх, чтобы Safari убрал панели («psevdo»), — о состоянии она сообщает сюда.
+let psevdoPolnyy = false;
+const vOkne = window.parent !== window;
 function dokEkrana() { try { return window.top.document; } catch { return document; } }
 function chtoRazvorachivat() { try { if (window.frameElement) return window.frameElement.parentElement; } catch {} return document.documentElement; }
-function vPolnomEkrane() { const d = dokEkrana(); return !!(d.fullscreenElement || d.webkitFullscreenElement); }
+function estPolnyyEkran() { const el = chtoRazvorachivat(); return !!(el.requestFullscreen || el.webkitRequestFullscreen); }
+function vPolnomEkrane() { const d = dokEkrana(); return psevdoPolnyy || !!(d.fullscreenElement || d.webkitFullscreenElement); }
+function psevdo(da) { window.parent.postMessage({ igra: da ? 'razvernut' : 'svernut' }, location.origin); }
 function razvernut() {
   const el = chtoRazvorachivat(), f = el.requestFullscreen || el.webkitRequestFullscreen;
-  if (!f) return Promise.reject(new Error('нет полного экрана'));
+  if (!f) { if (vOkne) { psevdo(true); return Promise.resolve(); } return Promise.reject(new Error('нет полного экрана')); }
   return Promise.resolve(f.call(el, { navigationUI: 'hide' }))
-    .then(() => screen.orientation?.lock?.('landscape').catch(() => {}));   // держать горизонтально
+    .then(() => screen.orientation?.lock?.('landscape').catch(() => {}))    // держать горизонтально
+    .catch(e => { if (vOkne) psevdo(true); else throw e; });              // браузер не пустил — растянуть окно на странице
 }
-function svernut() { const d = dokEkrana(); const f = d.exitFullscreen || d.webkitExitFullscreen; if (f) Promise.resolve(f.call(d)).catch(() => {}); }
+function svernut() {
+  if (psevdoPolnyy) { psevdo(false); return; }
+  const d = dokEkrana(); const f = d.exitFullscreen || d.webkitExitFullscreen; if (f) Promise.resolve(f.call(d)).catch(() => {});
+}
+addEventListener('message', e => {
+  if (e.origin !== location.origin || !e.data || e.data.igra !== 'ekran') return;
+  psevdoPolnyy = !!e.data.polnyy; obnovitKnopkuEkrana();
+});
 function obnovitKnopkuEkrana() {
   const v = vPolnomEkrane(), t = v ? 'Свернуть — показать браузер' : 'Во весь экран';
   // свернули во встроенном окне — браузер после выхода из полного экрана мог прокрутить страницу; возвращаем окно игры в кадр
-  if (!v) try { window.frameElement?.scrollIntoView({ block: 'start' }); } catch {}
+  if (!v && !psevdoBylo) try { window.frameElement?.scrollIntoView({ block: 'start' }); } catch {}
+  psevdoBylo = psevdoPolnyy;
   elIkonkaEkran.setAttribute('d', v ? 'M9 4v5H4M15 4v5h5M9 20v-5H4M15 20v-5h5' : 'M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5');
   elEkran.setAttribute('aria-label', t); elEkran.title = t;
 }
+let psevdoBylo = false;                                         // растяжку на странице сворачивает сама страница
 {
-  const el = chtoRazvorachivat();
-  elEkran.hidden = !(el.requestFullscreen || el.webkitRequestFullscreen);   // iPhone не умеет — кнопку не показываем
+  elEkran.hidden = !estPolnyyEkran() && !vOkne;                  // отдельная страница на iPhone — сворачивать нечего
   [document, dokEkrana()].forEach(d => ['fullscreenchange', 'webkitfullscreenchange'].forEach(t => d.addEventListener(t, obnovitKnopkuEkrana)));
   obnovitKnopkuEkrana();
 }
