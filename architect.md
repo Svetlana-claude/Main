@@ -1149,7 +1149,14 @@ PDF A5 без сторонних библиотек и шлёт два пись�
 `vysotaVybroski` опускает выброску под сплошной слой (pokr ≥ 0,8), `oblakaShag`
 следит за входом в облако (мгла `s.tuman`, «☁ В ОБЛАКЕ», раскрытие в облаке ×0,5),
 `risovatSloi` рисует облака в перспективе `h/(h−hs)`. Проверка —
-`igra/tools/proverka-oblakov.py`. Новые файлы в `public/igra-app` и
+`igra/tools/proverka-oblakov.py`.
+Посадка видом сбоку: ниже `F.bokOt` (50 м) `bokVid()` включает `risovatBok()`
+(переход за 0,5 с, время ниже 50 м настоящее — `F.uskBok`). Человек рисуется по
+суставам (`sustavy`, руки — `lokot`, двухзвенная IK), позы — `pozaVozduh` (руки
+по ходу клевант, ноги вместе) и `pozaZemlya` (шесть исходов `ISHODY`). Высоты
+«раз-два» — `razDva(W)`, шкала — `risovatShkalu`; исход — `ishodPosadki(vz, vf,
+vVozd, ногиВрозь)`, совет — `sovetPosadki`; экран итога через 2,8 с. Проверка —
+`igra/tools/proverka-posadki.py`. Новые файлы в `public/igra-app` и
 `public/images/igra` получают группу `mokeeva`: каталоги без setgid, а
 `chgrp` запрещён. Поэтому таким файлам ставится 0644, иначе nginx отдаст 403.
 Проверка — `tools/proverka-maketa.py <адрес> <каталог

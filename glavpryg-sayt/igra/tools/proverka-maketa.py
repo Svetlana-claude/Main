@@ -27,7 +27,7 @@ AVTOPILOT = """() => {
   nazh.levo = !nizko && d < -10; nazh.pravo = !nizko && d > 10; nazh.vniz = false;
   nazh.vverh = s.faza === 'padenie' && Math.abs(d) < 30;            // в падении — движение вперёд к цели
   if (s.faza === 'padenie' && s.h < (s.W > 7 ? 920 : 1000)) raskryt();
-  nazh.podushka = s.faza === 'kupol' && s.h < 5.5;
+  nazh.podushka = s.faza === 'kupol' && s.h < (typeof razDva === 'function' ? (razDva(s.W)[0] + razDva(s.W)[1]) / 2 : 5.5);
   return s.faza + ' ' + Math.round(s.h) + ' ' + Math.round(Math.hypot(s.x, s.y));
 }"""
 oshibki = []
@@ -52,7 +52,8 @@ with sync_playwright() as p:
             if f in ('padenie', 'kupol') and f not in snyato and s.evaluate('s.h') < (2000 if f == 'padenie' else 250):
                 snyato.add(f); s.screenshot(path=f'{kuda}/igra-{imya}-{f}.png')
             s.wait_for_timeout(50)
-        s.wait_for_timeout(1300)
+        s.wait_for_timeout(500); s.screenshot(path=f'{kuda}/igra-{imya}-posadka.png')   # посадка видом сбоку
+        s.wait_for_selector('#e-itog.vidno', timeout=8000)
         s.screenshot(path=f'{kuda}/igra-{imya}-itog.png')
         print(imya, s.inner_text('#zag-itog'), '|', s.inner_text('#itog-ochki'), '|', s.inner_text('#itog-razbor').replace('\n', ' '))
         c.close()

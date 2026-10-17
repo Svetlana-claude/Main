@@ -5,8 +5,8 @@
 
 1) Глубокое торможение (кнопка «Подушка») на высоте дольше нескольких секунд — сваливание.
 2) Резкий разворот ниже 40 м — сваливание и «жёсткое приземление».
-3) Подушка на 5 м с полной скорости — мягкое касание и бонус «Подушка».
-4) Без подушки — касание без бонуса.
+3) Подушка на 5 м с полной скорости — красиво на ноги, +10.
+4) Без подушки — перекат, без бонуса.
 """
 import sys
 from playwright.sync_api import sync_playwright
@@ -70,7 +70,7 @@ with sync_playwright() as p:
     s.evaluate("nazh.podushka = true")
     zag, razbor = itog(s)
     s.evaluate("nazh.podushka = false")
-    proverit('Подушка' in razbor and '+10' in razbor, f'подушка на 5 м — {razbor[:120]}')
+    proverit('на ноги' in razbor and '+10' in razbor, f'подушка на 5 м — {razbor[:120]}')
     # 4. без подушки
     do_kupola(s, 60)
     zag, razbor = itog(s)

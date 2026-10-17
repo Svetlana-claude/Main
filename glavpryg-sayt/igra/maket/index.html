@@ -288,6 +288,8 @@ const F = {
   raskrytieMin:900, zapasnoy:350, raskrytieDlit:2.5,
   // ускорение игрового времени: падение и спуск под куполом идут быстрее настоящих
   uskFF:2, uskKupol:2.5, uskNizko:1.5,
+  // посадка: ниже bokOt м — вид сбоку и настоящее время, чтобы подушку можно было сделать «на раз-два»
+  bokOt:50, uskBok:1,
 };
 // запасное поле — к западу от дороги; на нём метки, видные с воздуха
 const ZAPASNOE = [[-820,-120],[-230,-180],[-170,500],[-760,560]];
@@ -597,6 +599,8 @@ function noviyPryzhok(nomer) {
     poza:'zhivot', fig:null, figGotov:true, vg:0, figury:[], bylaBochka:false, nestab:false, tFF:0, kmd:null,
     // облака: в каком слое сейчас, насколько затянуло экран, раскрылся ли в облаке
     vOblake:null, tuman:0, raskrytVOblake:false,
+    // посадка: качание под куполом, где начата подушка, вид сбоку, исход касания
+    uskor:0, put:0, podushkaH:null, razH:null, bKas:0, bokT:0, posadka:null,
   };
   const nizhe = sloi.filter(L => L.tip !== 'ci' && L.verh < vys);
   pokazat(`${pogoda.imya} — выброска на ${vys} м` + (nizhe.length ? `, облака ниже: ${opisSloev(nizhe)} м` : ''), 2.8);
@@ -689,9 +693,11 @@ function shag(dtReal) {
     const [kx, ky] = vec(s.kurs); s.x += kx * 30 * dtReal; s.y += ky * 30 * dtReal;
     return;
   }
+  if (s.posadka) s.posadka.t += dtReal;
+  if (bokVid()) s.bokT += dtReal;
   if (s.faza === 'itog') return;
   oblakaShag(dtReal);
-  const usk = s.faza === 'padenie' ? F.uskFF : (s.h < 100 ? F.uskNizko : F.uskKupol);
+  const usk = s.faza === 'padenie' ? F.uskFF : s.h < F.bokOt ? F.uskBok : s.h < 100 ? F.uskNizko : F.uskKupol;
   const dt = dtReal * usk;
   const L = nazh.levo, P = nazh.pravo, oba = (L && P) || nazh.vniz;
 
@@ -771,6 +777,7 @@ function shag(dtReal) {
     s.kurs += s.om * dt;
     const dv = (vCel - s.v) * Math.min(1, dt / (s.svalT > 0 ? 0.3 : F.tauGor));
     s.v += dv;
+    s.uskor += (dv / Math.max(dt, 1e-3) - s.uskor) * Math.min(1, dt / 0.25);   // для качания парашютиста под куполом
     // подушка: гашение скорости вперёд переходит в подъёмную силу и снижает вертикальную —
     // работает только с полной скорости и только пока скорость гасится (≈ 4–6 м над землёй)
     s.vzK += (vzCel - s.vzK) * Math.min(1, dt / (s.svalT > 0 ? 0.5 : F.tauVert)) - (s.svalT > 0 ? 0 : F.podemnaya * Math.max(0, -dv));
@@ -778,7 +785,14 @@ function shag(dtReal) {
     s.vzTek = s.vzK;
     const [kx, ky] = vec(s.kurs), [wx, wy] = veterNa(s.h);
     s.x += (kx * s.v + wx) * dt; s.y += (ky * s.v + wy) * dt; s.h -= s.vzTek * dt;
+    s.put += (s.v + wx * kx + wy * ky) * dt;                        // путь вдоль курса — для вида сбоку
     if (s.h < 3 && b > 0.6) s.podushka = true;
+    // где начата подушка у земли: РАЗ — клеванты до середины, ДВА — до конца; отпустил — не считается
+    const hh = Math.round(s.h * 10) / 10;
+    if (s.h < 12 && cel[0] + cel[1] >= 1 && s.razH == null) s.razH = hh;
+    if (s.h < 12 && nazh.podushka && s.podushkaH == null) s.podushkaH = hh;
+    if (cel[0] + cel[1] === 0 && s.h > 1) s.razH = s.podushkaH = null;
+    s.bKas = b;
     // контрольные точки коробочки
     for (const t of s.tochki) {
       if (!s.proydeny.includes(t.n) && Math.abs(s.h - t.h) < 25 && Math.hypot(s.x - t.x, s.y - t.y) < 90) {
@@ -788,17 +802,57 @@ function shag(dtReal) {
     if (s.h < 420 && !s.trevogaBylo.k1) { s.trevogaBylo.k1 = 1; pokazat('400 м — только средний режим, к точке I', 2); }
     if (s.h < 110 && !s.trevogaBylo.k2) { s.trevogaBylo.k2 = 1; pokazat('100 м — против ветра, по стрелке!', 2); }
     if (s.h < 50 && !s.trevogaBylo.k3) { s.trevogaBylo.k3 = 1; pokazat('50 м — полная скорость, ноги вместе', 1.6); }
-    if (s.h < 14 && !s.trevogaBylo.k4) { s.trevogaBylo.k4 = 1; pokazat('Готовь подушку! Жми у самой земли', 1.4); }
-    if (s.u.podskazka && s.h < 6.5 && !s.trevogaBylo.k5) { s.trevogaBylo.k5 = 1; pokazat('ПОДУШКА — сейчас!', 1.2); }
+    if (s.h < 14 && !s.trevogaBylo.k4) { s.trevogaBylo.k4 = 1; pokazat('Взгляд на горизонт, ноги вместе — готовь подушку', 1.6); }
+    const [raz, dva] = razDva(s.W);
+    if (s.u.podskazka && s.h < raz && !s.trevogaBylo.k5) { s.trevogaBylo.k5 = 1; pokazat('Подушка: РАЗ — до середины…', 1); }
+    if (s.u.podskazka && s.h < dva && !s.trevogaBylo.k6) { s.trevogaBylo.k6 = 1; pokazat('…ДВА — до конца!', 1); }
     if (s.h <= 0) prizemlenie();
   }
 }
 
 // ───────── Приземление и счёт ─────────
+// Исход касания — по вертикальной скорости и скорости вперёд над землёй (с ветром).
+// Подушка «на раз-два» (AFF, с. 34): РАЗ — клеванты из верхнего положения в среднее, ДВА — до конца.
+// razDva(W) — высоты, м, на которых это делать в игре (подсказка и шкала клевант в виде сбоку):
+// в штиль — 5,5 и 3 м; чем сильнее встречный ветер, тем позже и мельче, иначе купол встанет и потащит назад
+function razDva(W) { return [Math.max(2.2, 5.5 - 0.3 * W), Math.max(1.2, 3 - 0.15 * W)]; }
+const ISHODY = {
+  nogi:      { imya:'Красиво на ноги',            ochki:'+10', sovet:'ноги вместе, подушка вовремя' },
+  probezhka: { imya:'На ноги с пробежкой',        ochki:'+5',  sovet:'' },
+  koleni:    { imya:'Упал на колени',             ochki:'',    sovet:'' },
+  popa:      { imya:'Упал назад, на спину',       ochki:'',    sovet:'подушка рано — купол встал и просел' },
+  kuvyrok:   { imya:'Перекат — большая скорость', ochki:'×0,5', sovet:'' },
+  zhestko:   { imya:'Жёсткий удар',               ochki:'',    sovet:'' },
+};
+// vz — вниз, vf — вперёд над землёй (минус — ветер тащит назад), vVozd — скорость купола по воздуху
+function ishodPosadki(vz, vf, vVozd, nogaVroz) {
+  if (vf > 8.5 || (vz > 4.5 && vf > 6)) return 'kuvyrok';         // летел вперёд — гасит скорость перекатом
+  if ((vz > 2.6 && vVozd < 3.2) || vf < -4) return 'popa';          // купол встал высоко или ветер тащит назад — падает на спину
+  if (vz > 3.8 || vf > 7 || nogaVroz) return 'koleni';
+  if (vz <= 2.2 && vf <= 6 && vf >= -2.5) return 'nogi';
+  return 'probezhka';                                                // пробежка — вперёд или шагом назад
+}
+// почему так вышло — одной строкой в разбор
+function sovetPosadki(ishod) {
+  const h = s.podushkaH, r = s.razH, [raz, dva] = razDva(s.W), m = v => String(v).replace('.', ',') + ' м';
+  if (ishod === 'zhestko') return '';
+  if (h == null) return s.bKas > 0.3 ? 'в среднем режиме, без подушки' : 'без подушки';
+  if (ishod === 'popa' && s.posadka.vf < -4) return 'встречный ветер утащил назад — подушку мельче и позже';
+  if (ishod === 'nogi') return r != null && r > h + 0.5 ? 'подушка на раз-два: ' + m(r) + ' и ' + m(h) : ISHODY.nogi.sovet;
+  if (h > raz + 1.5) return 'подушка рано, на ' + m(h);
+  if (h < dva - 1) return 'подушка поздно, на ' + m(h);
+  if (s.razvorotNizko) return 'в развороте — ноги врозь';
+  if (r != null && r > h + 0.5) return 'подушка на раз-два: ' + m(r) + ' и ' + m(h);
+  return ISHODY[ishod].sovet || 'подушка на ' + m(h);
+}
 function prizemlenie() {
   s.h = 0; s.faza = 'itog';
   kR.classList.remove('vidno'); knopkaPodushka(false); nazh.podushka = false;
   const vKas = s.vzTek, zhestko = s.svalT > 0 || vKas > F.zhestko;
+  const [wx0, wy0] = veterNa(0), [kx0, ky0] = vec(s.kurs), vf = s.v + wx0 * kx0 + wy0 * ky0;
+  const ishod = zhestko ? 'zhestko' : ishodPosadki(vKas, vf, s.v, s.razvorotNizko);
+  s.posadka = { ishod, t:0, vz:vKas, vf };
+  pokazat(ISHODY[ishod].imya + (ishod === 'nogi' ? '!' : ''), 2.4, ishod === 'zhestko' || ishod === 'kuvyrok');
   const g = grunt(s.x, s.y), d = Math.hypot(s.x, s.y);
   const razbor = [];
   let ochki = 0, zag, pogib = false, pochemu = '';
@@ -828,8 +882,10 @@ function prizemlenie() {
     if (baza > 0) {
       const protivVetra = Math.abs(norm180(s.kurs - (s.veterKuda + 180))) < 45;
       if (s.W > 0 && protivVetra) { ochki += 5; razbor.push(['Против ветра', '+5']); }
-      if (s.podushka && vKas <= F.myagko) { ochki += 10; razbor.push(['Подушка · касание ' + vKas.toFixed(1) + ' м/с', '+10']); }
-      else razbor.push(['Касание ' + vKas.toFixed(1) + ' м/с' + (s.podushka ? ' — подушка не вовремя' : ' — без подушки'), '']);
+      const I = ISHODY[ishod], skor = ` · ${vKas.toFixed(1)} м/с вниз, ${Math.max(0, vf).toFixed(1)} вперёд`;
+      razbor.push([I.imya + ' — ' + sovetPosadki(ishod) + skor, I.ochki]);
+      if (ishod === 'nogi') ochki += 10; else if (ishod === 'probezhka') ochki += 5;
+      else if (ishod === 'kuvyrok') ochki = Math.round(ochki * 0.5);
       if (s.svalBylo) razbor.push(['Было сваливание купола', '']);
       s.proydeny.forEach(n => { ochki += 5; razbor.push(['Точка ' + n + ' захода', '+5']); });
       s.figury.forEach(f => { ochki += 5; razbor.push([IMENA_FIGUR[f], '+5']); });
@@ -842,7 +898,7 @@ function prizemlenie() {
   hran.rekord = Math.max(hran.rekord, ochki);
   if (pobeda && s.nomer + 1 > hran.uroven) hran.uroven = Math.min(UROVNI.length - 1, s.nomer + 1);
   sohranit();
-  setTimeout(() => pokazatItog(zag, ochki, razbor, pogib, pobeda, pochemu), 900);
+  setTimeout(() => pokazatItog(zag, ochki, razbor, pogib, pobeda, pochemu), 2800);   // сперва досмотреть посадку
 }
 
 function pokazatItog(zag, ochki, razbor, pogib, pobeda, pochemu) {
@@ -873,6 +929,9 @@ function risovat() {
   ctx.setTransform(1, 0, 0, 1, 0, 0);
   ctx.fillStyle = '#6f7a42'; ctx.fillRect(0, 0, SH, VY);
   if (!s || !imgDal) return;
+  // ниже 50 м — вид сбоку; переход — наплывом за полсекунды
+  const bokA = bokVid() ? Math.min(1, s.bokT / 0.5) : 0;
+  if (bokA >= 1) { risovatBok(); return; }
   // видимая высота кадра в метрах — от высоты: высоко видно весь район, у земли — площадку
   const vidno = Math.max(90, Math.min(2600, s.h * 0.85 + 90));
   const k = VY / vidno;
@@ -982,6 +1041,254 @@ function risovat() {
     ctx.rotate(-a2); ctx.fillStyle = '#fff'; ctx.font = '700 10px system-ui'; ctx.textAlign = 'center';
     ctx.fillText(Math.round(Math.hypot(dx, dy)) + ' м', 0, 20); ctx.restore();
   }
+  if (bokA > 0) { ctx.globalAlpha = bokA; risovatBok(); ctx.globalAlpha = 1; }
+}
+
+// ───────── Вид сбоку: последние 50 м и посадка ─────────
+// Как на видео посадки (Грызлово, 00995): сбоку, парашютист летит слева направо, впереди круг и колдун,
+// на горизонте лес, мачты и водонапорная башня. Масштаб растёт к земле — подушку видно крупно.
+function bokVid() { return !!s && (s.posadka || (s.faza === 'kupol' && s.h < F.bokOt)); }
+const TELO = { golen:0.48, bedro:0.48, tors:0.6, plecho:0.31, predpl:0.31 };
+const lerp = (a, b, k) => a + (b - a) * k;
+const plavno = k => (k = Math.max(0, Math.min(1, k)), k * k * (3 - 2 * k));
+// точка по углу от вертикали вниз (+ — вперёд, по ходу полёта)
+const vniz = (p, ug, l) => [p[0] + Math.sin(ug) * l, p[1] - Math.cos(ug) * l];
+// локоть по плечу и кисти: двузвенная рука, локоть — книзу
+function lokot(pl, ks) {
+  let dx = ks[0] - pl[0], dy = ks[1] - pl[1], d = Math.hypot(dx, dy);
+  const L = TELO.plecho + TELO.predpl - 0.01;
+  if (d > L) { dx *= L / d; dy *= L / d; d = L; ks = [pl[0] + dx, pl[1] + dy]; }
+  const a = Math.atan2(dy, dx), b = Math.acos(Math.min(1, d / (2 * TELO.plecho)));
+  const e1 = [pl[0] + Math.cos(a + b) * TELO.plecho, pl[1] + Math.sin(a + b) * TELO.plecho];
+  const e2 = [pl[0] + Math.cos(a - b) * TELO.plecho, pl[1] + Math.sin(a - b) * TELO.plecho];
+  return [e1[1] < e2[1] ? e1 : e2, ks];
+}
+// Поза: таз (x, y), наклон корпуса (+ вперёд), ноги [[бедро, голень], …] от вертикали, кисть относительно плеча,
+// поворот всего тела вокруг таза (перекат). Возвращает точки суставов.
+function sustavy(p) {
+  const r = p.rot || 0, c = Math.cos(-r), si = Math.sin(-r), [tx, ty] = p.taz;
+  const pov = ([x, y]) => [tx + (x - tx) * c - (y - ty) * si, ty + (x - tx) * si + (y - ty) * c];
+  const pl = [tx + Math.sin(p.tors) * TELO.tors, ty + Math.cos(p.tors) * TELO.tors];
+  const gol = [pl[0] + Math.sin(p.tors) * 0.24, pl[1] + Math.cos(p.tors) * 0.24];
+  const nogi = p.nogi.map(([b, g]) => { const k = vniz(p.taz, b, TELO.bedro), st = vniz(k, g, TELO.golen); return [k, st, [st[0] + Math.cos(g) * 0.13, st[1] + Math.sin(g) * 0.13]]; });
+  const ruka = lokot(pl, [pl[0] + p.kist[0], pl[1] + p.kist[1]]);
+  return { taz:pov(p.taz), pl:pov(pl), gol:pov(gol), nogi:nogi.map(n => n.map(pov)), ruka:ruka.map(pov), rot:r, tors:p.tors };
+}
+function risovatCheloveka(J, ppm) {
+  const lw = Math.max(0.13, 2 / ppm), lin = (pts, cvet, w) => {
+    ctx.strokeStyle = cvet; ctx.lineWidth = w; ctx.beginPath(); pts.forEach((q, i) => i ? ctx.lineTo(q[0], q[1]) : ctx.moveTo(q[0], q[1])); ctx.stroke();
+  };
+  ctx.lineCap = 'round'; ctx.lineJoin = 'round';
+  // дальняя нога темнее; если ноги вместе — почти закрыта ближней
+  const [n1, n2] = J.nogi;
+  lin([J.taz, n2[0], n2[1]], '#132d66', lw * 1.25); lin([n2[1], n2[2]], '#14181e', lw * 1.1);
+  // ранец за спиной
+  const sp = J.tors + J.rot, bx = -Math.cos(sp) * 0.14, by = Math.sin(sp) * 0.14;
+  ctx.fillStyle = '#20252d'; ctx.beginPath();
+  ctx.moveTo(J.taz[0] + bx * 0.6, J.taz[1] + by * 0.6); ctx.lineTo(J.taz[0] + bx * 1.9, J.taz[1] + by * 1.9);
+  ctx.lineTo(J.pl[0] + bx * 1.9, J.pl[1] + by * 1.9); ctx.lineTo(J.pl[0] + bx * 0.6, J.pl[1] + by * 0.6); ctx.fill();
+  lin([J.taz, J.pl], '#1b3f8a', lw * 2.1);                                 // корпус
+  lin([J.taz, n1[0], n1[1]], '#1b3f8a', lw * 1.3); lin([n1[1], n1[2]], '#20252d', lw * 1.15);
+  lin([J.pl, J.ruka[0], J.ruka[1]], '#3d6fd6', lw * 1.15);
+  ctx.fillStyle = '#ffb74c'; ctx.beginPath(); ctx.arc(J.ruka[1][0], J.ruka[1][1], 0.075, 0, 7); ctx.fill();   // перчатка с клевантой
+  ctx.fillStyle = '#fff'; ctx.beginPath(); ctx.arc(J.gol[0], J.gol[1], 0.14, 0, 7); ctx.fill();   // шлем
+  ctx.fillStyle = '#ff7a1a'; ctx.beginPath(); ctx.arc(J.gol[0], J.gol[1], 0.14, Math.PI * 0.15 - sp, Math.PI * 0.55 - sp); ctx.lineTo(J.gol[0], J.gol[1]); ctx.fill();
+}
+// Купол сбоку: профиль крыла, нос справа. ug — тангаж (+ нос вверх), szh — насколько сложен (0…1), zakr — ход клевант
+function risovatProfil(cx, cy, ug, szh, zakr, hord) {
+  const c = hord / 2, tl = 0.6 * (1 - szh * 0.8), zad = zakr * 0.6;
+  ctx.save(); ctx.translate(cx, cy); ctx.rotate(ug);
+  const kontur = new Path2D();
+  kontur.moveTo(-c, -zad);
+  kontur.bezierCurveTo(-c * 0.4, tl * 1.25, c * 0.5, tl * 1.4, c, tl * 0.25);
+  kontur.quadraticCurveTo(c * 1.06, -tl * 0.25, c * 0.9, -tl * 0.35);
+  kontur.quadraticCurveTo(0, -tl * 0.2, -c * 0.55, -zad * 0.5);
+  kontur.closePath();
+  ctx.fillStyle = s.zapasnoy ? '#f2f2f2' : '#ff7a1a'; ctx.fill(kontur);
+  ctx.save(); ctx.clip(kontur);
+  ctx.fillStyle = s.zapasnoy ? '#c9c9c9' : '#fff'; ctx.fillRect(-c * 0.25, -1, c * 0.35, 3);             // белая полоса, как сверху
+  ctx.strokeStyle = 'rgba(80,20,0,.35)'; ctx.lineWidth = 0.05;
+  for (let i = -3; i <= 3; i++) { ctx.beginPath(); ctx.moveTo(i * c / 3.6, -1); ctx.lineTo(i * c / 3.6, 2); ctx.stroke(); }
+  ctx.restore();
+  ctx.strokeStyle = '#7a2e00'; ctx.lineWidth = 0.06; ctx.stroke(kontur);
+  ctx.restore();
+  // точки крепления строп: нижняя кромка, спереди назад, и задняя кромка — для клевант
+  const t = (x, y) => [cx + x * Math.cos(ug) - y * Math.sin(ug), cy + x * Math.sin(ug) + y * Math.cos(ug)];
+  return { stropy:[t(c * 0.85, -tl * 0.3), t(c * 0.35, -tl * 0.25), t(-c * 0.15, -tl * 0.15), t(-c * 0.55, -zad * 0.5)], kromka:t(-c, -zad) };
+}
+// поза в воздухе под куполом: руки по ходу клевант, ноги вместе и чуть вперёд, к земле — ступни параллельно ей
+function pozaVozduh(taz, b, kach) {
+  const vroz = s.razvorotNizko || Math.abs(s.om) / F.povorot > 0.3;
+  const k1 = 0.32 + 0.12 * b, kist = [lerp(0.05, 0.12, b), lerp(0.52, -0.42, plavno(b))];
+  return { taz, tors:-0.08 + kach * 0.6, kist, rot:0,
+    nogi: vroz ? [[k1 + 0.25, 0.25], [-0.15, -0.35]] : [[k1, 0.02], [k1 - 0.03, 0.0]] };
+}
+// поза после касания по исходу; t — секунды с касания. Возвращает позу и сдвиг тела вперёд, м
+function pozaZemlya(P, t) {
+  const v0 = Math.abs(P.vf) < 0.5 ? 0.5 : P.vf, vp = Math.max(0.5, P.vf);   // vp — только вперёд
+  const ruki = (b) => [lerp(0.12, 0.05, b), lerp(-0.42, 0.55, b)];
+  const tazStoya = pr => 0.96 - 0.3 * pr;
+  switch (P.ishod) {
+    case 'nogi': {
+      const pr = Math.sin(Math.min(1, t / 0.5) * Math.PI) * 0.7, x = v0 * 0.45 * (1 - Math.exp(-t * 2.2));
+      const shag = t < 0.9 && Math.abs(v0) > 2.5 ? Math.sin(t * 14) * 0.35 * (1 - t / 0.9) : 0;
+      return [{ taz:[x, tazStoya(pr)], tors:0.12 * pr, kist:ruki(plavno((t - 0.6) / 0.6)), rot:0,
+        nogi:[[0.15 * pr + shag, -0.5 * pr + Math.min(0, shag)], [0.1 * pr - shag, -0.55 * pr - Math.max(0, shag)]] }, x];
+    }
+    case 'probezhka': {
+      const tb = Math.min(t, 1.6), x = v0 * 0.65 * (1 - Math.exp(-tb * 1.6)), sk = Math.exp(-tb * 1.6), f = t * 15;
+      const sh = Math.sin(f) * 0.55 * sk, pr = 0.25 * sk;
+      return [{ taz:[x, tazStoya(pr) + Math.abs(Math.cos(f)) * 0.04 * sk], tors:0.3 * sk * Math.sign(v0), kist:ruki(plavno((t - 1.2) / 0.5)), rot:0,
+        nogi:[[sh, -0.7 * Math.max(0, -Math.sin(f)) * sk], [-sh, -0.7 * Math.max(0, Math.sin(f)) * sk]] }, x];
+    }
+    case 'koleni': {
+      const x = vp * 0.3 * (1 - Math.exp(-t * 3)), kk = plavno(t / 0.45);
+      return [{ taz:[x, lerp(0.96, 0.5, kk)], tors:lerp(0.1, 0.45, kk), kist:[lerp(0.12, 0.3, kk), lerp(-0.42, -0.6, kk)], rot:0,
+        nogi:[[lerp(0.15, 0, kk), lerp(-0.4, -1.57, kk)], [lerp(0.1, 0.05, kk), lerp(-0.45, -1.5, kk)]] }, x];
+    }
+    case 'popa': {
+      // по книге: падая назад — голову втянуть, спину округлить, руки назад не ставить
+      const x = v0 * 0.25 * (1 - Math.exp(-t * 3)), kk = plavno(t / 0.4), ot = plavno((t - 0.35) / 0.35);
+      return [{ taz:[x - 0.25 * kk, lerp(0.96, 0.13, kk)], tors:lerp(0, -0.5, kk) - ot * 0.35 + ot * Math.max(0, 0.6 - t) * 0.5, kist:[0.35, -0.15], rot:0,
+        nogi:[[lerp(0.15, 1.35, kk), lerp(-0.3, 1.55, kk)], [lerp(0.1, 1.25, kk), lerp(-0.35, 1.45, kk)]] }, x];
+    }
+    case 'kuvyrok': {
+      // перекат через плечо: тело катится вперёд и гасит скорость
+      const tr = Math.min(t, 1.1), x = vp * 0.55 * (1 - Math.exp(-tr * 1.8)), ob = plavno(tr / 1.0);
+      const rot = ob * Math.PI * 2.5, gr = Math.sin(Math.min(1, tr / 0.9) * Math.PI);
+      return [{ taz:[x, lerp(0.96, 0.25, plavno(t / 0.25)) + gr * 0.12], tors:0.4 * gr, kist:[0.3, -0.2], rot,
+        nogi:[[1.2 * gr + 0.1, -1.5 * gr], [1.1 * gr + 0.05, -1.4 * gr]] }, x];
+    }
+    default: {   // жёсткий удар: ноги не держат, падает на бок
+      const x = vp * 0.2 * (1 - Math.exp(-t * 4)), kk = plavno(t / 0.3), rot = -plavno(t / 0.55) * 1.45;
+      return [{ taz:[x, lerp(0.96, 0.2, kk)], tors:lerp(0, 0.3, kk), kist:[0.4, 0.1], rot,
+        nogi:[[lerp(0, 0.6, kk), lerp(0, 0.2, kk)], [lerp(0, 0.4, kk), lerp(0, -0.3, kk)]] }, x];
+    }
+  }
+}
+// шкала клевант: где руки сейчас и где должны быть на этой высоте
+function celKlevant(h) {
+  const [raz, dva] = razDva(s.W);
+  return h > raz ? [0, 0.12, 'ПОЛНЫЙ ХОД — руки вверху'] : h > dva ? [0.35, 0.65, 'РАЗ — до середины'] : [0.85, 1, 'ДВА — до конца!'];
+}
+function risovatShkalu(b) {
+  const x = 14, y0 = VY * 0.37, vys = VY * 0.26, [ot, do_, tx] = celKlevant(s.h);
+  ctx.fillStyle = 'rgba(11,29,51,.72)'; ctx.beginPath(); ctx.roundRect(x - 6, y0 - 28, 92, vys + 54, 6); ctx.fill();
+  ctx.fillStyle = '#fff'; ctx.font = '800 15px system-ui'; ctx.textAlign = 'left';
+  ctx.fillText(Math.max(0, s.h).toFixed(s.h < 10 ? 1 : 0) + ' м', x, y0 - 12);
+  ctx.fillStyle = 'rgba(255,255,255,.18)'; ctx.fillRect(x, y0, 9, vys);
+  ctx.fillStyle = 'rgba(61,220,132,.75)'; ctx.fillRect(x, y0 + ot * vys, 9, (do_ - ot) * vys);
+  ctx.fillStyle = '#ff7a1a'; ctx.beginPath(); const yb = y0 + b * vys;
+  ctx.moveTo(x + 9, yb); ctx.lineTo(x + 17, yb - 5); ctx.lineTo(x + 17, yb + 5); ctx.fill();
+  ctx.font = '700 8px system-ui'; ctx.fillStyle = 'rgba(255,255,255,.85)';
+  ctx.fillText('вверху', x + 20, y0 + 6); ctx.fillText('середина', x + 20, y0 + vys / 2 + 3); ctx.fillText('подушка', x + 20, y0 + vys);
+  ctx.font = '800 8px system-ui'; ctx.fillStyle = b >= ot - 0.06 && b <= do_ + 0.06 ? '#3ddc84' : '#ffb74c';
+  const [t1, t2] = tx.split(' — ');
+  ctx.fillText(t1, x, y0 + vys + 11); if (t2) ctx.fillText(t2, x, y0 + vys + 20);
+}
+function risovatBok() {
+  const P = s.posadka, h = Math.max(0, s.h);
+  const ppm = P ? lerp(28, 32, plavno(P.t / 0.8)) : Math.max(4, Math.min(25, VY * 0.8 / (h + 7)));
+  const zem = VY * 0.86, gor = VY * 0.55, x0 = SH * 0.4;            // земля в плоскости парашютиста, горизонт, где парашютист
+  const [kx, ky] = vec(s.kurs), doCeli = -(s.x * kx + s.y * ky), bok = -(s.x * -ky + s.y * kx);
+  const [wx, wy] = veterNa(0), vdol = wx * kx + wy * ky;               // ветер вдоль курса: + в спину
+  const sx = X => x0 + X * ppm;                                         // X — метры вперёд от парашютиста (в момент касания — от точки касания)
+  // небо и облака погоды
+  let g = ctx.createLinearGradient(0, 0, 0, gor);
+  g.addColorStop(0, '#6f9fd0'); g.addColorStop(1, '#d6e4ec'); ctx.fillStyle = g; ctx.fillRect(0, 0, SH, gor + 1);
+  const sdv = s.put * 0.6;
+  s.sloi.forEach((L, i) => {
+    if (L.tip === 'ci') { ctx.fillStyle = 'rgba(240,243,247,.35)'; ctx.fillRect(0, 0, SH, gor * 0.6); return; }
+    ctx.fillStyle = L.tip === 'sc' ? 'rgba(200,207,216,.95)' : 'rgba(250,251,252,.9)';
+    for (let j = 0; j < (L.tip === 'sc' ? 9 : 5); j++) {
+      const w = (L.tip === 'sc' ? 110 : 60) + (j * 37 % 50), xx = ((j * 173 + i * 61 - sdv) % (SH + 200) + SH + 200) % (SH + 200) - 100;
+      const yy = gor * (L.tip === 'sc' ? 0.12 + (j % 3) * 0.06 : 0.25 + (j % 4) * 0.12) * Math.min(1, 3000 / L.niz);
+      ctx.beginPath(); ctx.ellipse(xx, yy, w / 2, w / 7, 0, 0, 7); ctx.ellipse(xx + w * 0.15, yy - w / 10, w / 4, w / 6, 0, 0, 7); ctx.fill();
+    }
+  });
+  // горизонт: лес, мачты в красно-белую полоску, водонапорная башня, опоры ЛЭП — медленный параллакс
+  const pl = s.put * 1.2, W = SH + 240, mod = v => ((v % W) + W) % W - 120;
+  ctx.fillStyle = '#4f5a35'; ctx.beginPath(); ctx.moveTo(0, gor + 2);
+  for (let xx = 0; xx <= SH + 8; xx += 8) ctx.lineTo(xx, gor - 9 - (Math.sin((xx + pl) * 0.07) * 3 + Math.sin((xx + pl) * 0.023) * 4 + 4));
+  ctx.lineTo(SH, gor + 2); ctx.fill();
+  [[40, 'macha'], [190, 'bashnya'], [260, 'macha'], [430, 'lep'], [560, 'macha']].forEach(([b0, tip]) => {
+    const xx = mod(b0 - pl);
+    if (tip === 'macha') for (let i = 0; i < 6; i++) { ctx.fillStyle = i % 2 ? '#fff' : '#d23a2a'; ctx.fillRect(xx, gor - 34 + i * 5, 3, 5); }
+    else if (tip === 'bashnya') { ctx.fillStyle = '#a55a3c'; ctx.fillRect(xx, gor - 30, 5, 26); ctx.fillRect(xx - 2, gor - 34, 9, 6); }
+    else { ctx.strokeStyle = 'rgba(40,40,40,.6)'; ctx.lineWidth = 1; ctx.beginPath(); ctx.moveTo(xx - 5, gor); ctx.lineTo(xx, gor - 40); ctx.lineTo(xx + 5, gor); ctx.moveTo(xx - 7, gor - 33); ctx.lineTo(xx + 7, gor - 33); ctx.stroke(); }
+  });
+  // поле: скошенные полосы уходят к горизонту и бегут при полёте
+  g = ctx.createLinearGradient(0, gor, 0, VY); g.addColorStop(0, '#8e8f4c'); g.addColorStop(1, '#b0a457');
+  ctx.fillStyle = g; ctx.fillRect(0, gor, SH, VY - gor);
+  const shagP = 6, sdvP = ((s.put % (shagP * 2)) + shagP * 2) % (shagP * 2);
+  const vx = SH * 0.5, kZ = y => (y - gor) / (zem - gor);               // перспектива: на горизонте всё сходится
+  ctx.fillStyle = 'rgba(255,240,170,.13)';
+  for (let X = -sdvP - shagP * 2 * Math.ceil(x0 / ppm / shagP / 2 + 2); sx(X) < SH * 3; X += shagP * 2) {
+    const a = sx(X), b = sx(X + shagP);
+    ctx.beginPath(); ctx.moveTo(vx + (a - vx) * kZ(VY), VY); ctx.lineTo(vx + (b - vx) * kZ(VY), VY); ctx.lineTo(vx, gor); ctx.fill();
+  }
+  // круг и колдун: X цели — по курсу; круг 50 м — колышки на краях, в центре — песчаный круг
+  const Xc = doCeli;
+  const bokOk = Math.abs(bok) < 50;
+  ctx.fillStyle = bokOk ? '#e8c27a' : 'rgba(232,194,122,.45)';
+  ctx.beginPath(); ctx.ellipse(sx(Xc), zem + 4, 2.5 * ppm, 0.9 * ppm * 0.6 + 1, 0, 0, 7); ctx.fill();
+  ctx.strokeStyle = '#fff'; ctx.lineWidth = 1.5; ctx.stroke();
+  [-50, 50].forEach(d => { const xx = sx(Xc + d); if (xx > -10 && xx < SH + 10) { ctx.fillStyle = '#fff'; ctx.fillRect(xx - 1, zem - 4, 2, 8); } });
+  ctx.font = '800 9px system-ui'; ctx.textAlign = 'center'; ctx.fillStyle = '#fff'; ctx.strokeStyle = 'rgba(0,0,0,.55)'; ctx.lineWidth = 3;
+  const podpis = Math.round(Math.hypot(doCeli, bok)) + ' м до центра' + (bokOk ? '' : bok > 0 ? ' · левее' : ' · правее');
+  const lx = Math.max(150, Math.min(SH - 70, sx(Xc)));
+  if (!P) { ctx.strokeText(podpis, lx, gor + 14); ctx.fillText(podpis, lx, gor + 14); }    // под горизонтом — не под кнопками телефона
+  // колдун на шесте у круга: конус вытянут по ветру
+  const xk = sx(Xc + 12), yk = gor + (zem - gor) * 0.55, mk = Math.max(0.5, ppm / 12);
+  ctx.fillStyle = '#ddd'; ctx.fillRect(xk - 1, yk - 26 * mk, 2, 26 * mk);
+  const naduv = Math.min(1, s.W / 7), dl = 14 * mk, nap = Math.sign(vdol || 1);
+  for (let i = 0; i < 4; i++) {
+    ctx.fillStyle = i % 2 ? '#fff' : '#e8452c'; const a = xk + nap * dl * i / 4, b = xk + nap * dl * (i + 1) / 4;
+    const prov = (q) => (1 - naduv) * q * dl * 0.9;                    // в штиль висит
+    ctx.beginPath(); ctx.moveTo(a, yk - 26 * mk + prov(i / 4)); ctx.lineTo(b, yk - 26 * mk + prov((i + 1) / 4));
+    ctx.lineTo(b, yk - 26 * mk + 3 * mk * (1 - i * 0.15) + prov((i + 1) / 4)); ctx.lineTo(a, yk - 26 * mk + 4 * mk * (1 - i * 0.12) + prov(i / 4)); ctx.fill();
+  }
+  // тень под парашютистом
+  ctx.fillStyle = `rgba(30,35,20,${0.35 - Math.min(0.25, h / 120)})`;
+  ctx.beginPath(); ctx.ellipse(x0 + (P ? pozaZemlya(P, P.t)[1] * ppm : 0), zem + 2, Math.max(4, 1.6 * ppm), 3, 0, 0, 7); ctx.fill();
+
+  // парашютист и купол — в метрах, y вверх
+  ctx.save(); ctx.translate(x0, zem); ctx.scale(ppm, -ppm);
+  const b = P ? 0 : Math.min(s.dL, s.dP), bSr = P ? 0 : (s.dL + s.dP) / 2;
+  let J, kupol, szh = 0, ugK, kach = 0;
+  if (!P) {
+    // качание: при торможении парашютиста выносит вперёд под куполом
+    kach = Math.max(-0.45, Math.min(0.45, -s.uskor * 0.07)) + (s.svalT > 0 ? Math.sin(s.t * 9) * 0.25 : 0);
+    J = sustavy(pozaVozduh([0, h + 0.95], bSr, kach));
+    ugK = -0.1 + 0.25 * bSr - kach * 0.5;
+    szh = s.svalT > 0 ? 0.6 + Math.sin(s.t * 11) * 0.2 : 0;
+    const dl = 4.8, cx = J.pl[0] - Math.sin(kach) * dl, cy = J.pl[1] + Math.cos(kach) * dl;
+    kupol = { cx, cy };
+  } else {
+    J = sustavy(pozaZemlya(P, P.t)[0]);
+    // купол пролетает вперёд, ложится на землю и гаснет, как на видео
+    const bys = P.ishod === 'nogi' || P.ishod === 'probezhka' ? 1.6 : 1.0, k = plavno(P.t / bys);
+    kupol = { cx:J.pl[0] + 0.3 + 4.6 * k, cy:lerp(J.pl[1] + 4.8, 0.15, Math.pow(k, 1.3)) };
+    ugK = -0.1 - 1.25 * Math.sin(Math.min(1, k * 1.25) * Math.PI) - 0.05 * k; szh = k;
+  }
+  const prof = risovatProfil(kupol.cx, kupol.cy, ugK, szh, P ? 0 : bSr, 3 * (1 - szh * 0.25));
+  // стропы — к плечам, клеванты — к кистям
+  ctx.strokeStyle = 'rgba(255,255,255,.75)'; ctx.lineWidth = Math.max(0.025, 0.6 / ppm);
+  prof.stropy.forEach(q => { ctx.beginPath(); ctx.moveTo(J.pl[0], J.pl[1] + 0.05); ctx.lineTo(q[0], q[1]); ctx.stroke(); });
+  ctx.strokeStyle = 'rgba(255,90,90,.9)';
+  ctx.beginPath(); ctx.moveTo(J.ruka[1][0], J.ruka[1][1]); ctx.lineTo(prof.kromka[0], prof.kromka[1]); ctx.stroke();
+  if (!P) {                                                              // слайдер на стропах
+    const sl = 0.45, sxl = lerp(J.pl[0], prof.stropy[1][0], sl), syl = lerp(J.pl[1], prof.stropy[1][1], sl);
+    ctx.fillStyle = 'rgba(240,240,240,.9)'; ctx.fillRect(sxl - 0.35, syl - 0.05, 0.7, 0.1);
+  }
+  risovatCheloveka(J, ppm);
+  // пыль от удара
+  if (P && (P.ishod === 'kuvyrok' || P.ishod === 'zhestko' || P.ishod === 'popa') && P.t < 1.2) {
+    ctx.fillStyle = `rgba(200,180,130,${0.5 * (1 - P.t / 1.2)})`;
+    for (let i = 0; i < 6; i++) { const r = 0.25 + P.t * 0.9; ctx.beginPath(); ctx.arc(J.taz[0] + (i - 2.5) * 0.35, 0.1 + (i % 2) * 0.2 * P.t, r * (0.6 + (i % 3) * 0.2), 0, 7); ctx.fill(); }
+  }
+  ctx.restore();
+  if (!P && s.faza === 'kupol') risovatShkalu(b);
 }
 
 // Облачные слои под парашютистом — в перспективе: чем ближе облако к глазу, тем крупнее
@@ -1171,7 +1478,7 @@ function obnovitPribory() {
   }
   // режим купола
   const kupol = s.faza === 'kupol';
-  elRezhim.classList.toggle('vidno', kupol);
+  elRezhim.classList.toggle('vidno', kupol && !bokVid());            // в виде сбоку вместо него — шкала клевант
   if (kupol) {
     elRezhim.classList.toggle('svalivanie', s.svalT > 0);
     elRezhimy.forEach((e, i) => e.classList.toggle('akt', i === s.rezhim && !(s.svalT > 0)));
