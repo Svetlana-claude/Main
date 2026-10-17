@@ -1,0 +1,19 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <!--
+    «Кнопка доступа» — помощник под Windows для доступа к СВОЕМУ ноуту.
+    Поднимает обратный SSH-туннель на ваш сервер вашим ключом; дальше вы сами
+    заходите на ноут со своего устройства через сервер. Чужих ключей не кладёт,
+    команд удалённо не исполняет, себя не обновляет из сети.
+  -->
+  <PropertyGroup>
+    <OutputType>WinExe</OutputType>
+    <TargetFramework>net9.0-windows</TargetFramework>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <UseWPF>true</UseWPF>
+    <AssemblyName>KnopkaDostup</AssemblyName>
+    <RootNamespace>KnopkaDostup</RootNamespace>
+  </PropertyGroup>
+
+</Project>
