@@ -16,6 +16,13 @@
 # «Файлах проекта» (glavpryg-sayt/downloads/rezerv/), чтобы забрать её с сервера:
 # копия на том же диске от отказа сервера не спасает. Вне сервера — Яндекс
 # Диск, папка glavpryg-rezerv/, 7 последних (если есть ~/.config/yandex-disk.netrc).
+#
+# Сбой не молчит: 16–18.10.2026 копия три ночи падала, и узнали случайно.
+# Теперь при любом выходе с ошибкой — письмо на адреса из
+# ~/.config/glavpryg-rezerv.adresa (по одному в строке, отправитель
+# glavpryg@mokeevasky.ru, через местный Postfix) и файл
+# OSHIBKA-REZERVNOY-KOPII.txt рядом с копией в «Файлах проекта». Удачная копия
+# этот файл убирает. Свежесть копии проверяет и tests/check-glavpryg.sh.
 
 set -uo pipefail
 
@@ -28,7 +35,33 @@ LOG="$DEST/rezerv.log"
 STAMP=$(date +%Y%m%d-%H%M%S)
 WORK=$(mktemp -d)
 ARCH="$DEST/glavpryg-rezerv-$STAMP.tar"
-trap 'rm -rf "$WORK"' EXIT
+ADRESA=$HOME/.config/glavpryg-rezerv.adresa
+METKA="$SHARE/OSHIBKA-REZERVNOY-KOPII.txt"
+
+# Письмо и метка о сбое. Тема — в кодировке RFC 2047: русская тема «как есть»
+# почтовики показывают кракозябрами.
+uvedomit() {
+    local prichina hvost tema
+    prichina=$(grep -m1 -o 'ОШИБКА: .*' <(tac "$LOG" 2>/dev/null) || echo "скрипт прерван (код $1)")
+    hvost=$(tail -n 15 "$LOG" 2>/dev/null)
+    printf 'Резервная копия сайта «Главпрыг» НЕ сделана.\n%s\n%s\n\nЖурнал: %s\n\n%s\n' \
+        "$(date '+%d.%m.%Y %H:%M')" "$prichina" "$LOG" "$hvost" > "$METKA" 2>/dev/null
+    [ -r "$ADRESA" ] || return 0
+    tema="=?UTF-8?B?$(printf 'Главпрыг: резервная копия не сделана' | base64 -w0)?="
+    grep -vE '^\s*(#|$)' "$ADRESA" | while read -r adres; do
+        { printf 'From: =?UTF-8?B?%s?= <glavpryg@mokeevasky.ru>\nTo: %s\nSubject: %s\n' \
+              "$(printf 'Главпрыг — резервная копия' | base64 -w0)" "$adres" "$tema"
+          printf 'MIME-Version: 1.0\nContent-Type: text/plain; charset=UTF-8\nContent-Transfer-Encoding: 8bit\n\n'
+          cat "$METKA"; } | /usr/sbin/sendmail -i -f glavpryg@mokeevasky.ru "$adres" \
+            && log "письмо о сбое отправлено: $adres" || log "письмо о сбое НЕ ушло: $adres"
+    done
+}
+zavershit() {
+    local kod=$?
+    rm -rf "$WORK"
+    [ "$kod" -eq 0 ] || uvedomit "$kod"
+}
+trap zavershit EXIT
 
 mkdir -p "$DEST" "$SHARE"
 chmod 700 "$DEST"
@@ -91,6 +124,7 @@ cp -p "$ARCH" "$SHARE/" || fail "не скопирована в downloads"
 
 # ── Уборка старых ─────────────────────────────────────────────────────
 ls -1t "$DEST"/glavpryg-rezerv-*.tar 2>/dev/null | tail -n +$((KEEP + 1)) | xargs -r rm -f
+rm -f "$METKA"
 log "--- готово: копий $(ls -1 "$DEST"/glavpryg-rezerv-*.tar | wc -l), занято $(du -sh "$DEST" | cut -f1) ---"
 
 # ── Копия вне сервера — Яндекс Диск по WebDAV ─────────────────────────

@@ -141,6 +141,20 @@ else
     skazat_ploho "копия макета админки разошлась с Orchid — tests/check-maket-orchid.php"
 fi
 
+# 12. Резервная копия свежая. 16–18.10.2026 она три ночи падала молча: сайт
+#     работал, а копии не было. Ночная — в 04:10, значит не старше 26 часов.
+#     Проверка — только на самом сервере, где лежат копии.
+REZERV=/home/mokeeva/backups/glavpryg
+if [ -d "$REZERV" ]; then
+    svezh=$(find "$REZERV" -maxdepth 1 -name 'glavpryg-rezerv-*.tar' -mmin -$((26 * 60)) | wc -l)
+    posl=$(ls -1t "$REZERV"/glavpryg-rezerv-*.tar 2>/dev/null | head -1)
+    if [ "$svezh" -gt 0 ]; then
+        skazat_horosho "резервная копия свежая: $(basename "$posl")"
+    else
+        skazat_ploho "резервной копии за сутки нет (последняя: $(basename "${posl:-нет}")) — $REZERV/rezerv.log"
+    fi
+fi
+
 echo
 if [ "$oshibki" -eq 0 ]; then
     echo "Все проверки пройдены."

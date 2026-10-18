@@ -951,7 +951,7 @@ MariaDB. В репозитории лежит только **оснастка**:
 | База | MariaDB, база и пользователь `glavpryg`, слушает только 127.0.0.1 |
 | Пароли | `~/.config/glavpryg-db.pass`, `~/.config/glavpryg-admin.pass` (оба 600) |
 | Дампы перед обновлением | `/var/backups/glavpryg/baza-<метка>.sql.gz` |
-| Резервная копия | `glavpryg-sayt/deploy/rezerv.sh`, ежедневно 04:10: база, `storage/app`, код (bundle), `.env`, почта — один tar; 14 копий в `/home/mokeeva/backups/glavpryg/`, последняя в `glavpryg-sayt/downloads/rezerv/` для забора с сервера |
+| Резервная копия | `glavpryg-sayt/deploy/rezerv.sh`, ежедневно 04:10: база, `storage/app`, код (bundle), `.env`, почта — один tar; 14 копий в `/home/mokeeva/backups/glavpryg/`, последняя в `glavpryg-sayt/downloads/rezerv/` для забора с сервера; сбой — письмо на `~/.config/glavpryg-rezerv.adresa` и метка `OSHIBKA-REZERVNOY-KOPII.txt` рядом с копией, свежесть (≤ 26 ч) проверяет `tests/check-glavpryg.sh` |
 | Фотоархив сайта | `/var/www/glavpryg/storage/app/public/fotoarkhiv/<подраздел>/` — `tandem`, `samostoyatelnyy`, `sportivnyy`, `vr` |
 | Код сайта | git-репозиторий прямо в `/var/www/glavpryg`, ветка `main`; удалённого нет (GitHub отложен) |
 | Копия кода вне сервера | `glavpryg-sayt/downloads/glavpryg-kod.bundle` — пересобирается после каждого коммита крючком `.git/hooks/post-commit` (исходник — `deploy/post-commit`), скачивается из «Файлов проекта» |
