@@ -16,3 +16,6 @@ PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
 # Своего вывода не даёт: путь к отчёту он печатает, а журнал ведёт сам
 # в /var/lib/secaudit/audit.log. Отчёты читаются во вкладке «Безопасность».
 0 0 * * * /bin/bash /opt/secaudit/audit.sh >/dev/null 2>&1
+10 4 * * * /bin/bash /home/mokeeva/main/glavpryg-sayt/deploy/rezerv.sh >> /home/mokeeva/backups/glavpryg/cron.log 2>&1
+# Главпрыг: погода дня для игры «Точно в круг» — каждые два часа (glavpryg-sayt/igra/tools/pogoda-dnya.py)
+7 */2 * * * /usr/bin/python3 /home/mokeeva/main/glavpryg-sayt/igra/tools/pogoda-dnya.py /var/www/glavpryg/public/igra-app/pogoda-dnya.json >> /tmp/pogoda-dnya.log 2>&1

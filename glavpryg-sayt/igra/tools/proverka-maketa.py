@@ -1,18 +1,27 @@
 #!/usr/bin/env python3
 """Проверка игрового макета: загрузка без ошибок, прыжок автопилотом, снимки.
 
-    python proverka-maketa.py <адрес index.html> <каталог снимков> [уровни: 0,5,7]
+    python proverka-maketa.py <адрес index.html> <каталог снимков> [уровни: 0,5,7] [--bez-svodki]
+
+По умолчанию погода — та, что выберет игра (на сервере — «Сегодня в Грызлово» по сводке дня);
+`--bez-svodki` подменяет сводку пустой — погода и ветер по уровню.
 
 Автопилот ведёт к цели в падении (поворот и движение вперёд), раскрывается на 1000 м и под куполом
 держит курс на круг (ниже 45 м не крутит — иначе сваливание),
-на 5,5 м жмёт подушку. Печатает итог прыжка.
+на 5,5 м жмёт подушку, в сильный ветер после касания гасит купол. Печатает итог прыжка.
 """
 import sys, time
 from playwright.sync_api import sync_playwright
 
 adres, kuda = sys.argv[1], sys.argv[2]
-urovni = [int(u) for u in (sys.argv[3] if len(sys.argv) > 3 else '0').split(',')]
+argi = [a for a in sys.argv[3:] if not a.startswith('--')]
+urovni = [int(u) for u in (argi[0] if argi else '0').split(',')]
+bez_svodki = '--bez-svodki' in sys.argv
 AVTOPILOT = """() => {
+  // сильный ветер тянет купол после касания — гасим: одна клеванта до конца
+  const P = s && s.posadka;
+  if (P && P.tyanet && P.gasheno == null) { nazh.levo = true; nazh.pravo = nazh.podushka = false; return 'gasit'; }
+  if (P) nazh.levo = nazh.pravo = nazh.podushka = false;
   if (!s || s.faza === 'itog' || s.faza === 'samolet') return s && s.faza;
   let kurs = Math.atan2(-s.x, s.y) * 180 / Math.PI;        // курс на центр: 0 — север
   // ветер сильнее купола — держаться против ветра, поправляясь вбок, и раскрываться низко
@@ -40,7 +49,9 @@ with sync_playwright() as p:
         s.on('console', lambda m: m.type == 'error' and oshibki.append(m.text))
         s.on('pageerror', lambda e: oshibki.append(str(e)))
         s.on('response', lambda r: r.status >= 400 and oshibki.append(f'{r.status} {r.url}'))
+        if bez_svodki: s.route('**/pogoda-dnya.json', lambda r: r.fulfill(status=200, content_type='application/json', body='null'))
         s.goto(adres); s.wait_for_timeout(800)
+        if bez_svodki: s.evaluate("() => { vybranaPogoda = POGODA.findIndex(p => p.id === 'sluchaynaya'); spisokPogody(); }")
         s.screenshot(path=f'{kuda}/igra-{imya}-start.png')
         s.click(f'#urovni button >> nth={ur}'); s.click('#b-start'); s.wait_for_timeout(2000)
         s.screenshot(path=f'{kuda}/igra-{imya}-samolet.png')

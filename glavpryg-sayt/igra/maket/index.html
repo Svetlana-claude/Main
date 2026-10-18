@@ -55,6 +55,8 @@
     background:var(--glass); border-radius:14px; padding:6px 8px; text-align:center; }
   #koldun svg { width:min(21vh,140px); display:block; margin:0 auto; }
   #veter-cifra { font:800 clamp(12px,3.2vh,19px)/1 system-ui; margin-top:2px; white-space:nowrap; }
+  #veter-vys { font:700 clamp(10px,2.6vh,14px)/1.1 system-ui; margin-top:3px; white-space:nowrap; color:#ffd27a; }
+  #veter-vys:empty { display:none; }
   #oblaka-cifra { font:600 clamp(10px,2.6vh,14px)/1.1 system-ui; margin-top:3px; opacity:.85; white-space:nowrap; }
   #soobshenie { left:50%; top:12px; transform:translateX(-50%); max-width:52vw; text-align:center;
     background:var(--glass); border-radius:12px; padding:6px 14px; font-size:clamp(13px,3.6vh,22px);
@@ -136,6 +138,8 @@
   .razbor { text-align:left; margin:8px auto; max-width:460px; font-weight:500; font-size:clamp(13px,3.3vh,16px); }
   .razbor div { display:flex; justify-content:space-between; gap:10px; border-bottom:1px dashed rgba(255,255,255,.15); padding:3px 0; }
   .stat { font-size:13px; opacity:.75; margin-top:8px; font-weight:500; }
+  .istochniki { font-size:11px; opacity:.55; }
+  .istochniki a { color:inherit; }
   .bonus { margin-top:8px; padding:8px; border-radius:10px; background:rgba(255,122,26,.18); font-weight:600; font-size:14px; }
   #povorot { z-index:9; text-align:center; }
   #povorot .ikonka { font-size:64px; animation:krut 1.6s infinite ease-in-out; }
@@ -174,6 +178,7 @@
     <text id="shtil" y="5" text-anchor="middle" font-size="14" font-weight="800" fill="#fff" display="none">штиль</text>
   </svg>
   <div id="veter-cifra">0 м/с</div>
+  <div id="veter-vys"></div>
   <div id="oblaka-cifra">ясно</div>
 </div>
 
@@ -197,11 +202,12 @@
     <div class="razdel">Погода</div>
     <div class="urovni pogoda" id="pogoda" role="group" aria-label="Погода"></div>
     <p class="pogoda-opis" id="pogoda-opis" aria-live="polite"></p>
-    <div class="razdel">Уровень — ветер у земли</div>
+    <div class="razdel" id="razdel-urovni">Уровень — ветер у земли</div>
     <div class="urovni" id="urovni" role="group" aria-label="Уровень сложности"></div>
     <button class="glavnaya" id="b-start">Прыгать!</button>
     <button class="vtorostep" id="b-upr">Управление</button>
     <p class="stat" id="stat-start"></p>
+    <p class="stat istochniki">Окрестности — © участники <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener">OpenStreetMap</a>, погода — <a href="https://open-meteo.com/" target="_blank" rel="noopener">Open-Meteo</a></p>
     <p class="stat" id="ios-sovet">На iPhone во весь экран: «Поделиться» → «На экран „Домой“» и запускать игру со значка.</p>
   </div>
 </section>
@@ -228,9 +234,10 @@
     <table class="upr">
       <tr><td>Разворот</td><td class="tolko-sensor">одна кнопка</td><td class="tolko-klav"><kbd>←</kbd> <kbd>→</kbd></td><td>Клеванта затягивается не сразу, купол поворачивает с запаздыванием.</td></tr>
       <tr><td>Средний режим</td><td class="tolko-sensor">обе кнопки</td><td class="tolko-klav"><kbd>↓</kbd> или <kbd>←</kbd>+<kbd>→</kbd></td><td>Медленнее вперёд и вниз — для захода.</td></tr>
-      <tr><td>Подушка</td><td class="tolko-sensor">средняя кнопка — держать</td><td class="tolko-klav"><kbd>пробел</kbd> или <kbd>↑</kbd> — держать</td><td>На 4–6 м с полной скорости. Раньше или дольше — сваливание.</td></tr>
+      <tr><td>Подушка</td><td class="tolko-sensor">средняя кнопка — держать</td><td class="tolko-klav"><kbd>пробел</kbd> или <kbd>↑</kbd> — держать</td><td>На раз-два: до середины (обе кнопки или <kbd>↓</kbd>) на 5–6 м, до конца на 3 м; ноги вместе. Раньше или дольше — сваливание.</td></tr>
+      <tr><td>Погасить купол</td><td class="tolko-sensor">одна кнопка — сразу после касания</td><td class="tolko-klav"><kbd>←</kbd> или <kbd>→</kbd></td><td>В сильный ветер купол тянет по земле: одну клеванту отпусти, вторую вытяни до конца.</td></tr>
     </table>
-    <p class="stat">Очки: круг 100, зона 1 — 50, зона 2 — 25, запасное поле — 5. Бонусы: против ветра +5, подушка +10, точки захода по +5, каждая фигура выше 2000 м +5.</p>
+    <p class="stat">Очки: круг 100, зона 1 — 50, зона 2 — 25, запасное поле — 5. Бонусы: против ветра +5, красиво на ноги +10, с пробежкой +5, купол погашен +5, точки захода по +5, каждая фигура выше 2000 м +5.</p>
     <button class="glavnaya" id="b-upr-nazad">Понятно</button>
   </div>
 </section>
@@ -255,7 +262,11 @@
 'use strict';
 // ───────── Мир: метры, ноль — центр круга, x на восток, y на юг ─────────
 // Границы слоёв выдаёт сборка карты (igra/tools/sobrat-kartu.py) → assets/world.json
-const MIR = { dal:[-1958,-2112,1993,2936], blizh:[-322,-446,523,761], maska:[-1958,-2112,0.2] };
+// Широкий слой — OpenStreetMap в стиле игры (igra/tools/osm-karta.py): местность на 15×15 км вокруг
+const MIR = { dal:[-1958,-2112,1993,2936], blizh:[-322,-446,523,761], maska:[-1958,-2112,0.2],
+  shir:[-7500,-7500,7500,7500], maskaShir:[-7500,-7500,0.1] };
+// подписи сёл и городов широкого слоя: [имя, x, y, размер 0–2] — печатает osm-karta.py
+const MESTA = [["Пущино",-1315,-4361,2],["Лужки",-4346,-6777,1],["Зиброво",3605,-5678,0],["Никифорово",6349,-6002,1],["Енино",4847,-6969,0],["Республика",-648,-6226,0],["Каргашино",1798,4395,1],["Трухачёво",497,1918,0],["Федотовка",1512,2781,0],["Семеновское",-2150,-1433,1],["Еськино",1474,-843,0],["Большое Грызлово",-458,-1261,1],["Аладьино",2261,-10,0],["Большая Городня",-3871,3492,1],["Балково",1722,-4225,0],["Алфертищево",1650,-3347,0],["Прончищево",5113,-842,0],["Нижняя Городня",-6517,3890,0],["Покровское",-6708,2458,0],["Тульчино",4033,-3880,1],["Зайцево",-4668,-1940,0],["Болынтово",327,7159,0],["Коптево",-1700,378,0],["Зыбинка",2511,-2434,0],["Сенькино",5343,-2083,0],["Шепилово",-5557,-3698,1],["Дубачино",-871,3868,0],["Демшинка",-1641,1868,0],["Агарино",510,5021,0],["Федино",-6250,958,0],["Якшино",-7043,-412,0],["Глазово-2",-4721,695,0],["Рогово",-4790,2866,0],["Ярославцево",-2240,6183,0],["Злобино",-6927,5898,1],["Волохово",4030,1946,1],["Мещериново",-5353,-5355,0],["Селино",-6388,-5541,0],["Вязищи",6723,490,0],["Глебово",3988,5323,0],["Любиж",6207,6117,0],["Малое Грызлово",3435,3594,0],["Терехово",-1312,6842,0],["Присады",-3245,-3807,0],["Новосёлки",4378,1091,0],["Туэлино",7180,4124,0],["Мечта",3054,-3601,0],["Вечери",-7280,-5757,0]];
 
 // Уровни: ветер у земли и разброс точки выброски
 const UROVNI = [
@@ -290,6 +301,12 @@ const F = {
   uskFF:2, uskKupol:2.5, uskNizko:1.5,
   // посадка: ниже bokOt м — вид сбоку и настоящее время, чтобы подушку можно было сделать «на раз-два»
   bokOt:50, uskBok:1,
+  // отделение (AFF, с. 21): тело летит вперёд со скоростью самолёта, горизонталь гаснет к 10–12 с
+  // (вынос 250–350 м), вертикаль набирает ≈ 50 м/с к 10–15 с; первые секунды — поток от винтов
+  brosok:44, brosokSnos:250, potokDlit:3,
+  // протаскивание (AFF, с. 39): ветер у земли с порывом от protaschit м/с тянет купол после касания;
+  // погасить — отпустить одну клеванту и вытянуть другую — за gasitOkno с
+  protaschit:7, gasitOkno:1.6,
 };
 // запасное поле — к западу от дороги; на нём метки, видные с воздуха
 const ZAPASNOE = [[-820,-120],[-230,-180],[-170,500],[-760,560]];
@@ -303,6 +320,8 @@ const ROZA = { x:360, y:-318, r:42 };
 // Сплошной слой (pokr ≥ 0,8) ниже 4300 м опускает выброску под себя; сквозь кучевые падают —
 // внутри облака ничего не видно. «Облачность выше высоты раскрытия» (AFF, с. 44): ниже 900 м — прыжков нет.
 const POGODA = [
+  { id:'segodnya', ikonka:'📍', imya:'Сегодня в Грызлово', kratko:'загрузка…', segodnya:true,
+    opis:'Погода на аэродроме сегодня по прогнозу Open-Meteo: ветер по высотам, порывы, облака.', sloi:[] },
   { id:'yasno',    ikonka:'☀️', imya:'Ясно',               kratko:'4000 м',
     opis:'Голубое небо, видно далеко.', sloi:[] },
   { id:'kuchevye', ikonka:'🌤', imya:'Кучевые',             kratko:'1500–2000',
@@ -359,6 +378,67 @@ function opisSloev(sloi) {
   return sloi.length ? sloi.map(L => L.tip === 'ci' ? 'пелена ' + L.niz / 1000 + ' км' : L.niz + '–' + L.verh).join(' · ') : 'ясно';
 }
 
+// ───────── Ветер по высотам ─────────
+// Профиль — [высота над аэродромом, м/с, куда дует] снизу вверх. Между точками — линейно по составляющим.
+function veterProfil(pr, h) {
+  const v = ([, w, k]) => { const [x, y] = vec(k); return [x * w, y * w]; };
+  if (h <= pr[0][0]) return v(pr[0]);
+  let i = 0; while (i < pr.length - 1 && pr[i + 1][0] < h) i++;
+  if (i === pr.length - 1) return v(pr[i]);
+  const a = v(pr[i]), b = v(pr[i + 1]), k = (h - pr[i][0]) / (pr[i + 1][0] - pr[i][0]);
+  return [a[0] + (b[0] - a[0]) * k, a[1] + (b[1] - a[1]) * k];
+}
+// Профиль для погоды без сводки. AFF, с. 36: ПМУ — ветер на всех высотах одинаков; СМУ — на разных высотах
+// дует по-разному («колено»), больше 8 м/с. С высотой ветер крепчает и поворачивает вправо — трение
+// о землю его тормозит и отклоняет, к ≈ 1000 м это проходит. ПМУ — уровни 1–3, «колено» — с 6-го.
+function profilVetra(W, kuda, nomer) {
+  const H = [10, 100, 300, 600, 1000, 1500, 2000, 3000, 4500];
+  if (nomer <= 2) return H.map(h => [h, W * (1 + 0.15 * Math.min(h, 1000) / 1000), kuda]);
+  const K = [1, 1.15, 1.3, 1.4, 1.5, 1.55, 1.6, 1.75, 1.9], POV = [0, 5, 12, 20, 28, 30, 30, 32, 35];
+  const koleno = nomer >= 5 ? { h:700 + Math.random() * 1800, ug:(Math.random() < 0.5 ? -1 : 1) * (60 + Math.random() * 60) } : null;
+  return H.map((h, i) => [h, W * K[i], (kuda + POV[i] + (koleno && h >= koleno.h ? koleno.ug : 0) + 360) % 360]);
+}
+
+// ───────── Погода дня и время года ─────────
+// pogoda-dnya.json кладёт на сервер igra/tools/pogoda-dnya.py (crontab, раз в два часа): по часам 8–20
+// ветер по высотам, облачные слои, порывы, запрет прыжков и время года. Нет файла — погоду выбирает игра.
+let DEN = null, SEZON = 'leto';
+const SEZONY = ['leto', 'osen', 'golaya', 'zima', 'vesna'];
+function sezonPoDate(d) {                                       // без сводки: снег — с середины декабря до середины марта
+  const m = d.getMonth() + 1, dd = d.getDate();
+  if ((m === 12 && dd >= 15) || m <= 2 || (m === 3 && dd < 15)) return 'zima';
+  if ((m >= 6 && m <= 8) || (m === 9 && dd < 15)) return 'leto';
+  if (m === 9 || m === 10) return 'osen';
+  if (m === 5 || (m === 4 && dd >= 20)) return 'vesna';
+  return 'golaya';
+}
+const ikonkaKoda = c => c <= 1 ? '☀️' : c === 2 ? '🌤' : c === 3 ? '☁️' : c <= 48 ? '🌫' : c <= 67 ? '🌧' : c <= 77 ? '❄️' : c <= 82 ? '🌦' : c <= 86 ? '🌨' : '⛈';
+const mskChas = d => new Intl.DateTimeFormat('sv-SE', { timeZone:'Europe/Moscow', year:'numeric', month:'2-digit', day:'2-digit', hour:'2-digit', hourCycle:'h23' }).format(d).replace(' ', 'T');
+// час прыжков: сейчас, ночью — ближайшее утро; всё прошло — последний час сводки
+function vybratChas(d, seychas = new Date()) {
+  const kl = Object.keys(d.chasy).sort(), tek = mskChas(seychas);
+  return kl.find(k => k >= tek) || kl[kl.length - 1];
+}
+const otkudaTekst = kuda => ['С','СВ','В','ЮВ','Ю','ЮЗ','З','СЗ'][Math.round(((kuda + 180) % 360) / 45) % 8];
+function prinyatSvodku(d) {
+  const p = POGODA.find(p => p.segodnya), kl = d && d.chasy && vybratChas(d);
+  if (!kl) {
+    p.sloi = null; p.kratko = 'нет сводки';
+    p.opis = 'Сводки погоды нет — погоду и ветер выберет игра по уровню.';
+  } else {
+    const c = d.chasy[kl], v0 = c.veter[0], v1 = Math.hypot(...veterProfil(c.veter, 1000));
+    const chas = kl.slice(11) + ':00' + (kl.slice(0, 10) === mskChas(new Date()).slice(0, 10) ? '' : ' завтра');
+    DEN = c; p.ikonka = ikonkaKoda(c.kod); p.sloi = c.sloi; p.zapret = !!c.zapret; p.zapretTekst = c.zapret;
+    p.kratko = `${chas} · ${Math.round(v0[1])} м/с`;
+    p.opis = `На ${chas}: ${Math.round(c.t)}°, ветер у земли ${otkudaTekst(v0[2])} ${Math.round(v0[1])} м/с, порывы до ${Math.round(c.poryvy)}; `
+      + `на 1000 м — ${Math.round(v1)} м/с. Облака: ${opisSloev(c.sloi)}.` + (c.zapret ? ` Прыжков нет: ${c.zapret}.` : '');
+    SEZON = SEZONY.includes(d.sezon) ? d.sezon : sezonPoDate(new Date());
+  }
+  if (!d) SEZON = sezonPoDate(new Date());
+  const q = new URLSearchParams(location.search).get('sezon');   // для проверок: ?sezon=zima
+  if (SEZONY.includes(q)) SEZON = q;
+}
+
 
 // ───────── Холст ─────────
 const holst = document.getElementById('igra');
@@ -374,20 +454,28 @@ addEventListener('resize', razmer); razmer();
 
 // ───────── Загрузка ─────────
 function kartinka(src) { return new Promise((ok, osh) => { const i = new Image(); i.onload = () => ok(i); i.onerror = osh; i.src = src; }); }
-let imgDal, imgBlizh, maskaDannye, maskaW, maskaH;
-const zagruzka = Promise.all([kartinka('assets/karta-dal.webp'), kartinka('assets/karta-blizh.webp'), kartinka('assets/maska.png')])
-  .then(([d, b, m]) => {
-    imgDal = d; imgBlizh = b;
-    const c = document.createElement('canvas'); c.width = maskaW = m.width; c.height = maskaH = m.height;
-    const cx = c.getContext('2d'); cx.drawImage(m, 0, 0);
-    maskaDannye = cx.getImageData(0, 0, maskaW, maskaH).data;
-  });
-// что под точкой: 0 поле, 1 лес, 2 вода
+let imgDal, imgBlizh, imgShir, maska, maskaShir;
+function dannyeMaski(m) {
+  const c = document.createElement('canvas'); c.width = m.width; c.height = m.height;
+  const cx = c.getContext('2d'); cx.drawImage(m, 0, 0);
+  return { d:cx.getImageData(0, 0, m.width, m.height).data, w:m.width, h:m.height };
+}
+const svodka = fetch('pogoda-dnya.json', { cache:'no-cache', signal:AbortSignal.timeout?.(4000) })
+  .then(r => r.ok ? r.json() : null).catch(() => null).then(d => { prinyatSvodku(d); spisokPogody(); });
+const zagruzka = svodka.then(() => {
+  const put = n => SEZON === 'leto' ? `assets/${n}.webp` : `assets/sezon/${SEZON}/${n}.webp`;
+  return Promise.all([kartinka(put('karta-dal')), kartinka(put('karta-blizh')), kartinka(put('karta-shir')),
+    kartinka('assets/maska.png'), kartinka('assets/maska-shir.png')]);
+}).then(([d, b, sh, m, ms]) => { imgDal = d; imgBlizh = b; imgShir = sh; maska = dannyeMaski(m); maskaShir = dannyeMaski(ms); });
+// что под точкой: 0 поле, 1 лес, 2 вода; в пределах снимка учебника — его маска, дальше — широкая из OSM
+function izMaski(M, m, x, y) {
+  if (!M) return -1;
+  const mx = Math.floor((x - m[0]) * m[2]), my = Math.floor((y - m[1]) * m[2]);
+  return mx < 0 || my < 0 || mx >= M.w || my >= M.h ? -1 : M.d[(my * M.w + mx) * 4];
+}
 function grunt(x, y) {
-  if (!maskaDannye) return 0;
-  const mx = Math.floor((x - MIR.maska[0]) * MIR.maska[2]), my = Math.floor((y - MIR.maska[1]) * MIR.maska[2]);
-  if (mx < 0 || my < 0 || mx >= maskaW || my >= maskaH) return 0;
-  const v = maskaDannye[(my * maskaW + mx) * 4];
+  let v = izMaski(maska, MIR.maska, x, y);
+  if (v < 0) v = izMaski(maskaShir, MIR.maskaShir, x, y);
   return v > 150 ? 2 : v > 50 ? 1 : 0;
 }
 function vMnogougolnike(x, y, p) {
@@ -567,20 +655,29 @@ function norm180(a) { return ((a + 540) % 360) - 180; }
 
 function noviyPryzhok(nomer) {
   const u = UROVNI[nomer];
-  const veterKuda = Math.random() * 360;                       // куда дует ветер
   // погода — выбранная на старте или случайная по уровню
   const pogoda = POGODA[vybranaPogoda].sloi ? POGODA[vybranaPogoda] : sluchaynayaPogoda(nomer);
   const sloi = sozdatSloi(pogoda), vys = vysotaVybroski(pogoda);
-  const W = u.veter;
+  // ветер: «сегодня» — по сводке, иначе у земли — по уровню, выше — по профилю уровня
+  const den = pogoda.segodnya && DEN;
+  const profil = den ? DEN.veter : profilVetra(u.veter, Math.random() * 360, nomer);
+  const W = Math.round(profil[0][1]), veterKuda = profil[0][2];
+  const poryv = den ? Math.min(0.6, Math.max(0, DEN.poryvy / Math.max(1, profil[0][1]) - 1)) : nomer >= 6 ? 0.35 : nomer >= 4 ? 0.22 : W ? 0.08 : 0;
   const [wx, wy] = vec(veterKuda);
-  // точка выброски: против ветра от цели на величину ожидаемого сноса —
-  // в падении (до 900 м) и под куполом, если ветер сильнее купола (≈180 с)
-  const snosFF = W * 1.15 * ((vys - 900) / F.padenie + 4);
-  const snosKupol = Math.max(0, W * 1.075 - F.kupolGor) * 180;
-  const dal = Math.min(2000, snosFF + snosKupol + 250 * Math.max(0, 1 - W / 10));
+  // точка выброски — против сноса от цели: в падении до 900 м (ветер по высотам), под куполом — там,
+  // где ветер сильнее купола (≈ 5 м/с вниз), и на вынос от самолёта вперёд по боевому курсу
+  let sx = 0, sy = 0;
+  for (let h = vys; h > 900; h -= 50) { const [a, b] = veterProfil(profil, h); sx += a * 50 / F.padenie; sy += b * 50 / F.padenie; }
+  // боевой курс — против ветра на высотах падения
+  const kursVybr = Math.hypot(sx, sy) > 1 ? (Math.atan2(sx, -sy) * 180 / Math.PI + 180 + 360) % 360 : (veterKuda + 180) % 360;
+  for (let h = 900; h > 0; h -= 25) {
+    const [a, b] = veterProfil(profil, h), w = Math.hypot(a, b), lish = w ? Math.max(0, w * 1.075 - F.kupolGor) / w : 0;
+    sx += a * lish * 25 / F.kupolVert; sy += b * lish * 25 / F.kupolVert;
+  }
+  const [bx, by] = vec(kursVybr), zapas = 250 * Math.max(0, 1 - W / 10);   // в слабый ветер — запас на заход
   const bok = (Math.random() * 2 - 1) * u.razbros, vdol = (Math.random() * 2 - 1) * u.razbros * 0.6;
-  let x = -wx * (dal + vdol) + -wy * bok, y = -wy * (dal + vdol) + wx * bok;
-  x = Math.max(-1800, Math.min(1800, x)); y = Math.max(-1950, Math.min(2750, y));
+  let x = -sx - wx * (zapas + vdol) - wy * bok - bx * F.brosokSnos, y = -sy - wy * (zapas + vdol) + wx * bok - by * F.brosokSnos;
+  x = Math.max(-6000, Math.min(6000, x)); y = Math.max(-6000, Math.min(6000, y));
   // круг захода — правый: все развороты правой клевантой, сторона захода — слева от направления ветра
   const st = vec(veterKuda - 90);
   const d3 = W <= 2 ? 135 : W <= 5 ? 100 : W <= 7 ? 50 : 0;
@@ -590,7 +687,9 @@ function noviyPryzhok(nomer) {
     { n:'III', h:100, x:wx*d3,               y:wy*d3 },
   ];
   s = {
-    nomer, u, W, veterKuda, pogoda, sloi, vys, tuchiSdvig:[0, 0], x, y, h:vys, kurs:veterKuda + 180, faza:'samolet', t:0,
+    nomer, u, W, veterKuda, pogoda, sloi, vys, tuchiSdvig:[0, 0], x, y, h:vys, kurs:kursVybr, faza:'samolet', t:0,
+    // ветер по высотам, сила порывов (доля), часы порывов; вынос от самолёта; турбулентность за лесом
+    profil, poryv, vremya:0, faza0:Math.random() * 6, brosok:[0, 0], turb:0,
     vz:0, raskrytVys:null, zapasnoy:false, nizkoe:false, tochki, proydeny:[], razvorotNizko:false,
     // купол: ход клевант 0…1, угловая скорость, скорость вперёд и вниз, сваливание
     dL:0, dP:0, om:0, v:F.kupolGor, vzK:F.kupolVert, vzTek:0, svalT:0, svalBylo:false, glubT:0, rezkoT:0, rezhim:0,
@@ -603,13 +702,27 @@ function noviyPryzhok(nomer) {
     uskor:0, put:0, podushkaH:null, razH:null, bKas:0, bokT:0, posadka:null,
   };
   const nizhe = sloi.filter(L => L.tip !== 'ci' && L.verh < vys);
-  pokazat(`${pogoda.imya} — выброска на ${vys} м` + (nizhe.length ? `, облака ниже: ${opisSloev(nizhe)} м` : ''), 2.8);
+  pokazat(`${pogoda.imya} — выброска на ${vys} м` + (nizhe.length ? `, облака ниже: ${opisSloev(nizhe)} м` : '')
+    + (W > 10 ? `. Ветер ${W} м/с — выше нормы AFF (10 м/с)` : ''), 2.8);
 }
 
-function veterNa(h) {                                          // ветер крепчает с высотой
-  const k = s.W * (1 + 0.15 * Math.min(h, 1000) / 1000);
-  const [x, y] = vec(s.veterKuda);
+// ветер на высоте h с порывами: у земли — в полную силу, к 1000 м слабеют; плавный шум из трёх синусов
+function veterNa(h) {
+  const [x, y] = veterProfil(s.profil, h);
+  if (!s.poryv) return [x, y];
+  const t = s.vremya, n = (Math.sin(t * 0.9 + s.faza0) + Math.sin(t * 2.3 + s.faza0 * 2) * 0.6 + Math.sin(t * 0.37) * 0.8) / 2.4;
+  const k = 1 + s.poryv * n * (h < 150 ? 1 : Math.max(0.3, 1 - (h - 150) / 1000));
   return [x * k, y * k];
+}
+// механическая турбулентность (Ярмен, гл. 3; USPA — на 10–20 высот препятствия по ветру): ветер переваливает
+// через лес, за опушкой бьёт вниз и крутит. 0…1 — сила; лес ищется против ветра до 300 м
+function turbulentnost() {
+  if (s.h > 80) return 0;
+  const [wx, wy] = veterProfil(s.profil, 20), w = Math.hypot(wx, wy);
+  if (w < 4 || grunt(s.x, s.y) === 1) return 0;
+  for (let d = 30; d <= 300; d += 30)
+    if (grunt(s.x - wx / w * d, s.y - wy / w * d) === 1) return (1 - d / 330) * Math.min(1, (w - 3) / 6) * Math.min(1, (80 - s.h) / 30);
+  return 0;
 }
 
 function raskryt() {
@@ -679,6 +792,7 @@ function oblakaShag(dtReal) {
 // ───────── Шаг симуляции ─────────
 function shag(dtReal) {
   if (!s) return;
+  s.vremya += dtReal;
   if (s.faza !== 'itog') {                                     // тени облаков плывут по ветру на высоте кромки
     const [wx, wy] = veterNa(1000), usk0 = s.faza === 'samolet' ? 1 : s.faza === 'padenie' ? F.uskFF : F.uskKupol;
     s.tuchiSdvig[0] += wx * 1.3 * dtReal * usk0; s.tuchiSdvig[1] += wy * 1.3 * dtReal * usk0;
@@ -688,13 +802,24 @@ function shag(dtReal) {
     s.samoletT += dtReal;
     if (s.samoletT > 2.6 && s.samoletT - dtReal <= 2.6) pokazat('Приготовиться…', 1.5);
     if (s.samoletT > 4 && s.samoletT - dtReal <= 4) pokazat('Пошёл!', 1);
-    if (s.samoletT >= 4.6) { s.faza = 'padenie'; s.vz = 15; knopkaPodushka(false); kR.classList.add('vidno'); pokazat('Отделение! Прогнись, лети к площадке', 2); }
+    if (s.samoletT >= 4.6) {
+      // отделение: скорость самолёта уносит вперёд, вниз — с нуля; поток от винтов разворачивает
+      s.faza = 'padenie'; s.vz = 0; s.brosok = vec(s.kurs).map(c => c * F.brosok);
+      s.om = (Math.random() < 0.5 ? -1 : 1) * (25 + Math.random() * 20);
+      knopkaPodushka(false); kR.classList.add('vidno'); pokazat('Отделение! Поток от винтов — прогнись, коробочка', 2);
+    }
     // самолёт летит против ветра по боевому курсу
     const [kx, ky] = vec(s.kurs); s.x += kx * 30 * dtReal; s.y += ky * 30 * dtReal;
     return;
   }
   if (s.posadka) s.posadka.t += dtReal;
   if (bokVid()) s.bokT += dtReal;
+  // ветер тянет купол: погасить — одна клеванта до конца (одна кнопка или ← / →); не успел — протащило
+  const Pk = s.posadka;
+  if (Pk && Pk.tyanet && Pk.gasheno == null) {
+    if (nazh.levo !== nazh.pravo) { Pk.gasheno = true; Pk.tG = Pk.t; pokazat('Купол погашен!', 1.4); s.itogPosadki(); }
+    else if (Pk.t > F.gasitOkno) { Pk.gasheno = false; Pk.tG = Pk.t; pokazat('Протащило по земле! Купол гасят сразу после касания', 2.2, true); s.itogPosadki(); }
+  }
   if (s.faza === 'itog') return;
   oblakaShag(dtReal);
   const usk = s.faza === 'padenie' ? F.uskFF : s.h < F.bokOt ? F.uskBok : s.h < 100 ? F.uskNizko : F.uskKupol;
@@ -722,12 +847,16 @@ function shag(dtReal) {
       omCel = kmd.povorot * F.povorotFF;
       vgCel = kmd.vpered * (kmd.vpered > 0 ? F.vperedFF : F.nazadFF);
     }
-    s.vz += Math.max(-4 * dt, Math.min(9.8 * dt * 0.6, vzCel - s.vz));
+    // скорость по воздуху — вниз и вынос вперёд; сопротивление ∝ квадрату скорости, предел — vzCel
+    const V = Math.hypot(s.brosok[0], s.brosok[1], s.vz), kS = 9.8 / (vzCel * vzCel);
+    s.vz += (9.8 - kS * V * s.vz) * dt;
+    const gas = Math.max(0, 1 - kS * 0.8 * V * dt); s.brosok[0] *= gas; s.brosok[1] *= gas;
+    if (s.tFF < F.potokDlit && !s.fig) omCel += Math.sin(s.tFF * 5 + s.faza0) * 40 * (1 - s.tFF / F.potokDlit);   // поток от винтов
     s.om += (omCel - s.om) * Math.min(1, dt / F.tauFF);
     s.vg += (vgCel - s.vg) * Math.min(1, dt / F.tauGorFF);
     s.kurs += s.om * dt;
     const [kx, ky] = vec(s.kurs), [wx, wy] = veterNa(s.h);
-    s.x += (kx * s.vg + wx) * dt; s.y += (ky * s.vg + wy) * dt; s.h -= s.vz * dt;
+    s.x += (kx * s.vg + wx + s.brosok[0]) * dt; s.y += (ky * s.vg + wy + s.brosok[1]) * dt; s.h -= s.vz * dt;
     if (s.poza === 'spina' && s.h < F.figuryOt && !s.trevogaBylo.sp) { s.trevogaBylo.sp = 1; pokazat('На спине ниже 2000 м — прогнись, ляг на живот!', 2.2, true); }
     if (s.h < 1600 && !s.trevogaBylo.r1) { s.trevogaBylo.r1 = 1; pokazat('1500 м — приготовься к раскрытию', 2); }
     if (s.h < 1050 && !s.trevogaBylo.r2) { s.trevogaBylo.r2 = 1; pokazat('РАСКРЫВАЙСЯ!', 2, true); }
@@ -783,6 +912,12 @@ function shag(dtReal) {
     s.vzK += (vzCel - s.vzK) * Math.min(1, dt / (s.svalT > 0 ? 0.5 : F.tauVert)) - (s.svalT > 0 ? 0 : F.podemnaya * Math.max(0, -dv));
     s.vzK = Math.max(0.2, s.vzK);
     s.vzTek = s.vzK;
+    s.turb = turbulentnost();
+    if (s.turb > 0) {
+      s.vzTek += s.turb * (1.6 + 1.4 * (Math.sin(s.vremya * 7.3) * 0.6 + Math.sin(s.vremya * 3.1 + 1) * 0.4));   // в среднем — вниз
+      s.om += s.turb * 40 * Math.sin(s.vremya * 5.7) * dt;
+      if (!s.trevogaBylo.turb) { s.trevogaBylo.turb = 1; pokazat('Турбулентность за лесом! С подветренной стороны леса не заходят', 2.4, true); }
+    }
     const [kx, ky] = vec(s.kurs), [wx, wy] = veterNa(s.h);
     s.x += (kx * s.v + wx) * dt; s.y += (ky * s.v + wy) * dt; s.h -= s.vzTek * dt;
     s.put += (s.v + wx * kx + wy * ky) * dt;                        // путь вдоль курса — для вида сбоку
@@ -801,6 +936,9 @@ function shag(dtReal) {
     }
     if (s.h < 420 && !s.trevogaBylo.k1) { s.trevogaBylo.k1 = 1; pokazat('400 м — только средний режим, к точке I', 2); }
     if (s.h < 110 && !s.trevogaBylo.k2) { s.trevogaBylo.k2 = 1; pokazat('100 м — против ветра, по стрелке!', 2); }
+    if (s.h < 85 && !s.trevogaBylo.sv && s.W * (1 + s.poryv) >= F.protaschit) {
+      s.trevogaBylo.sv = 1; pokazat('Сильный ветер: после касания сразу гаси купол — одну клеванту до конца', 2.2);
+    }
     if (s.h < 50 && !s.trevogaBylo.k3) { s.trevogaBylo.k3 = 1; pokazat('50 м — полная скорость, ноги вместе', 1.6); }
     if (s.h < 14 && !s.trevogaBylo.k4) { s.trevogaBylo.k4 = 1; pokazat('Взгляд на горизонт, ноги вместе — готовь подушку', 1.6); }
     const [raz, dva] = razDva(s.W);
@@ -851,9 +989,13 @@ function prizemlenie() {
   const vKas = s.vzTek, zhestko = s.svalT > 0 || vKas > F.zhestko;
   const [wx0, wy0] = veterNa(0), [kx0, ky0] = vec(s.kurs), vf = s.v + wx0 * kx0 + wy0 * ky0;
   const ishod = zhestko ? 'zhestko' : ishodPosadki(vKas, vf, s.v, s.razvorotNizko);
-  s.posadka = { ishod, t:0, vz:vKas, vf };
-  pokazat(ISHODY[ishod].imya + (ishod === 'nogi' ? '!' : ''), 2.4, ishod === 'zhestko' || ishod === 'kuvyrok');
   const g = grunt(s.x, s.y), d = Math.hypot(s.x, s.y);
+  // сильный ветер у земли (с порывом) тянет купол: его надо погасить, иначе протащит
+  const wk = Math.hypot(wx0, wy0), tyanet = !zhestko && g === 0 && wk >= F.protaschit;
+  const P = s.posadka = { ishod, t:0, vz:vKas, vf, tyanet, wk, napr:Math.sign(wx0 * kx0 + wy0 * ky0) || -1, gasheno:null, tG:null };
+  pokazat(ISHODY[ishod].imya + (tyanet ? ' — ветер тянет купол! Погаси: одна клеванта до конца' : ishod === 'nogi' ? '!' : ''),
+    tyanet ? F.gasitOkno + 0.4 : 2.4, tyanet || ishod === 'zhestko' || ishod === 'kuvyrok');
+  s.itogPosadki = () => {
   const razbor = [];
   let ochki = 0, zag, pogib = false, pochemu = '';
   if (g === 1 || g === 2) {
@@ -886,6 +1028,8 @@ function prizemlenie() {
       razbor.push([I.imya + ' — ' + sovetPosadki(ishod) + skor, I.ochki]);
       if (ishod === 'nogi') ochki += 10; else if (ishod === 'probezhka') ochki += 5;
       else if (ishod === 'kuvyrok') ochki = Math.round(ochki * 0.5);
+      if (P.gasheno === true) { ochki += 5; razbor.push(['Купол погашен сразу — одна клеванта до конца', '+5']); }
+      else if (P.gasheno === false) { ochki = Math.round(ochki * 0.5); razbor.push(['Протащило куполом — сразу отпусти одну клеванту, вторую тяни до кромки', '×0,5']); }
       if (s.svalBylo) razbor.push(['Было сваливание купола', '']);
       s.proydeny.forEach(n => { ochki += 5; razbor.push(['Точка ' + n + ' захода', '+5']); });
       s.figury.forEach(f => { ochki += 5; razbor.push([IMENA_FIGUR[f], '+5']); });
@@ -898,7 +1042,10 @@ function prizemlenie() {
   hran.rekord = Math.max(hran.rekord, ochki);
   if (pobeda && s.nomer + 1 > hran.uroven) hran.uroven = Math.min(UROVNI.length - 1, s.nomer + 1);
   sohranit();
-  setTimeout(() => pokazatItog(zag, ochki, razbor, pogib, pobeda, pochemu), 2800);   // сперва досмотреть посадку
+  // сперва досмотреть посадку
+  setTimeout(() => pokazatItog(zag, ochki, razbor, pogib, pobeda, pochemu), !P.tyanet ? 2800 : P.gasheno ? 1600 : 2800);
+  };
+  if (!tyanet) s.itogPosadki();
 }
 
 function pokazatItog(zag, ochki, razbor, pogib, pobeda, pochemu) {
@@ -927,7 +1074,7 @@ function skrytSoob() { elSoob.classList.remove('vidno'); }
 // ───────── Рисование ─────────
 function risovat() {
   ctx.setTransform(1, 0, 0, 1, 0, 0);
-  ctx.fillStyle = '#6f7a42'; ctx.fillRect(0, 0, SH, VY);
+  ctx.fillStyle = { zima:'#dfe6ee', osen:'#9a8f55', golaya:'#8a8166', vesna:'#7f9150' }[SEZON] || '#6f7a42'; ctx.fillRect(0, 0, SH, VY);
   if (!s || !imgDal) return;
   // ниже 50 м — вид сбоку; переход — наплывом за полсекунды
   const bokA = bokVid() ? Math.min(1, s.bokT / 0.5) : 0;
@@ -942,10 +1089,20 @@ function risovat() {
   ctx.translate(-s.x, -s.y);
   ctx.imageSmoothingEnabled = true;
   // крупный «пиксель» карты: при увеличении — без сглаживания, при уменьшении — со сглаживанием (без ряби)
+  const [sa, sb, sc, sd] = MIR.shir; ctx.imageSmoothingEnabled = k < 0.22; ctx.drawImage(imgShir, sa, sb, sc - sa, sd - sb);
   const [a, b, c, d] = MIR.dal; ctx.imageSmoothingEnabled = k < 0.75; ctx.drawImage(imgDal, a, b, c - a, d - b);
   const [e, f, g, h] = MIR.blizh; ctx.imageSmoothingEnabled = k < 1.8; ctx.drawImage(imgBlizh, e, f, g - e, h - f);
   ctx.imageSmoothingEnabled = true;
   const px = 1 / k;                                            // метров в одном пикселе
+  // подписи сёл и городов — когда видно далеко; мелкие деревни — только пониже
+  if (vidno > 700) {
+    ctx.textAlign = 'center'; ctx.lineWidth = 3 * px; ctx.strokeStyle = 'rgba(0,0,0,.55)'; ctx.fillStyle = 'rgba(255,255,255,.92)';
+    MESTA.forEach(([n, x, y, r]) => {
+      if ((vidno > 1800 && r < 1) || Math.hypot(x - s.x, y - s.y) > vidno * 2) return;
+      ctx.save(); ctx.translate(x, y); ctx.rotate(rad(s.kurs)); ctx.font = `800 ${9 + r * 2.5}px system-ui`.replace(/^800 ([\d.]+)px/, (_, f) => `800 ${f * px}px`);
+      ctx.strokeText(n, 0, 0); ctx.fillText(n, 0, 0); ctx.restore();
+    });
+  }
   // зоны
   ctx.lineWidth = 2 * px;
   ctx.strokeStyle = 'rgba(255,255,255,.55)'; ctx.setLineDash([6 * px, 5 * px]);
@@ -1125,6 +1282,13 @@ function pozaVozduh(taz, b, kach) {
 }
 // поза после касания по исходу; t — секунды с касания. Возвращает позу и сдвиг тела вперёд, м
 function pozaZemlya(P, t) {
+  if (P.tyanet && P.gasheno === false && t > P.tG) {
+    // протащило: лёг на спину, купол волочёт по ветру
+    const xG = pozaZemlya({ ...P, tyanet:false }, P.tG)[1], [poza] = pozaZemlya({ ...P, tyanet:false, ishod:'popa' }, 1.2);
+    const d = xG + P.napr * Math.min(4, P.wk * 0.4) * 2.2 * (1 - Math.exp(-(t - P.tG) / 1.4));
+    poza.taz = [d - 0.25, poza.taz[1]];
+    return [poza, d];
+  }
   const v0 = Math.abs(P.vf) < 0.5 ? 0.5 : P.vf, vp = Math.max(0.5, P.vf);   // vp — только вперёд
   const ruki = (b) => [lerp(0.12, 0.05, b), lerp(-0.42, 0.55, b)];
   const tazStoya = pr => 0.96 - 0.3 * pr;
@@ -1186,8 +1350,16 @@ function risovatShkalu(b) {
   const [t1, t2] = tx.split(' — ');
   ctx.fillText(t1, x, y0 + vys + 11); if (t2) ctx.fillText(t2, x, y0 + vys + 20);
 }
+// цвета вида сбоку по времени года: лес на горизонте, поле у горизонта и у ног, полосы покоса
+const BOK_SEZON = {
+  leto:   { les:'#4f5a35', pole:['#8e8f4c', '#b0a457'], polosy:'rgba(255,240,170,.13)', nebo:['#6f9fd0', '#d6e4ec'] },
+  osen:   { les:'#8a6428', pole:['#8f8550', '#a8935a'], polosy:'rgba(255,225,150,.12)', nebo:['#7b9cc0', '#d9e0e6'] },
+  golaya: { les:'#5d544a', pole:['#857c62', '#988c6c'], polosy:'rgba(230,220,190,.1)',  nebo:['#8a9aae', '#d3d8dd'] },
+  zima:   { les:'#3d4a46', pole:['#d5dde6', '#eef2f7'], polosy:'rgba(150,170,195,.16)', nebo:['#8fb0d6', '#e3ebf2'] },
+  vesna:  { les:'#58853a', pole:['#87924f', '#9a8b5c'], polosy:'rgba(255,240,170,.12)', nebo:['#6aa0d8', '#d8e8f0'] },
+};
 function risovatBok() {
-  const P = s.posadka, h = Math.max(0, s.h);
+  const P = s.posadka, h = Math.max(0, s.h), CV = BOK_SEZON[SEZON] || BOK_SEZON.leto;
   const ppm = P ? lerp(28, 32, plavno(P.t / 0.8)) : Math.max(4, Math.min(25, VY * 0.8 / (h + 7)));
   const zem = VY * 0.86, gor = VY * 0.55, x0 = SH * 0.4;            // земля в плоскости парашютиста, горизонт, где парашютист
   const [kx, ky] = vec(s.kurs), doCeli = -(s.x * kx + s.y * ky), bok = -(s.x * -ky + s.y * kx);
@@ -1195,7 +1367,7 @@ function risovatBok() {
   const sx = X => x0 + X * ppm;                                         // X — метры вперёд от парашютиста (в момент касания — от точки касания)
   // небо и облака погоды
   let g = ctx.createLinearGradient(0, 0, 0, gor);
-  g.addColorStop(0, '#6f9fd0'); g.addColorStop(1, '#d6e4ec'); ctx.fillStyle = g; ctx.fillRect(0, 0, SH, gor + 1);
+  g.addColorStop(0, CV.nebo[0]); g.addColorStop(1, CV.nebo[1]); ctx.fillStyle = g; ctx.fillRect(0, 0, SH, gor + 1);
   const sdv = s.put * 0.6;
   s.sloi.forEach((L, i) => {
     if (L.tip === 'ci') { ctx.fillStyle = 'rgba(240,243,247,.35)'; ctx.fillRect(0, 0, SH, gor * 0.6); return; }
@@ -1208,7 +1380,7 @@ function risovatBok() {
   });
   // горизонт: лес, мачты в красно-белую полоску, водонапорная башня, опоры ЛЭП — медленный параллакс
   const pl = s.put * 1.2, W = SH + 240, mod = v => ((v % W) + W) % W - 120;
-  ctx.fillStyle = '#4f5a35'; ctx.beginPath(); ctx.moveTo(0, gor + 2);
+  ctx.fillStyle = CV.les; ctx.beginPath(); ctx.moveTo(0, gor + 2);
   for (let xx = 0; xx <= SH + 8; xx += 8) ctx.lineTo(xx, gor - 9 - (Math.sin((xx + pl) * 0.07) * 3 + Math.sin((xx + pl) * 0.023) * 4 + 4));
   ctx.lineTo(SH, gor + 2); ctx.fill();
   [[40, 'macha'], [190, 'bashnya'], [260, 'macha'], [430, 'lep'], [560, 'macha']].forEach(([b0, tip]) => {
@@ -1218,11 +1390,11 @@ function risovatBok() {
     else { ctx.strokeStyle = 'rgba(40,40,40,.6)'; ctx.lineWidth = 1; ctx.beginPath(); ctx.moveTo(xx - 5, gor); ctx.lineTo(xx, gor - 40); ctx.lineTo(xx + 5, gor); ctx.moveTo(xx - 7, gor - 33); ctx.lineTo(xx + 7, gor - 33); ctx.stroke(); }
   });
   // поле: скошенные полосы уходят к горизонту и бегут при полёте
-  g = ctx.createLinearGradient(0, gor, 0, VY); g.addColorStop(0, '#8e8f4c'); g.addColorStop(1, '#b0a457');
+  g = ctx.createLinearGradient(0, gor, 0, VY); g.addColorStop(0, CV.pole[0]); g.addColorStop(1, CV.pole[1]);
   ctx.fillStyle = g; ctx.fillRect(0, gor, SH, VY - gor);
   const shagP = 6, sdvP = ((s.put % (shagP * 2)) + shagP * 2) % (shagP * 2);
   const vx = SH * 0.5, kZ = y => (y - gor) / (zem - gor);               // перспектива: на горизонте всё сходится
-  ctx.fillStyle = 'rgba(255,240,170,.13)';
+  ctx.fillStyle = CV.polosy;
   for (let X = -sdvP - shagP * 2 * Math.ceil(x0 / ppm / shagP / 2 + 2); sx(X) < SH * 3; X += shagP * 2) {
     const a = sx(X), b = sx(X + shagP);
     ctx.beginPath(); ctx.moveTo(vx + (a - vx) * kZ(VY), VY); ctx.lineTo(vx + (b - vx) * kZ(VY), VY); ctx.lineTo(vx, gor); ctx.fill();
@@ -1241,7 +1413,7 @@ function risovatBok() {
   // колдун на шесте у круга: конус вытянут по ветру
   const xk = sx(Xc + 12), yk = gor + (zem - gor) * 0.55, mk = Math.max(0.5, ppm / 12);
   ctx.fillStyle = '#ddd'; ctx.fillRect(xk - 1, yk - 26 * mk, 2, 26 * mk);
-  const naduv = Math.min(1, s.W / 7), dl = 14 * mk, nap = Math.sign(vdol || 1);
+  const naduv = Math.min(1, Math.hypot(wx, wy) / 7), dl = 14 * mk, nap = Math.sign(vdol || 1);
   for (let i = 0; i < 4; i++) {
     ctx.fillStyle = i % 2 ? '#fff' : '#e8452c'; const a = xk + nap * dl * i / 4, b = xk + nap * dl * (i + 1) / 4;
     const prov = (q) => (1 - naduv) * q * dl * 0.9;                    // в штиль висит
@@ -1266,10 +1438,18 @@ function risovatBok() {
     kupol = { cx, cy };
   } else {
     J = sustavy(pozaZemlya(P, P.t)[0]);
-    // купол пролетает вперёд, ложится на землю и гаснет, как на видео
-    const bys = P.ishod === 'nogi' || P.ishod === 'probezhka' ? 1.6 : 1.0, k = plavno(P.t / bys);
-    kupol = { cx:J.pl[0] + 0.3 + 4.6 * k, cy:lerp(J.pl[1] + 4.8, 0.15, Math.pow(k, 1.3)) };
-    ugK = -0.1 - 1.25 * Math.sin(Math.min(1, k * 1.25) * Math.PI) - 0.05 * k; szh = k;
+    if (P.tyanet) {
+      // ветер держит купол стеной по ветру; погасил — купол падает, нет — тащит и падает позже
+      const k = plavno(P.t / 0.7), tPad = P.gasheno === true ? P.tG : P.gasheno === false ? P.tG + 2.2 : Infinity;
+      const pad = plavno((P.t - tPad) / 0.7), kach = Math.sin(P.t * 3.1) * 0.25 * (1 - pad);
+      kupol = { cx:J.pl[0] + P.napr * (1.4 + 2.6 * k + pad), cy:lerp(lerp(J.pl[1] + 4.8, 3.4, k) + kach, 0.15, pad) };
+      ugK = -0.1 + 0.35 * k * -P.napr - 1.1 * pad; szh = pad;
+    } else {
+      // купол пролетает вперёд, ложится на землю и гаснет, как на видео
+      const bys = P.ishod === 'nogi' || P.ishod === 'probezhka' ? 1.6 : 1.0, k = plavno(P.t / bys);
+      kupol = { cx:J.pl[0] + 0.3 + 4.6 * k, cy:lerp(J.pl[1] + 4.8, 0.15, Math.pow(k, 1.3)) };
+      ugK = -0.1 - 1.25 * Math.sin(Math.min(1, k * 1.25) * Math.PI) - 0.05 * k; szh = k;
+    }
   }
   const prof = risovatProfil(kupol.cx, kupol.cy, ugK, szh, P ? 0 : bSr, 3 * (1 - szh * 0.25));
   // стропы — к плечам, клеванты — к кистям
@@ -1283,6 +1463,10 @@ function risovatBok() {
   }
   risovatCheloveka(J, ppm);
   // пыль от удара
+  if (P && P.gasheno === false && P.t > P.tG && P.t < P.tG + 2.6) {             // пыль, пока тащит
+    ctx.fillStyle = 'rgba(200,180,130,.35)';
+    for (let i = 0; i < 5; i++) { ctx.beginPath(); ctx.arc(J.taz[0] - P.napr * (0.3 + i * 0.45), 0.12 + (i % 2) * 0.15, 0.22 + i * 0.07, 0, 7); ctx.fill(); }
+  }
   if (P && (P.ishod === 'kuvyrok' || P.ishod === 'zhestko' || P.ishod === 'popa') && P.t < 1.2) {
     ctx.fillStyle = `rgba(200,180,130,${0.5 * (1 - P.t / 1.2)})`;
     for (let i = 0; i < 6; i++) { const r = 0.25 + P.t * 0.9; ctx.beginPath(); ctx.arc(J.taz[0] + (i - 2.5) * 0.35, 0.1 + (i % 2) * 0.2 * P.t, r * (0.6 + (i % 3) * 0.2), 0, 7); ctx.fill(); }
@@ -1438,7 +1622,7 @@ const elStrelka = document.getElementById('strelka'), elVys = document.getElemen
 const elKonus = document.getElementById('konus'), elKompas = document.getElementById('kompas');
 const elVeter = document.getElementById('veter-cifra'), elShtil = document.getElementById('shtil');
 const STORONY = ['С','СВ','В','ЮВ','Ю','ЮЗ','З','СЗ'];
-const elOblaka = document.getElementById('oblaka-cifra');
+const elOblaka = document.getElementById('oblaka-cifra'), elVeterVys = document.getElementById('veter-vys');
 (function deleniya() {                                          // деления через 30° по кругу колдуна
   const g = document.getElementById('deleniya');
   for (let a = 0; a < 360; a += 30) {
@@ -1459,6 +1643,10 @@ function obnovitPribory() {
   const otkuda = STORONY[Math.round(((s.veterKuda + 180) % 360) / 45) % 8];
   const gradusy = Math.round((s.veterKuda + 180) % 360);           // откуда дует, как в метеосводке
   elVeter.textContent = s.W ? `${otkuda} ${gradusy}° · ${s.W} м/с` : '0 м/с';
+  // ветер там, где парашютист: на высоте он другой — сильнее и с поворотом
+  const [vx, vy] = h > 120 && s.faza !== 'itog' ? veterProfil(s.profil, h) : [0, 0], vw = Math.hypot(vx, vy);
+  const tVys = h > 120 && s.faza !== 'itog' ? `на ${Math.round(h / 100) * 100} м: ${vw < 0.5 ? 'штиль' : otkudaTekst(Math.atan2(vx, -vy) * 180 / Math.PI + 360) + ' ' + Math.round(vw) + ' м/с'}` : '';
+  if (elVeterVys.textContent !== tVys) elVeterVys.textContent = tVys;
   const tOblaka = s.vOblake ? '☁ В ОБЛАКЕ' : (s.sloi.length ? '☁ ' + opisSloev(s.sloi) : 'ясно');
   if (elOblaka.textContent !== tOblaka) elOblaka.textContent = tOblaka;
   // подсказка клавиш на компьютере
@@ -1470,7 +1658,11 @@ function obnovitPribory() {
   const ff = s.faza === 'padenie';
   elPoza.classList.toggle('vidno', ff);
   if (ff) {
-    const f = s.fig, tx = f ? (f.tip === 'saltoV' ? 'САЛЬТО ВПЕРЁД' : f.tip === 'saltoN' ? 'САЛЬТО НАЗАД' : f.vozvrat ? 'НА ЖИВОТ' : 'НА СПИНУ')
+    const vynos = Math.hypot(s.brosok[0], s.brosok[1]);
+    // поток и разгон — пока игрок сам ничего не делает; его движение важнее
+    const f = s.fig, sam = f || s.poza === 'spina' || Math.abs(s.vg) > 1.5;
+    const tx = !sam && s.tFF < F.potokDlit ? 'ПОТОК ОТ ВИНТОВ' : !sam && s.vz < 44 ? `РАЗГОН ↓${Math.round(s.vz)} · вперёд ${Math.round(vynos)} м/с`
+      : f ?(f.tip === 'saltoV' ? 'САЛЬТО ВПЕРЁД' : f.tip === 'saltoN' ? 'САЛЬТО НАЗАД' : f.vozvrat ? 'НА ЖИВОТ' : 'НА СПИНУ')
       : s.poza === 'spina' ? 'НА СПИНЕ — ПРОГНИСЬ' : s.vg > 2 ? 'ВПЕРЁД ' + Math.round(s.vg) + ' м/с'
       : s.vg < -1.5 ? 'НАЗАД ' + Math.round(-s.vg) + ' м/с' : Math.abs(s.om) > 12 ? (s.om > 0 ? 'ПОВОРОТ ВПРАВО' : 'ПОВОРОТ ВЛЕВО') : 'КОРОБОЧКА';
     if (elPoza.textContent !== tx) elPoza.textContent = tx;
@@ -1502,7 +1694,7 @@ const elUrovni = document.getElementById('urovni');
 let vybran = Math.min(hran.uroven, UROVNI.length - 1);
 // погода — первым выбором на старте; запоминается в браузере
 const elPogoda = document.getElementById('pogoda'), elPogodaOpis = document.getElementById('pogoda-opis');
-let vybranaPogoda = Math.max(0, POGODA.findIndex(p => p.id === (hran.pogoda || 'sluchaynaya')));
+let vybranaPogoda = Math.max(0, POGODA.findIndex(p => p.id === (hran.pogoda || 'segodnya')));
 function spisokPogody() {
   elPogoda.innerHTML = '';
   POGODA.forEach((p, i) => {
@@ -1514,14 +1706,18 @@ function spisokPogody() {
   });
   const p = POGODA[vybranaPogoda];
   elPogodaOpis.textContent = p.opis; elPogodaOpis.classList.toggle('zapret', !!p.zapret);
+  spisokUrovney();
 }
 spisokPogody();
 function spisokUrovney() {
+  // при погоде дня ветер — сегодняшний, уровень задаёт разброс выброски и подсказки
+  const svoyVeter = !!(POGODA[vybranaPogoda].segodnya && DEN);
+  document.getElementById('razdel-urovni').textContent = svoyVeter ? 'Уровень — разброс выброски и подсказки; ветер — сегодняшний' : 'Уровень — ветер у земли';
   elUrovni.innerHTML = '';
   UROVNI.forEach((u, i) => {
     const b = document.createElement('button');
-    b.innerHTML = `${i + 1}<small>${u.veter} м/с</small>`;
-    b.setAttribute('aria-pressed', i === vybran); b.setAttribute('aria-label', `Уровень ${i + 1}, ветер ${u.veter} метров в секунду`);
+    b.innerHTML = `${i + 1}<small>${svoyVeter ? '·' : u.veter + ' м/с'}</small>`;
+    b.setAttribute('aria-pressed', i === vybran); b.setAttribute('aria-label', `Уровень ${i + 1}` + (svoyVeter ? '' : `, ветер ${u.veter} метров в секунду`));
     b.onclick = () => { vybran = i; spisokUrovney(); };
     elUrovni.appendChild(b);
   });
@@ -1540,8 +1736,10 @@ function start(nomer) {
 }
 document.getElementById('b-start').onclick = () => {
   // нелётная погода: прыжков нет — объясняем, почему
-  if (POGODA[vybranaPogoda].zapret) {
-    elPogodaOpis.textContent = 'Прыжок отменён: облачность ниже высоты раскрытия. Выберите другую погоду.';
+  const p = POGODA[vybranaPogoda];
+  if (p.zapret) {
+    elPogodaOpis.textContent = p.segodnya ? `Сегодня прыжков нет: ${p.zapretTekst}. Выберите другую погоду.`
+      : 'Прыжок отменён: облачность ниже высоты раскрытия. Выберите другую погоду.';
     elPogodaOpis.classList.add('zapret'); return;
   }
   start(vybran);

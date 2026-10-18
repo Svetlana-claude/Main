@@ -22,7 +22,7 @@ def proverit(uslovie, chto):
 
 
 NACH = """([W, h]) => { pauza = true; vybranaPogoda = 0; noviyPryzhok(0); s.faza = 'kupol'; knopkaPodushka(true); kR.classList.add('vidno');
-  s.W = W; s.kurs = s.veterKuda + 180; s.h = h; s.x = 0; s.y = 0; s.v = F.kupolGor; s.vzK = F.kupolVert;
+  s.W = W; s.profil = [[10, W, s.veterKuda]]; s.poryv = 0; s.kurs = s.veterKuda + 180; s.h = h; s.x = 0; s.y = 0; s.v = F.kupolGor; s.vzK = F.kupolVert;
   Object.assign(s.trevogaBylo, { k1:1, k2:1, k3:1 }); document.getElementById('e-start').classList.remove('vidno'); }"""
 DO = """([h, plan]) => { const [raz, dva] = razDva(s.W); plan = plan.map(([hh, r]) => [hh === 'raz' ? raz : hh === 'dva' ? dva : hh, r]);
   let n = 0; while (s.faza === 'kupol' && s.h > h && n < 30000) {

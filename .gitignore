@@ -53,3 +53,6 @@ glavpryg-sayt/makety/.kusok.png
 
 # 3d: токен Hugging Face
 3d/.env
+
+# Сводка погоды игры «Точно в круг» — пишет igra/tools/pogoda-dnya.py (crontab на сервере), каждый день своя
+glavpryg-sayt/igra/maket/pogoda-dnya.json

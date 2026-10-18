@@ -1196,6 +1196,58 @@ vVozd, ногиВрозь)`, совет — `sovetPosadki`; экран итог�
 `.tolko-sensor` и `.tolko-klav`; на странице `/igra` — раздел «Управление».
 Проверка — `tools/proverka-padeniya.py <адрес> <каталог снимков>`.
 
+**Широкая карта из OpenStreetMap.** Вокруг снимков учебника — слой 15×15 км
+`assets/karta-shir.webp` (`MIR.shir` = [−7500, −7500, 7500, 7500], 0,15 точки/м)
+и маска `assets/maska-shir.png` (`MIR.maskaShir`, 10 м/точка). `grunt()` берёт
+маску учебника, за её краем — широкую. `karta-dal.webp` — RGBA с растушёванным
+краем (180 м), поверх широкого слоя. Подписи сёл — `MESTA` (видны выше 700 м).
+Делает всё `tools/osm-karta.py <каталог OSM> <assets>`; повторный запуск
+безопасен, альфа дальнего слоя строится заново. Выгрузки OSM лежат вне git, в
+`exchange/igra-src/osm/` (`priroda`, `voda`, `dorogi`, `doma`.json). Источник —
+Overpass `overpass-api.de` (без заголовка `User-Agent` отвечает 406, общий
+запрос — 504, поэтому четыре запроса), bbox `54.71,37.50,54.87,37.79`, `out geom`:
+- priroda: `way["natural"]; relation["natural"~"wood|water|wetland|scrub"]; way["landuse"]; relation["landuse"]; way["leisure"];`
+- voda: `way["waterway"];`
+- dorogi: `way["highway"]; way["railway"]; way["aeroway"]; way["power"="line"];`
+- doma: `way["building"]; node["place"];`
+
+Привязка: местная проекция (`LAT0 54.7884`, `LON0 37.6460`, `KX = 111320·cos LAT0`,
+`KY = 110540`), затем аффинное `OSM2IGRA` (в коде инструмента). Подобрано
+сопоставлением с маской леса игры (совпадение 0,87) и уточнено ECC. Мир игры
+повёрнут к северу на ≈ 3,9° и сжат в ≈ 0,9 раза, отсюда поправка +3,9° к
+направлению ветра в `pogoda-dnya.py`.
+
+**Времена года.** `tools/sezony.py <assets>` перекрашивает три карты в
+`assets/sezon/{osen,golaya,zima,vesna}/` (по цвету палитры: лес, вода, светлое,
+поля; кроны — по клеткам 10×10), ≈ 3,5 мин. Лето — исходные `assets/*.webp`.
+В коде `SEZON` (из сводки, иначе `sezonPoDate`, для проверок `?sezon=`), пути
+картинок выбираются в `zagruzka`; вид сбоку красится по `BOK_SEZON`.
+
+**Погода дня.** `tools/pogoda-dnya.py <файл> [--iz ответ.json]` (только
+стандартная библиотека) берёт прогноз Open-Meteo по часам и пишет
+`pogoda-dnya.json` атомарно (tmp → `os.replace`, 0644). Структура: `sezon`,
+`snegM`, `obnovleno`, `chasy["ГГГГ-ММ-ДДTЧЧ"]` за 8–20 ч сегодня и завтра →
+`{t, veter: [[h над аэродромом, м/с, куда], …], poryvy, sloi, osadki, sneg, kod,
+zapret}`. «Куда» — в градусах мира игры. На сервере — crontab пользователя
+`mokeeva` (`infra/crontab.mokeeva`): `7 */2 * * *` в
+`/var/www/glavpryg/public/igra-app/pogoda-dnya.json`, журнал
+`/tmp/pogoda-dnya.log`. Файл в git сайта не входит (`.gitignore`), локальная
+копия в `maket/` — тоже. В игре `svodka` (fetch, 4 с) → `prinyatSvodku` →
+`DEN` и кнопка `POGODA[0]` «Сегодня в Грызлово» (`segodnya`, по умолчанию).
+Нет файла — у неё `sloi = null`, погода по уровню.
+
+**Ветер по высотам, отделение, сильный ветер.** `s.profil` — `[h, W, куда]`,
+`veterProfil(pr, h)` интерполирует по составляющим, `veterNa(h)` добавляет
+порывы `s.poryv` (три синусоиды по `s.vremya`). Без сводки профиль строит
+`profilVetra(W, куда, уровень)`. Точка выброски интегрирует снос по профилю.
+Отделение: `s.brosok` (44 м/с по курсу, `F.brosok`), квадратичное сопротивление,
+поток от винтов `F.potokDlit`. Турбулентность за лесом — `turbulentnost()`.
+Протаскивание: `prizemlenie` ставит `s.posadka.tyanet` (ветер ≥ `F.protaschit`,
+поле), очки считаются в `s.itogPosadki()` после гашения (одна клеванта,
+`F.gasitOkno` 1,6 с). Проверка — `tools/proverka-pogody.py <адрес> <каталог
+снимков>`: сводка подменяется через `route`, на прежнем коде падает целиком.
+`proverka-maketa.py … --bez-svodki` — погода по уровню вместо сводки дня.
+
 ---
 
 ## Проект: `logotip` — фирменный стиль «Глубина»
