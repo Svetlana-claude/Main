@@ -12,7 +12,7 @@ from playwright.sync_api import sync_playwright
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 VYDACHA = os.path.abspath(os.path.join(HERE, "..", "..", "downloads", "kalendar-2027"))
-VARIANTY = os.environ.get("VARIANTY", "abcdef")
+VARIANTY = os.environ.get("VARIANTY", "abcdefghijk")
 PAGE = "file://" + os.path.join(HERE, "index.html")
 
 if __name__ == "__main__":
@@ -29,6 +29,17 @@ if __name__ == "__main__":
                 page.locator(f"#var-{v} {sel}").screenshot(path=put)
                 print(put)
             page.close()
+        # построение сетки поверх шапки — только у вариантов на дизайнерских сетках
+        page = browser.new_page(viewport={"width": 1300, "height": 1000}, device_scale_factor=2)
+        page.goto(PAGE + "?setka")
+        page.wait_for_function("document.body.classList.contains('gotovo')")
+        page.wait_for_timeout(800)
+        for v in VARIANTY:
+            if v in "ghijk":
+                put = os.path.join(VYDACHA, f"variant-{v}-setka.png")
+                page.locator(f"#var-{v} .shapka").screenshot(path=put)
+                print(put)
+        page.close()
         page = browser.new_page()
         for v in VARIANTY:
             page.goto(PAGE + "?v=" + v)

@@ -1,0 +1,203 @@
+/* Варианты G–I: тема F («Химия защиты») на дизайнерских сетках.
+   G — модульная сетка 12×8 (Вим Кроувел), H — шесть колонок и полосы Unigrid,
+   блоки как календарь Stendig (Массимо Виньелли), I — канон Ван де Граафа (Ян Чихольд). */
+
+.konstr { display: none; inset: 0; width: 100%; height: 100%; z-index: 20; pointer-events: none;
+  fill: rgba(255,0,180,.07); stroke: #ff00b4; stroke-width: .25; }
+body.setka .konstr { display: block; }
+.konstr .polosa-u { stroke-width: .5; stroke-dasharray: 2 1.2; }
+.konstr .blok-nabora { fill: rgba(255,0,180,.08); stroke-width: .5; }
+
+/* ================= G. МОДУЛЬ ================= */
+.var-g { --chern: #0d0d0d; --oranzh: #ff5a12; --fon: #f1f0ec; }
+.var-g .shapka { background: var(--fon); color: var(--chern); }
+.var-g .fon { inset: 0; width: 100%; height: 100%; }
+.var-g .kresty path { stroke: var(--chern); stroke-width: .2; opacity: .45; }
+.var-g .vynoski path { fill: none; stroke: var(--chern); stroke-width: .3; }
+.var-g .mono { font: 400 2.6px "IBM Plex Mono", monospace; fill: var(--chern); letter-spacing: .02em; }
+/* «2027» — колонки 1–7, ряды 1–2 */
+.var-g .god { left: 11mm; top: 13mm; font: 800 46mm/.8 "Unbounded", sans-serif; letter-spacing: -.035em; }
+.var-g .meta { left: 173mm; top: 12mm; width: 66mm; font: 400 3.2mm/1.35 "IBM Plex Mono", monospace; }
+.var-g .logo { left: 242mm; top: 12mm; width: 43mm; }
+/* заголовок — колонки 1–6, ряд 3 */
+.var-g .zag { left: 12mm; top: 59.25mm; width: 135mm; }
+.var-g .z1 { font: 800 8.4mm/1.05 "Unbounded", sans-serif; }
+.var-g .z2 { margin-top: 2.4mm; width: 112mm; font: 400 3.4mm/1.4 "IBM Plex Mono", monospace; }
+/* карточки — колонки 7–8, 9–10, 11–12, ряды 7–8 */
+.var-g .kartochki { left: 150mm; top: 153.75mm; width: 135mm; height: 44.25mm; display: grid; grid-template-columns: repeat(3, 43mm); column-gap: 3mm; }
+.var-g .kart { border-top: .6mm solid var(--chern); padding-top: 2mm; display: flex; flex-direction: column; font: 400 3mm/1.35 "IBM Plex Mono", monospace; }
+.var-g .kart svg { width: 14mm; height: 9mm; color: var(--chern); --m-o: var(--oranzh); margin-bottom: 1.6mm; }
+.var-g .kart b { font: 600 6.4mm/1.1 "Unbounded", sans-serif; }
+.var-g .geroinya { left: 10mm; bottom: 12mm; height: 104mm; }
+
+.var-g .blok { background: var(--fon); }
+.var-g .mes { position: absolute; inset: 12mm; }
+.var-g .mes-zag { position: absolute; left: 0; top: 0; bottom: 0; width: 112mm; display: flex; flex-direction: column; }
+.var-g .mes-nom { font: 800 44mm/.8 "Unbounded", sans-serif; letter-spacing: -.04em; }
+.var-g .mes-imya { margin-top: 4mm; font: 600 7mm/1 "Unbounded", sans-serif; }
+.var-g .mes-god { margin-top: 1.6mm; font: 400 4mm/1 "IBM Plex Mono", monospace; }
+.var-g .mes::after { content: attr(data-fakt); position: absolute; left: 0; bottom: 7mm; width: 112mm; padding-top: 1.6mm;
+  border-top: .4mm solid var(--chern); font: 400 3.2mm/1 "IBM Plex Mono", monospace; }
+/* дни — ровно колонки 6–12: один день — один модуль */
+.var-g .dni { position: absolute; left: 115mm; top: 0; bottom: 0; grid-template-columns: repeat(7, 20mm); column-gap: 3mm;
+  grid-template-rows: 6mm repeat(6, 1fr); row-gap: 1.6mm; }
+.var-g .dni span { text-align: left; }
+.var-g .dni .dn { font: 500 3mm/6mm "IBM Plex Mono", monospace; text-transform: uppercase; }
+.var-g .dni .dn.vyh { color: var(--oranzh); }
+.var-g .dni .d, .var-g .dni .pust { border-top: .4mm solid var(--chern); padding-top: 1mm; }
+.var-g .dni .pust { border-color: #cfcdc6; }
+.var-g .dni .d { font: 600 8.4mm/1 "Inter", sans-serif; letter-spacing: -.02em; }
+.var-g .dni .vyh { color: var(--oranzh); border-color: var(--oranzh); }
+.var-g .dni .rab { color: var(--chern); border-color: var(--chern); }
+.var-g .dni .rab::before { color: var(--oranzh); font-family: "IBM Plex Mono", monospace; text-align: left; }
+.var-g .dni .prazd::after { left: auto; right: 2mm; top: 2.4mm; bottom: auto; margin: 0; }
+.var-g .prim { left: 0; bottom: 0; font: 400 3.2mm/1 "IBM Plex Mono", monospace; color: var(--oranzh); }
+
+.var-g .polosa { background: var(--chern); color: #fff; }
+.var-g .polosa .tovary { left: 12mm; top: 4mm; height: 66mm; }
+.var-g .polosa .kontakty { left: 81mm; top: 15mm; }
+.var-g .polosa .tel { font: 800 10.5mm/1.1 "Unbounded", sans-serif; }
+.var-g .polosa .adr { margin-top: 2.4mm; font: 400 3.5mm/1.3 "IBM Plex Mono", monospace; color: #cfcfcf; }
+.var-g .polosa .sayt { margin-top: 1mm; font: 500 4.2mm/1 "IBM Plex Mono", monospace; color: var(--oranzh); }
+.var-g .polosa .qr { left: 242mm; top: 15.5mm; width: 43mm; background: #fff; padding: 1mm; }
+
+/* ================= H. ВИНЬЕЛЛИ ================= */
+.var-h { --chern: #0c0c0c; --yantar: #f2a01c; --krasn: #ff3b30; }
+.var-h .shapka { background: var(--chern); color: #fff; font-family: "Inter", sans-serif; }
+.var-h .lineyka { left: 14mm; right: 14mm; border-top: .5mm solid #fff; }
+.var-h .lineyka.l1 { top: 22mm; }
+.var-h .lineyka.l2 { top: 130mm; }
+.var-h .metka { top: 15mm; font: 600 3.8mm/1 "Inter", sans-serif; letter-spacing: .01em; }
+.var-h .god { left: 12mm; top: 27mm; font: 700 64mm/.8 "Inter", sans-serif; letter-spacing: -.055em; }
+.var-h .disk { left: 196.7mm; top: 27mm; width: 86.3mm; height: 86.3mm; }
+.var-h .disk .d1 { font: 700 6.2px "Inter", sans-serif; fill: var(--chern); }
+.var-h .disk .d2 { font: 500 3.4px "Inter", sans-serif; fill: var(--chern); }
+.var-h .tekst { left: 105.3mm; top: 134mm; width: 86.3mm; }
+.var-h .t1 { font: 700 8mm/1.05 "Inter", sans-serif; letter-spacing: -.02em; }
+.var-h .t2 { margin-top: 3mm; font: 400 3.6mm/1.4 "Inter", sans-serif; color: #cfcfcf; }
+.var-h .sostav { left: 196.7mm; top: 134mm; width: 40.7mm; display: grid; grid-template-columns: auto; font-family: "Inter", sans-serif; }
+.var-h .sostav dt { font: 700 6mm/1 "Inter", sans-serif; color: var(--yantar); }
+.var-h .sostav dd { margin: .8mm 0 3.6mm; font: 400 3.4mm/1 "Inter", sans-serif; color: #cfcfcf; }
+.var-h .logo { left: 242.3mm; bottom: 14mm; width: 40.7mm; }
+.var-h .geroinya { left: 12mm; top: 88mm; height: 108mm; }
+
+/* блок — календарь Stendig: чёрное поле, крупные цифры от левого верхнего угла */
+.var-h .blok { background: var(--chern); color: #fff; }
+.var-h .mes { position: absolute; inset: 12mm 14mm 9mm; font-family: "Inter", sans-serif; }
+.var-h .mes-zag { display: flex; align-items: baseline; height: 15mm; }
+.var-h .mes-nom { display: none; }
+.var-h .mes-imya { font: 700 12mm/1 "Inter", sans-serif; letter-spacing: -.03em; }
+.var-h .mes-god { margin-left: auto; font: 300 12mm/1 "Inter", sans-serif; letter-spacing: -.03em; }
+.var-h .dni { position: absolute; left: 0; right: 0; top: 16mm; bottom: 6mm; grid-template-rows: 6mm repeat(6, 1fr); }
+.var-h .dni span { text-align: left; }
+.var-h .dni .dn { font: 500 3.2mm/6mm "Inter", sans-serif; color: #9a9a9a; }
+.var-h .dni .dn.vyh { color: var(--krasn); }
+.var-h .dni .d { font: 700 11mm/1 "Inter", sans-serif; letter-spacing: -.04em; padding-top: 1mm; }
+.var-h .dni .vyh { color: var(--krasn); }
+.var-h .dni .rab { color: #fff; }
+.var-h .dni .rab::before { color: var(--krasn); font-family: "Inter", sans-serif; text-align: left; left: .4mm; }
+.var-h .dni .prazd::after { left: 15mm; top: 2mm; bottom: auto; margin: 0; }
+.var-h .prim { left: 0; bottom: 0; font: 400 3.2mm/1 "Inter", sans-serif; color: #9a9a9a; }
+
+.var-h .polosa { background: #fff; color: var(--chern); border-top: 1.2mm solid var(--chern); }
+.var-h .polosa .tovary { left: 14mm; top: 4mm; height: 64mm; }
+.var-h .polosa .kontakty { left: 105.3mm; top: 15mm; width: 132mm; }
+.var-h .polosa .tel { font: 700 11mm/1 "Inter", sans-serif; letter-spacing: -.03em; }
+.var-h .polosa .adr { margin-top: 3mm; font: 400 3.8mm/1.35 "Inter", sans-serif; color: #444; }
+.var-h .polosa .sayt { margin-top: 1mm; font: 700 4.2mm/1 "Inter", sans-serif; color: #c77700; }
+.var-h .polosa .qr { left: 242.3mm; top: 14mm; width: 40.7mm; }
+
+/* ================= I. КАНОН ================= */
+.var-i { --tush: #2a2118; --kinovar: #a8231b; --bumaga: #f4ecdb; }
+.var-i .shapka { background: var(--bumaga); color: var(--tush); font-family: "Cormorant Garamond", serif; }
+.var-i .bumaga { inset: 0; background:
+  url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='400' height='400'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='.9' numOctaves='3' seed='5'/><feColorMatrix values='0 0 0 0 .35  0 0 0 0 .28  0 0 0 0 .2  0 0 0 .08 0'/></filter><rect width='100%25' height='100%25' filter='url(%23n)'/></svg>"),
+  radial-gradient(ellipse at 45% 45%, rgba(255,250,238,.6), rgba(214,196,160,.35)); }
+/* полоса набора по канону: поля 1/9 и 2/9 листа — 33 / 23,3 / 66 / 46,7 мм */
+.var-i .polosa-nabora { left: 33mm; top: 23.33mm; width: 198mm; height: 140mm; display: flex; flex-direction: column; align-items: center; text-align: center; }
+.var-i .kolontitul { font: 600 3.4mm/1 "Cormorant Garamond", serif; letter-spacing: .28em; text-transform: uppercase; color: var(--kinovar);
+  width: 100%; padding-bottom: 2mm; border-bottom: .8mm double var(--tush); }
+.var-i .nad { margin-top: 5mm; font: 600 3.8mm/1 "Cormorant Garamond", serif; letter-spacing: .22em; text-transform: uppercase; }
+.var-i .titul-i { margin-top: 2mm; font: 600 12.5mm/1.05 "Cormorant Garamond", serif; letter-spacing: .01em; }
+.var-i .podzag { margin-top: 1.6mm; font: italic 500 5mm/1.2 "Cormorant Garamond", serif; }
+.var-i .gravyura { margin-top: 4mm; width: 150mm; height: 76mm; }
+.var-i .bukvy text { font: italic 600 4.6px "Cormorant Garamond", serif; fill: var(--kinovar); }
+.var-i .podpis { margin-top: 2mm; width: 176mm; font: italic 500 3.9mm/1.25 "Cormorant Garamond", serif; }
+.var-i .podpis i { color: var(--kinovar); }
+/* медальон с героиней — на широком внешнем поле */
+.var-i .medalyon { left: 240mm; top: 34mm; width: 48mm; height: 62mm; border-radius: 50%; overflow: hidden;
+  border: .3mm solid var(--tush); outline: .2mm solid var(--tush); outline-offset: 1.2mm; background: #e9dcc0; }
+.var-i .medalyon img { position: absolute; left: 1mm; top: 3mm; width: 128mm; }
+.var-i .medalyon-podpis { left: 236mm; top: 100mm; width: 56mm; text-align: center; font: italic 500 3.8mm/1 "Cormorant Garamond", serif; }
+.var-i .logo { left: 33mm; top: 177mm; width: 46mm; }
+.var-i .god { right: 66mm; top: 167mm; font: 600 30mm/1 "Cormorant Garamond", serif; color: var(--kinovar); font-variant-numeric: lining-nums; }
+.var-i .konstr path { fill: none; }
+
+.var-i .blok { background: var(--bumaga); color: var(--tush); }
+.var-i .mes { position: absolute; inset: 14mm 16mm 10mm; font-family: "Cormorant Garamond", serif; }
+.var-i .mes-zag { position: absolute; left: 0; top: 0; bottom: 0; width: 56mm; display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; }
+.var-i .mes-nom { display: none; }
+.var-i .mes-rim { display: block; font: 600 32mm/1 "Cormorant Garamond", serif; color: var(--kinovar); }
+.var-i .mes-imya { margin-top: 2mm; font: 600 5.2mm/1 "Cormorant Garamond", serif; letter-spacing: .24em; text-transform: uppercase; }
+.var-i .mes-god { margin-top: 2mm; font: italic 500 5mm/1 "Cormorant Garamond", serif; }
+.var-i .dni { position: absolute; left: 66mm; right: 50mm; top: 0; bottom: 0; grid-template-rows: 8mm repeat(6, 1fr);
+  border-top: .9mm double var(--tush); border-bottom: .9mm double var(--tush); }
+.var-i .dni .dn { font: italic 500 3.8mm/8mm "Cormorant Garamond", serif; border-bottom: .2mm solid var(--tush); }
+.var-i .dni .dn.vyh { color: var(--kinovar); }
+.var-i .dni .d, .var-i .dni .pust { display: flex; align-items: center; justify-content: center; border-bottom: .2mm solid #d3c3a2; }
+.var-i .dni span:nth-last-child(-n+7) { border-bottom: 0; }
+.var-i .dni .d { font: 600 8.6mm/1 "Cormorant Garamond", serif; font-variant-numeric: oldstyle-nums; }
+.var-i .dni .vyh { color: var(--kinovar); }
+.var-i .dni .rab { color: var(--tush); }
+.var-i .dni .rab::before { color: var(--kinovar); font: italic 500 2.8mm/1 "Cormorant Garamond", serif; }
+/* примечание — на поле, как маргиналия */
+.var-i .prim { right: 0; top: 10mm; width: 42mm; font: italic 500 4mm/1.25 "Cormorant Garamond", serif; color: var(--kinovar); }
+
+.var-i .polosa { background: var(--bumaga); color: var(--tush); }
+.var-i .polosa .ramka { inset: 5mm 6mm; border: .9mm double var(--tush); }
+.var-i .polosa .tovary { left: 14mm; top: 7mm; height: 60mm; }
+.var-i .polosa .kontakty { left: 80mm; width: 140mm; top: 15mm; text-align: center; }
+.var-i .polosa .tel { font: 600 11mm/1 "Cormorant Garamond", serif; font-variant-numeric: lining-nums; }
+.var-i .polosa .adr { margin-top: 2.4mm; font: italic 500 4.6mm/1.25 "Cormorant Garamond", serif; }
+.var-i .polosa .sayt { margin-top: 1.6mm; font: 600 4mm/1 "Cormorant Garamond", serif; letter-spacing: .24em; text-transform: uppercase; color: var(--kinovar); }
+.var-i .polosa .qr { right: 14mm; top: 13mm; width: 46mm; padding: 1mm; background: #fff; outline: .2mm solid var(--tush); outline-offset: 1.2mm; }
+
+/* ================= J. МОДУЛЬ + МОЛЕКУЛА (поверх правил G) ================= */
+.var-j .god span { color: var(--oranzh); position: relative; }
+.var-j .god .kr { position: absolute; left: 23mm; top: 30mm; width: 26mm; height: 21.5mm; color: var(--oranzh); }
+.var-j .zag { width: 112mm; }
+/* молекула — колонки 8–12, ряды 1–5; масло залито внутрь кольца Al₂O₃ */
+.var-j .molekula-j { left: 173mm; top: 12mm; width: 112mm; height: 103.4mm; color: var(--chern);
+  --mol-kaplya: #f29a16; --mol-c: var(--oranzh); --mol-c-tekst: #fff; --mol-tolsh: 26; font-family: "Unbounded", sans-serif; }
+/* карточки — ряды 6–7 под молекулой */
+.var-j .kartochki { left: 173mm; top: 130.125mm; width: 112mm; height: 44.25mm; grid-template-columns: repeat(3, 1fr); column-gap: 3mm; }
+.var-j .kart svg { width: 12mm; }
+.var-j .meta { left: 173mm; top: 177.4mm; width: 66mm; font-size: 2.9mm; }
+.var-j .logo { left: 242mm; top: 179mm; width: 43mm; }
+/* месяц — номер в незамкнутом кольце, название выходит через разрыв, как формула в молекуле */
+.var-j .mes-zag::before { content: ""; position: absolute; left: 0; top: 0; width: 52mm; height: 52mm;
+  background: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><path d='M83.7,21.7 A44,44 0 1 0 83.7,78.3' fill='none' stroke='%23ff5a12' stroke-width='6' stroke-linecap='round'/></svg>") center / contain no-repeat; }
+.var-j .mes-nom { position: absolute; left: 0; top: 0; width: 52mm; height: 52mm; display: flex; align-items: center; justify-content: center;
+  font-size: 18mm; line-height: 1; letter-spacing: -.04em; padding-right: 3mm; }
+.var-j .mes-imya { position: absolute; left: 46mm; top: 19mm; margin: 0; }
+.var-j .mes-god { position: absolute; left: 46.4mm; top: 28.5mm; margin: 0; }
+.var-j .polosa .mol-polosa { left: 214mm; top: 12mm; width: 24mm; height: 50mm; color: #fff; --mol-c: var(--oranzh); --mol-tolsh: 30; font-family: "Unbounded", sans-serif; }
+
+/* ================= K. ВИНЬЕЛЛИ + МОЛЕКУЛА (поверх правил H) ================= */
+.var-k .logo-mal { left: 14mm; top: 13.4mm; height: 6.4mm; }
+.var-k .god { top: 27mm; font-size: 46mm; }
+.var-k .tekst { left: 14mm; top: 69mm; width: 132mm; }
+.var-k .lineyka.l2 { top: 154mm; left: 151mm; }
+/* молекула — колонки 4–6: белая линия по чёрному, кольцо C — янтарная капля */
+.var-k .molekula-k { left: 151mm; top: 26mm; width: 132mm; height: 121.8mm; color: #fff;
+  --mol-c: var(--yantar); --mol-c-tekst: var(--chern); --mol-tolsh: 22; font-family: "Inter", sans-serif; }
+.var-k .sostav-k { left: 151mm; top: 158mm; width: 132mm; display: grid; grid-template-columns: repeat(3, 40.67mm); column-gap: 5mm; }
+.var-k .sostav-k div { display: flex; flex-direction: column; }
+.var-k .sostav-k b { font: 700 6mm/1 "Inter", sans-serif; color: var(--yantar); }
+.var-k .sostav-k span { margin-top: 1mm; font: 400 3.3mm/1.3 "Inter", sans-serif; color: #cfcfcf; }
+.var-k .sostav-k span + span { margin-top: .4mm; color: #8f8f8f; }
+.var-k .geroinya { left: 12mm; top: auto; bottom: 14mm; height: 100mm; }
+/* праздник — число в незамкнутом кольце молекулы вместо точки */
+.var-k .dni .prazd::after { left: -2.6mm; top: -2.4mm; bottom: auto; width: 16mm; height: 16mm; margin: 0; border-radius: 0;
+  background: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><path d='M83.7,21.7 A44,44 0 1 0 83.7,78.3' fill='none' stroke='%23f2a01c' stroke-width='5' stroke-linecap='round'/></svg>") center / contain no-repeat; }
+.var-k .polosa .sayt { color: #c77700; }

@@ -2,10 +2,11 @@
 <html lang="ru">
 <head>
 <meta charset="utf-8">
-<title>Aevit — квартальный календарь 2027, шесть вариантов</title>
+<title>Aevit — квартальный календарь 2027, одиннадцать вариантов</title>
 <link rel="stylesheet" href="fonts.css">
 <link rel="stylesheet" href="style.css">
 <link rel="stylesheet" href="style-2.css">
+<link rel="stylesheet" href="style-3.css">
 </head>
 <body>
 
@@ -57,7 +58,7 @@
 
 <header class="titul">
   <h1>Aevit — квартальный календарь 2027</h1>
-  <p>Шесть вариантов: A–C — первая подача, D–F — по сетке заказчика и новому рисунку героини. Посыл общий — наноформула (SiO₂, Al₂O₃, C) защищает любой двигатель; героиня, янтарь масла и голубой знак-молекула переходят из календаря 2026.
+  <p>Девять вариантов: A–C — первая подача, D–F — по сетке заказчика и новому рисунку героини, G–I — тема F на дизайнерских сетках, J и K — развитие G и H на молекуле Aevit. Посыл общий — наноформула (SiO₂, Al₂O₃, C) защищает любой двигатель; героиня, янтарь масла и голубой знак-молекула переходят из календаря 2026.
     На каждом варианте: шапка 297×210&nbsp;мм, три блока 297×148&nbsp;мм (декабрь 2026 — январь — февраль 2027), рекламная полоса 297×74&nbsp;мм.</p>
 </header>
 
@@ -531,6 +532,286 @@
   </div>
 </section>
 
+<!-- Варианты G–I: тема F («Химия защиты») на дизайнерских сетках.
+     Слой .konstr — построение сетки; виден в режиме body.setka (снимки variant-X-setka.png). -->
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+  <defs>
+    <symbol id="m-tetra" viewBox="-20 -20 40 34">
+      <path d="M0,-16 L-15,10 L15,10 Z M0,-16 L3,2 L-15,10 M3,2 L15,10" fill="none" stroke="currentColor" stroke-width="1.2" stroke-linejoin="round"/>
+      <circle cx="3" cy="2" r="3.6" fill="currentColor"/>
+      <circle cx="0" cy="-16" r="2.6" fill="var(--m-o, currentColor)"/><circle cx="-15" cy="10" r="2.6" fill="var(--m-o, currentColor)"/><circle cx="15" cy="10" r="2.6" fill="var(--m-o, currentColor)"/>
+    </symbol>
+    <symbol id="m-korund" viewBox="-4 -6 56 12">
+      <path d="M2,-1.2 L10,-1.2 M2,1.2 L10,1.2 M14,0 L22,0 M26,0 L34,0 M38,-1.2 L46,-1.2 M38,1.2 L46,1.2" fill="none" stroke="currentColor" stroke-width="1"/>
+      <circle cx="0" cy="0" r="2.4" fill="var(--m-o, currentColor)"/><circle cx="12" cy="0" r="3" fill="currentColor"/><circle cx="24" cy="0" r="2.4" fill="var(--m-o, currentColor)"/>
+      <circle cx="36" cy="0" r="3" fill="currentColor"/><circle cx="48" cy="0" r="2.4" fill="var(--m-o, currentColor)"/>
+    </symbol>
+    <symbol id="m-grafen" viewBox="-2 -6 28 30">
+      <path d="M0,0 l6,-3.5 l6,3.5 l0,7 l-6,3.5 l-6,-3.5 Z M12,0 l6,-3.5 l6,3.5 l0,7 l-6,3.5 l-6,-3.5 M6,10.5 l0,7 l6,3.5 l6,-3.5 l0,-7" fill="none" stroke="currentColor" stroke-width="1.2" stroke-linejoin="round"/>
+    </symbol>
+    <pattern id="g-soty" width="17.32" height="30" patternUnits="userSpaceOnUse" patternTransform="scale(.42)">
+      <path d="M8.66,0 L17.32,5 L17.32,15 L8.66,20 L0,15 L0,5 Z M8.66,20 L8.66,30" fill="none" stroke="#fff" stroke-width=".7"/>
+    </pattern>
+    <!-- гравюрная штриховка для I -->
+    <pattern id="i-shtrih" width="1.1" height="1.1" patternUnits="userSpaceOnUse">
+      <line x1="0" y1=".55" x2="1.1" y2=".55" stroke="#2a2118" stroke-width=".22"/>
+    </pattern>
+    <pattern id="i-shtrih2" width="1" height="1" patternUnits="userSpaceOnUse" patternTransform="rotate(-38)">
+      <line x1="0" y1=".5" x2="1" y2=".5" stroke="#2a2118" stroke-width=".3"/>
+    </pattern>
+  </defs>
+</svg>
+
+<!-- ============ ВАРИАНТ G. МОДУЛЬ (современный, по Виму Кроувелу) ============ -->
+<section class="var var-g" id="var-g">
+  <h2 class="var-imya"><b>G</b> «Модуль» — современная модульная сетка, по мотивам Вима Кроувела</h2>
+  <div class="trio">
+    <div class="shapka">
+      <svg class="fon" viewBox="0 0 297 210" aria-hidden="true">
+        <defs><clipPath id="g-kaplya"><circle cx="229" cy="91.6" r="56"/></clipPath></defs>
+        <!-- метки углов модулей: сетка 12 × 8, поля 12 мм, средник 3 мм -->
+        <g class="kresty g-kresty"></g>
+        <circle cx="229" cy="91.6" r="56" fill="#f29a16"/>
+        <rect x="173" y="35" width="112" height="113" fill="url(#g-soty)" clip-path="url(#g-kaplya)" opacity=".38"/>
+        <g fill="#0d0d0d">
+          <circle cx="252" cy="112" r="6.5"/><circle cx="212" cy="120" r="4.4"/><circle cx="244" cy="68" r="3.6"/>
+          <circle cx="206" cy="84" r="3"/><circle cx="266" cy="88" r="2.6"/>
+        </g>
+        <g class="vynoski">
+          <path d="M252,118.5 L252,150.5 L263.5,150.5"/><path d="M212,124.4 L212,150.5 L217.5,150.5"/><path d="M206,87 L171.5,87 L171.5,150.5"/>
+        </g>
+        <text x="173" y="31" class="mono">Ø 112 · капля масла · ×10⁶</text>
+      </svg>
+      <div class="god">2027</div>
+      <p class="meta">Aevit<br>квартальный календарь<br>наноприсадки и масла</p>
+      <img class="logo" src="../assets/logo-temnyy.png" alt="Aevit">
+      <div class="zag">
+        <p class="z1">Химия защиты<br>двигателя</p>
+        <p class="z2">SiO₂ + Al₂O₃ + C → керамический слой на трущихся деталях</p>
+      </div>
+      <div class="kartochki">
+        <div class="kart"><svg viewBox="0 0 40 34"><use href="#m-tetra"/></svg><b>SiO₂</b><span>кремнезём</span><span>60,08 г/моль</span></div>
+        <div class="kart"><svg viewBox="0 0 56 12"><use href="#m-korund"/></svg><b>Al₂O₃</b><span>корунд</span><span>101,96 г/моль</span></div>
+        <div class="kart"><svg viewBox="0 0 28 30"><use href="#m-grafen"/></svg><b>C</b><span>углерод</span><span>12,011 г/моль</span></div>
+      </div>
+      <img class="geroinya" src="../assets/geroinya-2.png" alt="Героиня Aevit">
+      <svg class="konstr" viewBox="0 0 297 210" aria-hidden="true"><g class="g-konstr"></g></svg>
+    </div>
+    <div class="blok"><div class="pruzhina"></div><div class="mes" data-y="2026" data-m="12" data-kletki data-fakt="SiO₂ · кремнезём · 60,08 г/моль"></div></div>
+    <div class="blok"><div class="pruzhina"></div><div class="mes" data-y="2027" data-m="1" data-kletki data-fakt="Al₂O₃ · корунд · 101,96 г/моль"></div></div>
+    <div class="blok"><div class="pruzhina"></div><div class="mes" data-y="2027" data-m="2" data-kletki data-fakt="C · углерод · 12,011 г/моль"></div></div>
+    <div class="polosa">
+      <img class="tovary" src="../assets/tovary.png" alt="Нано мойка и Нано масло">
+      <div class="kontakty">
+        <p class="tel">+7 (495) 662-48-62</p>
+        <p class="adr">г. Подольск, мкр. Климовск, Фабричный проезд, д.&nbsp;4, офис&nbsp;312</p>
+        <p class="sayt">www.aevit.ru</p>
+      </div>
+      <img class="qr" src="../assets/qr.png" alt="QR-код">
+    </div>
+  </div>
+</section>
+
+<!-- ============ ВАРИАНТ H. ВИНЬЕЛЛИ (классика модернизма: Stendig, Unigrid) ============ -->
+<section class="var var-h" id="var-h">
+  <h2 class="var-imya"><b>H</b> «Виньелли» — сетка календаря Stendig и Unigrid Массимо Виньелли</h2>
+  <div class="trio">
+    <div class="shapka">
+      <div class="lineyka l1"></div><div class="lineyka l2"></div>
+      <p class="metka" style="left:14mm">Aevit</p>
+      <p class="metka" style="left:105.3mm">Квартальный календарь</p>
+      <p class="metka" style="left:196.7mm">Химия защиты двигателя</p>
+      <div class="god">2027</div>
+      <svg class="disk" viewBox="0 0 86 86" aria-hidden="true">
+        <circle cx="43" cy="43" r="43" fill="#f2a01c"/>
+        <g fill="#0c0c0c"><circle cx="58" cy="56" r="3.2"/><circle cx="30" cy="62" r="2.2"/><circle cx="62" cy="28" r="1.8"/><circle cx="22" cy="36" r="1.5"/></g>
+        <text x="43" y="44" text-anchor="middle" class="d1">SiO₂ · Al₂O₃ · C</text>
+        <text x="43" y="51" text-anchor="middle" class="d2">нанокерамика в масле</text>
+      </svg>
+      <div class="tekst">
+        <p class="t1">Химия защиты<br>двигателя</p>
+        <p class="t2">SiO₂ + Al₂O₃ + C → керамический слой на&nbsp;трущихся деталях. Для авто, мото, авиа и&nbsp;водной техники.</p>
+      </div>
+      <dl class="sostav">
+        <dt>SiO₂</dt><dd>кремнезём</dd>
+        <dt>Al₂O₃</dt><dd>корунд</dd>
+        <dt>C</dt><dd>углерод</dd>
+      </dl>
+      <img class="logo" src="../assets/logo-belyy.png" alt="Aevit">
+      <img class="geroinya" src="../assets/geroinya-2.png" alt="Героиня Aevit">
+      <svg class="konstr" viewBox="0 0 297 210" aria-hidden="true"><g class="h-konstr"></g></svg>
+    </div>
+    <div class="blok"><div class="pruzhina"></div><div class="mes" data-y="2026" data-m="12" data-kletki></div></div>
+    <div class="blok"><div class="pruzhina"></div><div class="mes" data-y="2027" data-m="1" data-kletki></div></div>
+    <div class="blok"><div class="pruzhina"></div><div class="mes" data-y="2027" data-m="2" data-kletki></div></div>
+    <div class="polosa">
+      <img class="tovary" src="../assets/tovary.png" alt="Нано мойка и Нано масло">
+      <div class="kontakty">
+        <p class="tel">+7 (495) 662-48-62</p>
+        <p class="adr">г. Подольск, мкр. Климовск, Фабричный проезд, д.&nbsp;4, офис&nbsp;312</p>
+        <p class="sayt">www.aevit.ru</p>
+      </div>
+      <img class="qr" src="../assets/qr.png" alt="QR-код">
+    </div>
+  </div>
+</section>
+
+<!-- ============ ВАРИАНТ I. КАНОН (книжная классика: Чихольд, канон Ван де Граафа) ============ -->
+<section class="var var-i" id="var-i">
+  <h2 class="var-imya"><b>I</b> «Канон» — классическая книжная сетка Яна Чихольда</h2>
+  <div class="trio">
+    <div class="shapka">
+      <div class="bumaga"></div>
+      <div class="polosa-nabora">
+        <p class="kolontitul">Aevit · квартальный календарь · MMXXVII</p>
+        <p class="nad">Календарь на 2027 год</p>
+        <p class="titul-i">Химия защиты двигателя</p>
+        <p class="podzag">Нанокерамика SiO₂ · Al₂O₃ · C для авто, мото, авиа и водной техники</p>
+        <svg class="gravyura" viewBox="0 0 150 76" aria-hidden="true">
+          <defs><clipPath id="i-ten"><circle cx="75" cy="38" r="27"/></clipPath></defs>
+          <rect x=".3" y=".3" width="149.4" height="75.4" fill="none" stroke="#2a2118" stroke-width=".3"/>
+          <rect x="1.6" y="1.6" width="146.8" height="72.8" fill="none" stroke="#2a2118" stroke-width=".15"/>
+          <!-- капля: штрих по форме, тень — перекрёстный штрих -->
+          <circle cx="75" cy="38" r="27" fill="url(#i-shtrih)" opacity=".55"/>
+          <circle cx="86" cy="49" r="24" fill="url(#i-shtrih2)" clip-path="url(#i-ten)" opacity=".8"/>
+          <circle cx="75" cy="38" r="27" fill="none" stroke="#2a2118" stroke-width=".45"/>
+          <ellipse cx="66" cy="28" rx="7" ry="4" fill="#f4ecdb" transform="rotate(-30 66 28)"/>
+          <g fill="#f4ecdb" stroke="#2a2118" stroke-width=".35">
+            <circle cx="84" cy="46" r="3.2"/><circle cx="68" cy="50" r="2.2"/><circle cx="88" cy="30" r="1.8"/><circle cx="62" cy="40" r="1.5"/>
+          </g>
+          <g fill="none" stroke="#2a2118" stroke-width=".25" stroke-dasharray="1 .8">
+            <path d="M51,30 L36,24 M99,32 L112,24 M97,52 L114,58"/>
+          </g>
+          <g color="#2a2118" style="--m-o:#a8231b">
+            <svg x="12" y="10" width="26" height="22" viewBox="0 0 40 34"><use href="#m-tetra"/></svg>
+            <svg x="112" y="18" width="30" height="7" viewBox="0 0 56 12"><use href="#m-korund"/></svg>
+            <svg x="116" y="48" width="16" height="17" viewBox="0 0 28 30"><use href="#m-grafen"/></svg>
+          </g>
+          <g class="bukvy"><text x="22" y="40">а</text><text x="125" y="32">б</text><text x="122" y="70">в</text></g>
+        </svg>
+        <p class="podpis">Рис. 1. Капля масла с частицами нанокерамики: <i>а</i> — SiO₂, кремнезём; <i>б</i> — Al₂O₃, корунд; <i>в</i> — C, углерод</p>
+      </div>
+      <div class="medalyon"><img src="../assets/geroinya-2.png" alt="Героиня Aevit"></div>
+      <p class="medalyon-podpis">Героиня Aevit</p>
+      <img class="logo" src="../assets/logo-temnyy.png" alt="Aevit">
+      <p class="god">2027</p>
+      <svg class="konstr" viewBox="0 0 297 210" aria-hidden="true">
+        <path d="M0,0 L297,210 M297,0 L0,210 M0,0 L148.5,210 M148.5,0 L297,210 M33,0 L33,210 M231,0 L231,210 M0,23.33 L297,23.33 M0,163.33 L297,163.33"/>
+        <rect x="33" y="23.33" width="198" height="140" class="blok-nabora"/>
+      </svg>
+    </div>
+    <div class="blok"><div class="pruzhina"></div><div class="mes" data-y="2026" data-m="12" data-kletki></div></div>
+    <div class="blok"><div class="pruzhina"></div><div class="mes" data-y="2027" data-m="1" data-kletki></div></div>
+    <div class="blok"><div class="pruzhina"></div><div class="mes" data-y="2027" data-m="2" data-kletki></div></div>
+    <div class="polosa">
+      <div class="ramka"></div>
+      <img class="tovary" src="../assets/tovary.png" alt="Нано мойка и Нано масло">
+      <div class="kontakty">
+        <p class="tel">+7 (495) 662-48-62</p>
+        <p class="adr">г. Подольск, мкр. Климовск, Фабричный проезд, д.&nbsp;4, офис&nbsp;312</p>
+        <p class="sayt">www.aevit.ru</p>
+      </div>
+      <img class="qr" src="../assets/qr.png" alt="QR-код">
+    </div>
+  </div>
+</section>
+<!-- Молекула Aevit из календаря 2026: незамкнутые кольца SiO₂ и Al₂O₃, формула выходит
+     через разрыв, кольцо C — замкнутое. Цвета задаются переменными --mol-*. -->
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+  <defs>
+    <symbol id="mol-2026" viewBox="150 100 780 720">
+      <circle cx="605" cy="610" r="150" fill="var(--mol-kaplya, none)"/>
+      <g fill="none" stroke="currentColor" stroke-width="var(--mol-tolsh, 24)" stroke-linecap="round">
+        <path d="M716,186 A128,128 0 1 0 710,323"/>
+        <path d="M605,378 L605,482"/>
+        <path d="M745,497 A180,180 0 1 0 747,721"/>
+        <path d="M360,600 L425,600"/>
+      </g>
+      <circle cx="265" cy="600" r="95" fill="var(--mol-c, none)" stroke="currentColor" stroke-width="var(--mol-tolsh, 24)"/>
+      <g fill="var(--mol-tekst, currentColor)" font-weight="800">
+        <text x="522" y="286" font-size="96">SiO<tspan font-size="58">2</tspan></text>
+        <text x="497" y="646" font-size="104">Al<tspan font-size="62">2</tspan>O<tspan font-size="62">3</tspan></text>
+        <text x="265" y="638" font-size="104" text-anchor="middle" fill="var(--mol-c-tekst, currentColor)">C</text>
+      </g>
+    </symbol>
+  </defs>
+</svg>
+
+<!-- ============ ВАРИАНТ J. МОДУЛЬ + МОЛЕКУЛА (развитие G) ============ -->
+<section class="var var-g var-j" id="var-j">
+  <h2 class="var-imya"><b>J</b> «Модуль. Молекула» — развитие G: молекула Aevit на модульной сетке</h2>
+  <div class="trio">
+    <div class="shapka">
+      <svg class="fon" viewBox="0 0 297 210" aria-hidden="true">
+        <g class="kresty g-kresty"></g>
+      </svg>
+      <div class="god">202<span>7<svg class="kr" viewBox="0 0 120 100"><use href="#kryuchok"/></svg></span></div>
+      <div class="zag">
+        <p class="z1">Химия защиты<br>двигателя</p>
+        <p class="z2">SiO₂ + Al₂O₃ + C → керамический слой на трущихся деталях</p>
+      </div>
+      <svg class="molekula-j" viewBox="0 0 780 720" aria-hidden="true"><use href="#mol-2026"/></svg>
+      <div class="kartochki">
+        <div class="kart"><svg viewBox="0 0 40 34"><use href="#m-tetra"/></svg><b>SiO₂</b><span>кремнезём</span><span>60,08 г/моль</span></div>
+        <div class="kart"><svg viewBox="0 0 56 12"><use href="#m-korund"/></svg><b>Al₂O₃</b><span>корунд</span><span>101,96 г/моль</span></div>
+        <div class="kart"><svg viewBox="0 0 28 30"><use href="#m-grafen"/></svg><b>C</b><span>углерод</span><span>12,011 г/моль</span></div>
+      </div>
+      <p class="meta">Aevit · квартальный календарь<br>наноприсадки и масла</p>
+      <img class="logo" src="../assets/logo-temnyy.png" alt="Aevit">
+      <img class="geroinya" src="../assets/geroinya-2.png" alt="Героиня Aevit">
+      <svg class="konstr" viewBox="0 0 297 210" aria-hidden="true"><g class="g-konstr"></g></svg>
+    </div>
+    <div class="blok"><div class="pruzhina"></div><div class="mes" data-y="2026" data-m="12" data-kletki data-fakt="SiO₂ · кремнезём · 60,08 г/моль"></div></div>
+    <div class="blok"><div class="pruzhina"></div><div class="mes" data-y="2027" data-m="1" data-kletki data-fakt="Al₂O₃ · корунд · 101,96 г/моль"></div></div>
+    <div class="blok"><div class="pruzhina"></div><div class="mes" data-y="2027" data-m="2" data-kletki data-fakt="C · углерод · 12,011 г/моль"></div></div>
+    <div class="polosa">
+      <img class="tovary" src="../assets/tovary.png" alt="Нано мойка и Нано масло">
+      <div class="kontakty">
+        <p class="tel">+7 (495) 662-48-62</p>
+        <p class="adr">г. Подольск, мкр. Климовск, Фабричный проезд, д.&nbsp;4, офис&nbsp;312</p>
+        <p class="sayt">www.aevit.ru</p>
+      </div>
+      <svg class="mol-polosa" viewBox="0 0 780 720" aria-hidden="true"><use href="#mol-2026"/></svg>
+      <img class="qr" src="../assets/qr.png" alt="QR-код">
+    </div>
+  </div>
+</section>
+
+<!-- ============ ВАРИАНТ K. ВИНЬЕЛЛИ + МОЛЕКУЛА (развитие H) ============ -->
+<section class="var var-h var-k" id="var-k">
+  <h2 class="var-imya"><b>K</b> «Виньелли. Молекула» — развитие H: молекула Aevit крупно, белой линией по чёрному</h2>
+  <div class="trio">
+    <div class="shapka">
+      <div class="lineyka l1"></div><div class="lineyka l2"></div>
+      <img class="logo-mal" src="../assets/logo-belyy.png" alt="Aevit">
+      <p class="metka" style="left:105.3mm">Квартальный календарь</p>
+      <p class="metka" style="left:196.7mm">Наноприсадки и масла</p>
+      <div class="god">2027</div>
+      <div class="tekst"><p class="t1">Химия защиты<br>двигателя</p></div>
+      <svg class="molekula-k" viewBox="0 0 780 720" aria-hidden="true"><use href="#mol-2026"/></svg>
+      <div class="sostav-k">
+        <div><b>SiO₂</b><span>кремнезём</span><span>основа керамического слоя</span></div>
+        <div><b>Al₂O₃</b><span>корунд</span><span>износостойкость</span></div>
+        <div><b>C</b><span>углерод</span><span>лёгкое скольжение</span></div>
+      </div>
+      <img class="geroinya" src="../assets/geroinya-2.png" alt="Героиня Aevit">
+      <svg class="konstr" viewBox="0 0 297 210" aria-hidden="true"><g class="h-konstr" data-polosy="22 154"></g></svg>
+    </div>
+    <div class="blok"><div class="pruzhina"></div><div class="mes" data-y="2026" data-m="12" data-kletki></div></div>
+    <div class="blok"><div class="pruzhina"></div><div class="mes" data-y="2027" data-m="1" data-kletki></div></div>
+    <div class="blok"><div class="pruzhina"></div><div class="mes" data-y="2027" data-m="2" data-kletki></div></div>
+    <div class="polosa">
+      <img class="tovary" src="../assets/tovary.png" alt="Нано мойка и Нано масло">
+      <div class="kontakty">
+        <p class="tel">+7 (495) 662-48-62</p>
+        <p class="adr">г. Подольск, мкр. Климовск, Фабричный проезд, д.&nbsp;4, офис&nbsp;312</p>
+        <p class="sayt">www.aevit.ru</p>
+      </div>
+      <img class="qr" src="../assets/qr.png" alt="QR-код">
+    </div>
+  </div>
+</section>
 <script src="kalendar.js"></script>
+<script src="setka.js"></script>
 </body>
 </html>
