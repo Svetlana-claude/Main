@@ -11,6 +11,8 @@ import sys
 from playwright.sync_api import sync_playwright
 
 adres, kuda = sys.argv[1], sys.argv[2]
+# свет — полуденный: проверка смотрит на цвета неба и облаков, а утром и вечером кадр теплеет
+adres += ('&' if '?' in adres else '?') + 'vremya=2026-07-15T13:00'
 oshibki, provaly = [], []
 
 

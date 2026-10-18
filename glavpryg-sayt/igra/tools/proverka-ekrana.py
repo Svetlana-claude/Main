@@ -12,6 +12,12 @@ iPhone (полного экрана нет): окно растягивается
 import sys
 from playwright.sync_api import sync_playwright
 
+
+def nelyotno(r):
+    """Сегодня по сводке нелётно — игра права, что не пускает; для проверки экрана берём «Ясно»."""
+    if 'zapret' in (r.locator('#pogoda-opis').get_attribute('class') or ''):
+        r.locator('#pogoda button', has_text='Ясно').click()
+
 adres = sys.argv[1] if len(sys.argv) > 1 else 'https://mokeevasky.ru/glavpryg/igra'
 kuda = sys.argv[2] if len(sys.argv) > 2 else '/tmp'
 oshibki, provaly = [], []
@@ -38,6 +44,7 @@ with sync_playwright() as p:
         polnyy = s.evaluate("!!document.fullscreenElement")
         r = s.frame_locator('#igra-okno iframe')
         r.locator('#b-start').wait_for(timeout=15000)
+        nelyotno(r)
         r.locator('#b-start').click()
         fr = s.frames[1]
         fr.wait_for_function("s && s.faza === 'padenie'", timeout=15000)
@@ -86,6 +93,7 @@ with sync_playwright() as p:
     proverit(not s.locator('#igra-svayp').is_visible(), f'{imya}: панели спрятаны — подсказка ушла')
     r = s.frame_locator('#igra-okno iframe')
     r.locator('#b-start').wait_for(timeout=15000)
+    nelyotno(r)
     r.locator('#b-start').tap()
     fr = s.frames[1]
     fr.wait_for_function("s && s.faza === 'padenie'", timeout=15000)

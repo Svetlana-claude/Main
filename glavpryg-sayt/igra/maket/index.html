@@ -202,6 +202,7 @@
     <div class="razdel">Погода</div>
     <div class="urovni pogoda" id="pogoda" role="group" aria-label="Погода"></div>
     <p class="pogoda-opis" id="pogoda-opis" aria-live="polite"></p>
+    <p class="stat" id="vremya-opis"></p>
     <div class="razdel" id="razdel-urovni">Уровень — ветер у земли</div>
     <div class="urovni" id="urovni" role="group" aria-label="Уровень сложности"></div>
     <button class="glavnaya" id="b-start">Прыгать!</button>
@@ -402,7 +403,7 @@ function profilVetra(W, kuda, nomer) {
 // ───────── Погода дня и время года ─────────
 // pogoda-dnya.json кладёт на сервер igra/tools/pogoda-dnya.py (crontab, раз в два часа): по часам 8–20
 // ветер по высотам, облачные слои, порывы, запрет прыжков и время года. Нет файла — погоду выбирает игра.
-let DEN = null, SEZON = 'leto';
+let DEN = null, DEN_CHAS = null, SEZON = 'leto';
 const SEZONY = ['leto', 'osen', 'golaya', 'zima', 'vesna'];
 function sezonPoDate(d) {                                       // без сводки: снег — с середины декабря до середины марта
   const m = d.getMonth() + 1, dd = d.getDate();
@@ -428,7 +429,7 @@ function prinyatSvodku(d) {
   } else {
     const c = d.chasy[kl], v0 = c.veter[0], v1 = Math.hypot(...veterProfil(c.veter, 1000));
     const chas = kl.slice(11) + ':00' + (kl.slice(0, 10) === mskChas(new Date()).slice(0, 10) ? '' : ' завтра');
-    DEN = c; p.ikonka = ikonkaKoda(c.kod); p.sloi = c.sloi; p.zapret = !!c.zapret; p.zapretTekst = c.zapret;
+    DEN = c; DEN_CHAS = kl; p.ikonka = ikonkaKoda(c.kod); p.sloi = c.sloi; p.zapret = !!c.zapret; p.zapretTekst = c.zapret;
     p.kratko = `${chas} · ${Math.round(v0[1])} м/с`;
     p.opis = `На ${chas}: ${Math.round(c.t)}°, ветер у земли ${otkudaTekst(v0[2])} ${Math.round(v0[1])} м/с, порывы до ${Math.round(c.poryvy)}; `
       + `на 1000 м — ${Math.round(v1)} м/с. Облака: ${opisSloev(c.sloi)}.` + (c.zapret ? ` Прыжков нет: ${c.zapret}.` : '');
@@ -439,6 +440,53 @@ function prinyatSvodku(d) {
   if (SEZONY.includes(q)) SEZON = q;
 }
 
+// ───────── Солнце и время суток ─────────
+// Положение солнца над аэродромом — упрощённые формулы NOAA (точность ≈ 1°, игре хватает).
+// Азимут — от севера по часовой; в мире игры он больше на 3,9° (карта учебника повёрнута, osm-karta.py).
+const GEO = { lat:54.7884, lon:37.6460, povorot:3.9 };
+function polozhenieSolnca(d) {
+  const n = d.getTime() / 86400000 + 2440587.5 - 2451545, R = Math.PI / 180;
+  const L = 280.46 + 0.9856474 * n, g = (357.528 + 0.9856003 * n) * R;
+  const lam = (L + 1.915 * Math.sin(g) + 0.02 * Math.sin(2 * g)) * R, eps = (23.439 - 4e-7 * n) * R;
+  const ra = Math.atan2(Math.cos(eps) * Math.sin(lam), Math.cos(lam)), dec = Math.asin(Math.sin(eps) * Math.sin(lam));
+  const H = ((18.697374558 + 24.06570982441908 * n) % 24) * 15 * R + GEO.lon * R - ra, f = GEO.lat * R;
+  const vys = Math.asin(Math.sin(f) * Math.sin(dec) + Math.cos(f) * Math.cos(dec) * Math.cos(H)) / R;
+  const az = Math.atan2(-Math.sin(H), Math.tan(dec) * Math.cos(f) - Math.sin(f) * Math.cos(H)) / R;
+  return { vys, az:(az + 360) % 360 };
+}
+const chasMsk = d => new Intl.DateTimeFormat('ru-RU', { timeZone:'Europe/Moscow', hour:'2-digit', minute:'2-digit' }).format(d);
+// Время прыжка: сейчас; при сводке — её час; ?vremya=2026-12-20T15:30 — для проверок (по Москве).
+// Прыгают при свете: солнце ниже 4° — прыжок переносится на ближайший светлый час.
+function vremyaPryzhka() {
+  const q = new URLSearchParams(location.search).get('vremya');
+  let d = q ? new Date(q + ':00+03:00') : new Date();
+  if (isNaN(d)) d = new Date();
+  if (!q && POGODA[vybranaPogoda]?.segodnya && DEN_CHAS && DEN_CHAS !== mskChas(d)) d = new Date(DEN_CHAS + ':30:00+03:00');
+  let perenos = false;
+  for (let i = 0; i < 24 * 6 && polozhenieSolnca(d).vys < 4; i++) { d = new Date(d.getTime() + 600000); perenos = true; }
+  const { vys, az } = polozhenieSolnca(d), chas = +mskChas(d).slice(11, 13);
+  const chast = vys < 12 ? (chas < 13 ? 'утро' : 'вечер') : chas < 11 ? 'утро' : chas < 17 ? 'день' : 'вечер';
+  return { d, vys, az, azIgra:(az + GEO.povorot) % 360, chast, perenos, tekst:chasMsk(d) };
+}
+const STORONY_SOLNCA = ['севере', 'северо-востоке', 'востоке', 'юго-востоке', 'юге', 'юго-западе', 'западе', 'северо-западе'];
+const opisSolnca = S => `${S.chast[0].toUpperCase() + S.chast.slice(1)}, ${S.tekst}: солнце на ${STORONY_SOLNCA[Math.round(S.az / 45) % 8]}, ${Math.round(S.vys)}° над горизонтом`
+  + (S.perenos ? ' (сейчас темно — прыжок при свете)' : '');
+// Свет: высокое солнце — как есть; низкое — тёплый тон и темнее, утром розовее, вечером золотее;
+// сплошные облака гасят и тёплый тон, и тени. Возвращает цвет для умножения и силу теней 0…1.
+function svet(S, sloi) {
+  const pasm = Math.min(1, sloi.reduce((a, L) => a + (L.tip === 'sc' ? L.pokr : L.tip === 'cu' ? L.pokr * 0.3 : 0), 0));
+  const tepl = Math.max(0, Math.min(1, (30 - S.vys) / 26)) * (1 - 0.7 * pasm), temn = Math.max(0, Math.min(1, (14 - S.vys) / 12));
+  const [r0, g0, b0] = S.chast === 'утро' ? [255, 222, 206] : [255, 212, 160];
+  const k = 1 - 0.2 * temn - 0.1 * pasm;
+  const c = [r0 + (255 - r0) * (1 - tepl), g0 + (255 - g0) * (1 - tepl), b0 + (255 - b0) * (1 - tepl)].map(v => Math.round(v * k));
+  return { umn:`rgb(${c})`, nado:tepl > 0.02 || k < 0.98, teni:Math.max(0, Math.min(1, (S.vys - 3) / 15)) * (1 - pasm) };
+}
+// сдвиг тени от высоты h: от солнца, длина h / tg(высоты солнца), но не длиннее 3 h —
+// иначе на закате тени облаков уходят за край облачного поля (на деле — за 10 км)
+function sdvigTeni(S, h) {
+  const d = h / Math.max(Math.tan(S.vys * Math.PI / 180), 1 / 3), [x, y] = vec(S.azIgra + 180);
+  return [x * d, y * d];
+}
 
 // ───────── Холст ─────────
 const holst = document.getElementById('igra');
@@ -659,7 +707,7 @@ function noviyPryzhok(nomer) {
   const pogoda = POGODA[vybranaPogoda].sloi ? POGODA[vybranaPogoda] : sluchaynayaPogoda(nomer);
   const sloi = sozdatSloi(pogoda), vys = vysotaVybroski(pogoda);
   // ветер: «сегодня» — по сводке, иначе у земли — по уровню, выше — по профилю уровня
-  const den = pogoda.segodnya && DEN;
+  const den = pogoda.segodnya && DEN, solnce = vremyaPryzhka();
   const profil = den ? DEN.veter : profilVetra(u.veter, Math.random() * 360, nomer);
   const W = Math.round(profil[0][1]), veterKuda = profil[0][2];
   const poryv = den ? Math.min(0.6, Math.max(0, DEN.poryvy / Math.max(1, profil[0][1]) - 1)) : nomer >= 6 ? 0.35 : nomer >= 4 ? 0.22 : W ? 0.08 : 0;
@@ -689,7 +737,7 @@ function noviyPryzhok(nomer) {
   s = {
     nomer, u, W, veterKuda, pogoda, sloi, vys, tuchiSdvig:[0, 0], x, y, h:vys, kurs:kursVybr, faza:'samolet', t:0,
     // ветер по высотам, сила порывов (доля), часы порывов; вынос от самолёта; турбулентность за лесом
-    profil, poryv, vremya:0, faza0:Math.random() * 6, brosok:[0, 0], turb:0,
+    profil, poryv, vremya:0, faza0:Math.random() * 6, brosok:[0, 0], turb:0, solnce, svet:svet(solnce, sloi),
     vz:0, raskrytVys:null, zapasnoy:false, nizkoe:false, tochki, proydeny:[], razvorotNizko:false,
     // купол: ход клевант 0…1, угловая скорость, скорость вперёд и вниз, сваливание
     dL:0, dP:0, om:0, v:F.kupolGor, vzK:F.kupolVert, vzTek:0, svalT:0, svalBylo:false, glubT:0, rezkoT:0, rezhim:0,
@@ -702,7 +750,7 @@ function noviyPryzhok(nomer) {
     uskor:0, put:0, podushkaH:null, razH:null, bKas:0, bokT:0, posadka:null,
   };
   const nizhe = sloi.filter(L => L.tip !== 'ci' && L.verh < vys);
-  pokazat(`${pogoda.imya} — выброска на ${vys} м` + (nizhe.length ? `, облака ниже: ${opisSloev(nizhe)} м` : '')
+  pokazat(`${pogoda.imya}, ${solnce.chast} ${solnce.tekst} — выброска на ${vys} м` + (nizhe.length ? `, облака ниже: ${opisSloev(nizhe)} м` : '')
     + (W > 10 ? `. Ветер ${W} м/с — выше нормы AFF (10 м/с)` : ''), 2.8);
 }
 
@@ -939,6 +987,10 @@ function shag(dtReal) {
     if (s.h < 85 && !s.trevogaBylo.sv && s.W * (1 + s.poryv) >= F.protaschit) {
       s.trevogaBylo.sv = 1; pokazat('Сильный ветер: после касания сразу гаси купол — одну клеванту до конца', 2.2);
     }
+    // низкое солнце прямо по курсу слепит: смотреть на колдун и горизонт, а не на солнце
+    if (s.h < 150 && !s.trevogaBylo.slep && s.solnce.vys < 15 && s.svet.teni > 0.3 && Math.abs(norm180(s.solnce.azIgra - s.kurs)) < 30) {
+      s.trevogaBylo.slep = 1; pokazat('Солнце в глаза! Не смотри на него — ориентир по колдуну и горизонту', 2);
+    }
     if (s.h < 50 && !s.trevogaBylo.k3) { s.trevogaBylo.k3 = 1; pokazat('50 м — полная скорость, ноги вместе', 1.6); }
     if (s.h < 14 && !s.trevogaBylo.k4) { s.trevogaBylo.k4 = 1; pokazat('Взгляд на горизонт, ноги вместе — готовь подушку', 1.6); }
     const [raz, dva] = razDva(s.W);
@@ -1154,13 +1206,21 @@ function risovat() {
     });
   }
   // тени облаков: все куски одним контуром — перекрытия не темнее одиночных
-  const [sx0, sy0] = s.tuchiSdvig;
+  // тени облаков — от солнца: утром и вечером длинные и бледные; под сплошным слоем их нет
   s.sloi.forEach(L => {
-    if (!L.oblaka.length) return;
-    ctx.fillStyle = `rgba(16,28,60,${L.tip === 'sc' ? 0.3 : 0.24})`; ctx.beginPath();
+    if (!L.oblaka.length || s.svet.teni < 0.05) return;
+    const [tx, ty] = sdvigTeni(s.solnce, L.niz), sx0 = s.tuchiSdvig[0] + tx, sy0 = s.tuchiSdvig[1] + ty;
+    ctx.fillStyle = `rgba(16,28,60,${(L.tip === 'sc' ? 0.3 : 0.24) * (0.4 + 0.6 * s.svet.teni)})`; ctx.beginPath();
     L.oblaka.forEach(o => o.kuski.forEach(([x, y, r]) => { ctx.moveTo(x + sx0 + r, y + sy0); ctx.arc(x + sx0, y + sy0, r, 0, 7); }));
     ctx.fill();
   });
+  // тень купола на земле — ниже 300 м, по ней видно, куда садишься
+  if (s.faza === 'kupol' && s.h < 300 && s.svet.teni > 0.05) {
+    const [tx, ty] = sdvigTeni(s.solnce, s.h);
+    ctx.save(); ctx.translate(s.x + tx, s.y + ty); ctx.rotate(rad(s.kurs));
+    ctx.fillStyle = `rgba(10,16,8,${0.3 * s.svet.teni * Math.min(1, (300 - s.h) / 100)})`;
+    ctx.beginPath(); ctx.ellipse(0, -2, 4.5, 1.6, 0, 0, 7); ctx.ellipse(0, 2, 0.6, 0.9, 0, 0, 7); ctx.fill(); ctx.restore();
+  }
   risovatSloi(vidno);
   ctx.restore();
   // облака над головой затеняют землю: сплошные — сильно, пелена — чуть, белёсо
@@ -1184,6 +1244,7 @@ function risovat() {
   else if (s.faza === 'padenie') risovatPadenie();
   else risovatKupol(s.faza === 'raskrytie' ? Math.min(1, s.t / F.raskrytieDlit) : 1);
   ctx.restore();
+  osvetit();
 
   // указатель на цель, если круг за кадром
   const dx = -s.x, dy = -s.y, ug = rad(-s.kurs);
@@ -1199,6 +1260,12 @@ function risovat() {
     ctx.fillText(Math.round(Math.hypot(dx, dy)) + ' м', 0, 20); ctx.restore();
   }
   if (bokA > 0) { ctx.globalAlpha = bokA; risovatBok(); ctx.globalAlpha = 1; }
+}
+
+// утро и вечер — весь кадр умножается на тёплый тон
+function osvetit() {
+  if (!s.svet.nado) return;
+  ctx.save(); ctx.globalCompositeOperation = 'multiply'; ctx.fillStyle = s.svet.umn; ctx.fillRect(0, 0, SH, VY); ctx.restore();
 }
 
 // ───────── Вид сбоку: последние 50 м и посадка ─────────
@@ -1358,6 +1425,10 @@ const BOK_SEZON = {
   zima:   { les:'#3d4a46', pole:['#d5dde6', '#eef2f7'], polosy:'rgba(150,170,195,.16)', nebo:['#8fb0d6', '#e3ebf2'] },
   vesna:  { les:'#58853a', pole:['#87924f', '#9a8b5c'], polosy:'rgba(255,240,170,.12)', nebo:['#6aa0d8', '#d8e8f0'] },
 };
+function smeshCvet(a, b, k) {
+  const c = h => [1, 3, 5].map(i => parseInt(h.slice(i, i + 2), 16)), x = c(a), y = c(b);
+  return `rgb(${x.map((v, i) => Math.round(v + (y[i] - v) * k))})`;
+}
 function risovatBok() {
   const P = s.posadka, h = Math.max(0, s.h), CV = BOK_SEZON[SEZON] || BOK_SEZON.leto;
   const ppm = P ? lerp(28, 32, plavno(P.t / 0.8)) : Math.max(4, Math.min(25, VY * 0.8 / (h + 7)));
@@ -1366,8 +1437,20 @@ function risovatBok() {
   const [wx, wy] = veterNa(0), vdol = wx * kx + wy * ky;               // ветер вдоль курса: + в спину
   const sx = X => x0 + X * ppm;                                         // X — метры вперёд от парашютиста (в момент касания — от точки касания)
   // небо и облака погоды
+  // небо: днём — по сезону; низкое солнце — заря у горизонта (утром розовее, вечером оранжевее)
+  const S = s.solnce, zarya = Math.max(0, Math.min(1, (16 - S.vys) / 14)) * (1 - Math.min(0.8, s.sloi.filter(L => L.tip === 'sc').length * 0.4));
+  const ZAR = S.chast === 'утро' ? ['#6f86b8', '#f4c6b0'] : ['#5f78ad', '#f3b072'];
   let g = ctx.createLinearGradient(0, 0, 0, gor);
-  g.addColorStop(0, CV.nebo[0]); g.addColorStop(1, CV.nebo[1]); ctx.fillStyle = g; ctx.fillRect(0, 0, SH, gor + 1);
+  g.addColorStop(0, smeshCvet(CV.nebo[0], ZAR[0], zarya)); g.addColorStop(1, smeshCvet(CV.nebo[1], ZAR[1], zarya)); ctx.fillStyle = g; ctx.fillRect(0, 0, SH, gor + 1);
+  // солнце: смотрим вбок — правая рука кадра по курсу, значит взгляд — на курс − 90°
+  const otn = norm180(S.azIgra - (s.kurs - 90));
+  if (Math.abs(otn) < 75) {
+    const xs = SH / 2 + Math.tan(otn * Math.PI / 180) * SH * 0.45, ys = gor - Math.min(S.vys, 50) / 50 * gor * 0.95;
+    const sv = ctx.createRadialGradient(xs, ys, 0, xs, ys, 60);
+    sv.addColorStop(0, `rgba(255,${S.vys < 10 ? 214 : 248},${S.vys < 10 ? 150 : 225},.8)`); sv.addColorStop(1, 'rgba(255,240,200,0)');
+    ctx.fillStyle = sv; ctx.fillRect(xs - 60, ys - 60, 120, 120);
+    ctx.fillStyle = S.vys < 10 ? '#ffd28a' : '#fffbe8'; ctx.beginPath(); ctx.arc(xs, ys, 7, 0, 7); ctx.fill();
+  }
   const sdv = s.put * 0.6;
   s.sloi.forEach((L, i) => {
     if (L.tip === 'ci') { ctx.fillStyle = 'rgba(240,243,247,.35)'; ctx.fillRect(0, 0, SH, gor * 0.6); return; }
@@ -1421,8 +1504,9 @@ function risovatBok() {
     ctx.lineTo(b, yk - 26 * mk + 3 * mk * (1 - i * 0.15) + prov((i + 1) / 4)); ctx.lineTo(a, yk - 26 * mk + 4 * mk * (1 - i * 0.12) + prov(i / 4)); ctx.fill();
   }
   // тень под парашютистом
-  ctx.fillStyle = `rgba(30,35,20,${0.35 - Math.min(0.25, h / 120)})`;
-  ctx.beginPath(); ctx.ellipse(x0 + (P ? pozaZemlya(P, P.t)[1] * ppm : 0), zem + 2, Math.max(4, 1.6 * ppm), 3, 0, 0, 7); ctx.fill();
+  const [tx, ty] = sdvigTeni(S, Math.max(h, 1.2)), tVdol = Math.max(-60, Math.min(60, tx * kx + ty * ky));
+  ctx.fillStyle = `rgba(30,35,20,${(0.35 - Math.min(0.25, h / 120)) * (0.3 + 0.7 * s.svet.teni)})`;
+  ctx.beginPath(); ctx.ellipse(x0 + ((P ? pozaZemlya(P, P.t)[1] : 0) + tVdol * 0.5) * ppm, zem + 2, Math.max(4, 1.6 * ppm) + Math.abs(tVdol) * ppm * 0.5, 3, 0, 0, 7); ctx.fill();
 
   // парашютист и купол — в метрах, y вверх
   ctx.save(); ctx.translate(x0, zem); ctx.scale(ppm, -ppm);
@@ -1472,6 +1556,7 @@ function risovatBok() {
     for (let i = 0; i < 6; i++) { const r = 0.25 + P.t * 0.9; ctx.beginPath(); ctx.arc(J.taz[0] + (i - 2.5) * 0.35, 0.1 + (i % 2) * 0.2 * P.t, r * (0.6 + (i % 3) * 0.2), 0, 7); ctx.fill(); }
   }
   ctx.restore();
+  osvetit();
   if (!P && s.faza === 'kupol') risovatShkalu(b);
 }
 
@@ -1706,6 +1791,7 @@ function spisokPogody() {
   });
   const p = POGODA[vybranaPogoda];
   elPogodaOpis.textContent = p.opis; elPogodaOpis.classList.toggle('zapret', !!p.zapret);
+  document.getElementById('vremya-opis').textContent = '☀ ' + opisSolnca(vremyaPryzhka());
   spisokUrovney();
 }
 spisokPogody();

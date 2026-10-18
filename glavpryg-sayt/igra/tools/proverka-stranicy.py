@@ -24,6 +24,10 @@ with sync_playwright() as p:
         s.click('#igra-start')
         s.wait_for_timeout(1500)
         ramka = s.frame_locator('#igra-okno iframe')
+        # сегодня по сводке нелётно — игра права, что не пускает; для проверки запуска берём «Ясно»
+        if 'zapret' in (ramka.locator('#pogoda-opis').get_attribute('class') or ''):
+            print(imya, 'по сводке прыжков нет — проверяю запуск на «Ясно»')
+            ramka.locator('#pogoda button', has_text='Ясно').click()
         ramka.locator('#b-start').click()
         s.wait_for_timeout(4500)
         faza = s.frames[1].evaluate('s && s.faza') if len(s.frames) > 1 else None
