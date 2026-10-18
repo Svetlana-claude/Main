@@ -54,7 +54,8 @@ done
 # ── Загруженные файлы, код, настройки ─────────────────────────────────
 tar -C "$SAYT/storage" -czf "$WORK/faily.tar.gz" app || fail "не собраны файлы storage/app"
 git -C "$SAYT" bundle create "$WORK/kod.bundle" --all 2>>"$LOG" || fail "не собран git bundle"
-git bundle verify "$WORK/kod.bundle" >/dev/null 2>>"$LOG" || fail "git bundle не проходит проверку"
+# verify нужен репозиторий: из crontab каталог — домашний, не git, поэтому -C
+git -C "$SAYT" bundle verify "$WORK/kod.bundle" >/dev/null 2>>"$LOG" || fail "git bundle не проходит проверку"
 cp "$SAYT/.env" "$WORK/env" || fail "нет .env"
 
 # ── Почта ─────────────────────────────────────────────────────────────
