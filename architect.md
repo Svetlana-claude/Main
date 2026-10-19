@@ -1389,7 +1389,9 @@ G–I — на дизайнерских сетках, J–K — G и H на мо
 - `assets/` — вырезано из календаря 2026 заказчика: героиня (по белой обводке),
   фото масла, товары, QR. Логотип — вектор заказчика: `logo-zoloto.svg` (как прислан,
   буквы в золотом градиенте), `logo-belyy.svg` и `logo-temnyy.svg` (буквы перекрашены).
-  `motor-foto.png` — присланный снимок V8, белый фон вырезан (вариант E). `geroinya-2.png` — новый рисунок заказчика
+  `motor-foto.png` — присланный снимок V8, белый фон вырезан (вариант E).
+  `geroinya-2.svg` — вектор героини (D–K). `motor-hrom.jpg` — `i.jpg`, увеличенный
+  в 4 раза Real-ESRGAN: `/opt/video2x/torch-venv/bin/python uvelichit-foto.py вход выход 0.6`. `geroinya-2.png` — новый рисунок заказчика
   (обрезан по альфе, до 1500 px). `geroinya-2-karandash.png` и `maslo-karandash.jpg` —
   карандашные версии (OpenCV, color dodge и штриховка; скрипт `exchange/aevit/karandash.py`).
 - `opisanie-variantov.md` — записка к вариантам; PDF лежит в «Файлах проекта».
