@@ -76,6 +76,7 @@
 .var-e .god { right: 14mm; top: 12mm; font: 800 28mm/1 "Unbounded", sans-serif; color: #fff; letter-spacing: -.02em; }
 .var-e .god span { color: #3fe0ff; position: relative; }
 .var-e .god .kr { position: absolute; left: 3mm; top: 29mm; width: 24mm; height: 20mm; color: #3fe0ff; }
+.var-e .motor { position: absolute; left: 100mm; top: 40mm; width: 104mm; filter: drop-shadow(0 0 1.2mm rgba(255,190,90,.55)) drop-shadow(0 0 8mm rgba(242,140,20,.45)); }
 .var-e .molekula { right: 12mm; top: 70mm; width: 72mm; height: 72mm; }
 .var-e .mol-tekst { font: 600 15px "Unbounded", sans-serif; }
 .var-e .lozung { left: 86mm; top: 150mm; width: 140mm; color: #fff; }
