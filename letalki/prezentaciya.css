@@ -115,3 +115,52 @@ td.drk .cel-znak { background: var(--drk-svet); color: var(--drk); }
 .legenda span { display: inline-block; width: 2.6mm; height: 2.6mm; border-radius: 50%;
                 background: var(--seryy); vertical-align: -0.3mm; margin: 0 1mm 0 4mm; }
 .legenda span.kolco { background: #fff; border: 0.7mm solid var(--seryy); box-sizing: border-box; }
+
+/* ══ Справка по одному проекту («Твин Дракен») ══ */
+.oblozhka.odin { display: grid; grid-template-columns: 1fr 1.15fr; column-gap: 6mm;
+                 grid-template-rows: auto auto 1fr auto; }
+.oblozhka.odin > * { grid-column: 1; }
+.oblozhka.odin h1 { font-size: 34pt; }
+.oblozhka.odin .render { grid-column: 2; grid-row: 1 / 5; align-self: center;
+                         width: 118%; margin-left: -6%; }
+.oblozhka.odin .fakty { display: flex; gap: 6mm; margin-top: 8mm; }
+.oblozhka.odin .fakty div { border-top: 1.2mm solid #ff8a5c; padding-top: 2.5mm; }
+.oblozhka.odin .fakty b { display: block; font-size: 15pt; color: #fff; }
+.oblozhka.odin .fakty span { font-size: 8.5pt; color: #8fa3ba; }
+
+.kontsept { display: grid; grid-template-columns: 1fr 1.1fr; gap: 7mm; flex: 1; }
+.kontsept .kol { padding: 7mm 8mm; }
+.kontsept .kol p { font-size: 10.5pt; }
+.kontsept .zadachi { list-style: none; padding: 0; margin: 1mm 0 4mm; }
+.kontsept .zadachi li { padding: 2.5mm 0 2.5mm 7mm; position: relative; font-size: 10.5pt;
+                        border-top: 0.5pt solid #f3c7b8; margin: 0; }
+.kontsept .zadachi li::before { content: ""; position: absolute; left: 0; top: 4.2mm;
+                                width: 3.4mm; height: 0.9mm; background: var(--drk); }
+.kontsept .foto { border-radius: 3mm; background: radial-gradient(ellipse at 50% 60%, #26364a 0%, var(--tyomnyy) 70%);
+                  display: flex; flex-direction: column; justify-content: center; padding: 6mm; }
+.kontsept .foto img { width: 100%; }
+.kontsept .foto p { color: #8fa3ba; font-size: 8pt; letter-spacing: 0.14em; text-transform: uppercase;
+                    margin: 4mm 0 0; text-align: center; }
+
+.cifry.odin { grid-template-columns: repeat(4, 1fr); }
+.plitka.drk.tih { border-color: #f0a58a; }
+
+.dve-tablicy { display: grid; grid-template-columns: 1fr 1fr; gap: 7mm; }
+table.sravnenie.odin thead th.param { width: 44%; }
+table.sravnenie.odin thead th.drk { border-radius: 0 2mm 0 0; }
+
+.sostoyanie { display: grid; grid-template-columns: 1.2fr 1fr; gap: 7mm; flex: 1; }
+.sostoyanie .plan-blok { background: var(--tyomnyy); color: #fff; border-radius: 3mm; padding: 8mm;
+                         display: flex; flex-direction: column; }
+.sostoyanie .plan-blok .metka { color: #ff8a5c; }
+.sostoyanie .plan-blok h3 { color: #fff; font-size: 16pt; margin: 1mm 0 5mm; }
+.sostoyanie .plan-blok .cel-item { border-left: 1.2mm solid #ff8a5c; padding: 1mm 0 1mm 4mm;
+                                   margin: 0 0 4mm; font-size: 10.5pt; color: #dfe7ef; }
+.sostoyanie .plan-blok img { margin-top: auto; width: 100%; opacity: 0.95; }
+.kol.drk .shagi li { font-size: 10.5pt; padding-bottom: 5mm; }
+table.sravnenie.odin { font-size: 8.6pt; }
+table.sravnenie.odin td { padding: 1.25mm 2.6mm; line-height: 1.35; }
+table.sravnenie.odin thead th { padding: 2mm 2.6mm; }
+table.sravnenie.odin thead th.param { width: 36%; }
+.sostoyanie { align-items: start; grid-template-columns: 1fr 1.25fr; }
+.sostoyanie .plan-blok { align-self: stretch; }
