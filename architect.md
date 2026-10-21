@@ -1394,4 +1394,26 @@ G–I — на дизайнерских сетках, J–K — G и H на мо
   в 4 раза Real-ESRGAN: `/opt/video2x/torch-venv/bin/python uvelichit-foto.py вход выход 0.6`. `geroinya-2.png` — новый рисунок заказчика
   (обрезан по альфе, до 1500 px). `geroinya-2-karandash.png` и `maslo-karandash.jpg` —
   карандашные версии (OpenCV, color dodge и штриховка; скрипт `exchange/aevit/karandash.py`).
+- `maket/vektor.js` + `maket/vektor.py` (Python из `exchange/pwenv`) — векторная
+  выгрузка J и K по слоям: `python vektor.py [j k]`. Результат →
+  `griby/downloads/kalendar-2027/vektor/<вариант>/`: сборка, отдельные листы,
+  `shrifty/` и `.zip`.
+  - Устройство выгрузки:
+    - DOM переводится в SVG прямо на странице;
+    - псевдоэлементы превращаются в узлы;
+    - текст идёт по строкам из Range, базовая линия — `fontBoundingBoxAscent`;
+    - `<use>` и SVG-картинки встраиваются с префиксами id и классов.
+  - Слои размечены для Inkscape (`inkscape:groupmode="layer"`).
+  - Сверка: каждый лист отрисовывается на `maket/vektor-sverka.html`, там те же
+    шрифты, и сравнивается со снимком макета. Метрика — доля пятен расхождения
+    после размыкания 5×5, порог 0,05 %. Если лист расходится, скрипт выходит с
+    ошибкой; картинки сверки → `exchange/aevit/vektor/`.
+  - PDF Chromium через импорт Inkscape не годится: теряет текст, обводки и
+    градиенты.
+  - Тонкости:
+    - Inter переменный, ось `opsz` задаётся явно по кеглю в px;
+    - картинка ставится в поле содержимого, фон `<img>` рисуется;
+    - у растров атрибут `xlink:href`, иначе Inkscape их не видит.
+- `assets/qr.svg` — векторный QR на `https://aevit.ru` (segno, уровень Q), во всех
+  вариантах вместо `qr.png`.
 - `opisanie-variantov.md` — записка к вариантам; PDF лежит в «Файлах проекта».

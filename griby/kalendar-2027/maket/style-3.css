@@ -49,7 +49,7 @@ body.setka .konstr { display: block; }
 .var-g .dni .d { font: 600 8.4mm/1 "Inter", sans-serif; letter-spacing: -.02em; }
 .var-g .dni .vyh { color: var(--oranzh); border-color: var(--oranzh); }
 .var-g .dni .rab { color: var(--chern); border-color: var(--chern); }
-.var-g .dni .rab::before { color: var(--oranzh); font-family: "IBM Plex Mono", monospace; text-align: left; }
+.var-g .dni .rab::before { color: var(--oranzh); font-family: "IBM Plex Mono", monospace; font-weight: 500; text-align: left; }
 .var-g .dni .prazd::after { left: auto; right: 2mm; top: 2.4mm; bottom: auto; margin: 0; }
 .var-g .prim { left: 0; bottom: 0; font: 400 3.2mm/1 "IBM Plex Mono", monospace; color: var(--oranzh); }
 
