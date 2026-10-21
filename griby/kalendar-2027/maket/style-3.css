@@ -201,3 +201,11 @@ body.setka .konstr { display: block; }
 .var-k .dni .prazd::after { left: -2.6mm; top: -2.4mm; bottom: auto; width: 16mm; height: 16mm; margin: 0; border-radius: 0;
   background: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><path d='M83.7,21.7 A44,44 0 1 0 83.7,78.3' fill='none' stroke='%23f2a01c' stroke-width='5' stroke-linecap='round'/></svg>") center / contain no-repeat; }
 .var-k .polosa .sayt { color: #c77700; }
+
+/* ================= J — март–декабрь 2027: шрифты из сборки дизайнера (2-01.jpg) ================= */
+/* крупное — Arial Bold вместо Unbounded и Inter, мелкое — Courier New вместо IBM Plex Mono */
+#var-jm .mes-nom, #var-jm .mes-imya, #var-jm .dni .d { font-family: Arial, sans-serif; font-weight: 700; }
+#var-jm .mes-god, #var-jm .dni .dn, #var-jm .dni .rab::before, #var-jm .prim, #var-jm .mes::after {
+  font-family: "Courier New", monospace; font-weight: 400; }
+/* у дизайнера номер стоит на 2,4 мм левее центра кольца — как он встал после замены шрифта */
+#var-jm .mes-nom { padding-right: 7.75mm; }

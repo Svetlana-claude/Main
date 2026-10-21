@@ -23,6 +23,9 @@ KOREN = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))   # griby/ka
 VYHOD = os.path.join(KOREN, '..', 'downloads', 'kalendar-2027', 'vektor')
 SVERKA = '/home/mokeeva/main/exchange/aevit/vektor'
 VARIANTY = {'j': 'J-modul-molekula', 'k': 'K-vinyelli-molekula', 'jm': 'J-mesyacy-2027'}
+# системные шрифты Windows и macOS: в выгрузку не копируются — лицензия Microsoft
+# не разрешает их раздавать; у дизайнера и в типографии они есть
+SISTEMNYE = {'Arial', 'Courier New'}
 POROG = 0.05   # % площади листа в сплошных пятнах расхождения
 FAYLY_LISTOV = ['1-shapka', '2-dekabr', '3-yanvar', '4-fevral', '5-polosa']
 MESYACY = ['Январь', 'Февраль', 'Март', 'Апрель', 'Май', 'Июнь', 'Июль', 'Август', 'Сентябрь', 'Октябрь', 'Ноябрь', 'Декабрь']
@@ -89,7 +92,7 @@ def Shrifty(spisok):
         vesa = [int(v) for v in ves.group(1).split()] if ves else [400]
         kursiv = 'italic' in ost
         grani.append((sem, min(vesa), max(vesa), kursiv, fayl))
-    nuzhno = set()
+    nuzhno, sistemnye = set(), set()
     for z in spisok:
         sem, ves, stil = z.split('|')
         sem = sem.split(',')[0].strip().strip('"\'')
@@ -99,13 +102,16 @@ def Shrifty(spisok):
                 break
         else:
             blizh = [g for g in grani if g[0] == sem and g[3] == (stil == 'italic')]
+            if sem in SISTEMNYE:
+                sistemnye.add(sem)
+                continue
             if not blizh:
                 print(f'  ! шрифт не найден в fonts.css: {z}')
                 continue
             g = min(blizh, key=lambda g: min(abs(g[1] - int(ves)), abs(g[2] - int(ves))))
             nuzhno.add((sem, g[4]))
             print(f'  ! {sem} {ves}: такой грани нет, браузер дорисовывает её из {os.path.basename(g[4])}')
-    return sorted(nuzhno)
+    return sorted(nuzhno), sorted(sistemnye)
 
 
 def Sverit(pg, url, svg, etalon, imya):
@@ -156,9 +162,15 @@ def main():
             X = 'J' if v == 'jm' else X
             for i, l in enumerate(itog['otdelno']):
                 open(os.path.join(papka, f'{X}-{ImyaFayla(v, i, l["imya"])}.svg'), 'w').write(l['svg'])
-            for sem, fayl in Shrifty(itog['shrifty']):
+            fayly_shr, sistemnye = Shrifty(itog['shrifty'])
+            for sem, fayl in fayly_shr:
                 shutil.copy(os.path.join(KOREN, 'maket', fayl), os.path.join(papka, 'shrifty'))
                 print(f'  шрифт {sem}: {os.path.basename(fayl)}')
+            if sistemnye:
+                print(f'  системные шрифты: {", ".join(sistemnye)}')
+                open(os.path.join(papka, 'shrifty', 'CHITAT.txt'), 'w').write(
+                    f'Системные шрифты: {", ".join(sistemnye)} — есть в Windows и macOS, в архив не вложены.\n'
+                    'В PDF для печати весь текст переведён в кривые, шрифты для него не нужны.\n')
             for pr in itog['preduprezhdeniya']:
                 print('  ·', pr)
             for i, l in enumerate(itog['otdelno']):
