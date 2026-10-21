@@ -27,6 +27,9 @@ VARIANTY = {'j': 'J-modul-molekula', 'k': 'K-vinyelli-molekula', 'jm': 'J-mesyac
 # не разрешает их раздавать; у дизайнера и в типографии они есть
 SISTEMNYE = {'Arial', 'Courier New'}
 POROG = 0.05   # % площади листа в сплошных пятнах расхождения
+# печать сверяется с допуском на край буквы, поэтому верная выдача даёт ровно 0 — порог строже:
+# подмена начертания (SemiBold → ExtraBold в числах дат) даёт 0,01–0,07 %
+POROG_PECHATI = 0.005
 FAYLY_LISTOV = ['1-shapka', '2-dekabr', '3-yanvar', '4-fevral', '5-polosa']
 MESYACY = ['Январь', 'Февраль', 'Март', 'Апрель', 'Май', 'Июнь', 'Июль', 'Август', 'Сентябрь', 'Октябрь', 'Ноябрь', 'Декабрь']
 LAT = ['yanvar', 'fevral', 'mart', 'aprel', 'may', 'iyun', 'iyul', 'avgust', 'sentyabr', 'oktyabr', 'noyabr', 'dekabr']
@@ -61,10 +64,14 @@ def Pechat(papka, fayly, etalony, put):
             subprocess.run(['pdftoppm', '-r', f'{dpi:.4f}', '-png', '-singlefile', pdf, pdf[:-4]], check=True)
             kadr = cv2.imread(pdf[:-4] + '.png')
             kadr = cv2.resize(kadr, (etalony[i].shape[1], etalony[i].shape[0]))
-            raz = cv2.absdiff(kadr, etalony[i]).max(axis=2)
+            # растеризаторы Chromium и poppler по-разному сглаживают края букв и сдвигают их
+            # на долю точки — край в пределах соседней точки эталона расхождением не считается
+            yadro = np.ones((3, 3), np.uint8)
+            niz, verh = cv2.erode(etalony[i], yadro), cv2.dilate(etalony[i], yadro)
+            raz = np.maximum(cv2.subtract(niz, kadr), cv2.subtract(kadr, verh)).max(axis=2)
             d = float(cv2.morphologyEx(np.uint8(raz > 60), cv2.MORPH_OPEN, np.ones((5, 5), np.uint8)).mean()) * 100
-            print(f'  печать {os.path.basename(f)}: пятна {d:.3f} % — {"сходится" if d < POROG else "РАСХОДИТСЯ"}')
-            oshibki += d >= POROG
+            print(f'  печать {os.path.basename(f)}: пятна {d:.3f} % — {"сходится" if d < POROG_PECHATI else "РАСХОДИТСЯ"}')
+            oshibki += d >= POROG_PECHATI
             stranicy.append(pdf)
         subprocess.run(['pdfunite', *stranicy, put], check=True)
         shrifty = subprocess.run(['pdffonts', put], capture_output=True, text=True).stdout.splitlines()[2:]

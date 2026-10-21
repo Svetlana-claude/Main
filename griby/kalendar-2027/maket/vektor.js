@@ -330,7 +330,7 @@ const NAZV = {
   'molekula-j': 'Молекула', 'molekula-k': 'Молекула', kartochki: 'Состав', 'sostav-k': 'Состав', geroinya: 'Героиня',
   logo: 'Логотип', 'logo-mal': 'Логотип', lineyka: 'Линейки', metka: 'Подписи линеек', pruzhina: 'Пружина',
   'mes-zag': 'Номер и название месяца', 'shapka-mes': 'Номер и название месяца', 'psevdo-mes-after': 'Справка о веществе',
-  prim: 'Подпись о выходных', tovary: 'Товары', kontakty: 'Контакты', qr: 'QR-код', 'mol-polosa': 'Молекула',
+  prim: 'Подпись о выходных', daty: 'Важные даты', tovary: 'Товары', kontakty: 'Контакты', qr: 'QR-код', 'mol-polosa': 'Молекула',
 };
 function Sloy(el, list) {
   if (el === list) return 'Фон';
@@ -340,6 +340,7 @@ function Sloy(el, list) {
     if (el.classList.contains('psevdo') && el.closest('.prazd, .rab')) return 'Праздники';
     return el.closest('.dn') ? 'Дни недели' : 'Числа';
   }
+  if (el.closest('.daty')) return 'Важные даты';
   let x = el;
   while (x.parentElement && x.parentElement !== list && !x.parentElement.classList.contains('mes')) x = x.parentElement;
   if (el.classList.contains('mes')) return 'Фон месяца';
