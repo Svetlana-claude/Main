@@ -1,6 +1,8 @@
 """Векторные файлы вариантов календаря по слоям и шрифты к ним — для дизайнера.
 
-    /home/mokeeva/main/exchange/pwenv/bin/python vektor.py [j k]
+    /home/mokeeva/main/exchange/pwenv/bin/python vektor.py [j k jm]
+
+jm — блоки J на март — декабрь 2027: SVG по месяцам и PDF для печати (текст в кривых).
 
 Для каждого варианта в griby/downloads/kalendar-2027/vektor/<вариант>/:
   <X>-sborka.svg          — вся сборка 297×728 мм, листы — слои, внутри листа — подслои;
@@ -20,10 +22,52 @@ from playwright.sync_api import sync_playwright
 KOREN = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))   # griby/kalendar-2027
 VYHOD = os.path.join(KOREN, '..', 'downloads', 'kalendar-2027', 'vektor')
 SVERKA = '/home/mokeeva/main/exchange/aevit/vektor'
-VARIANTY = {'j': 'J-modul-molekula', 'k': 'K-vinyelli-molekula'}
+VARIANTY = {'j': 'J-modul-molekula', 'k': 'K-vinyelli-molekula', 'jm': 'J-mesyacy-2027'}
 POROG = 0.05   # % площади листа в сплошных пятнах расхождения
 FAYLY_LISTOV = ['1-shapka', '2-dekabr', '3-yanvar', '4-fevral', '5-polosa']
+MESYACY = ['Январь', 'Февраль', 'Март', 'Апрель', 'Май', 'Июнь', 'Июль', 'Август', 'Сентябрь', 'Октябрь', 'Ноябрь', 'Декабрь']
+LAT = ['yanvar', 'fevral', 'mart', 'aprel', 'may', 'iyun', 'iyul', 'avgust', 'sentyabr', 'oktyabr', 'noyabr', 'dekabr']
 
+
+def ImyaFayla(v, i, imya):
+    """Шапка и полоса — по месту в трио; блок отдельного набора месяцев — по месяцу: 2027-03-mart."""
+    if v != 'jm':
+        return FAYLY_LISTOV[i]
+    mes, god = imya.removeprefix('Блок — ').split()
+    m = MESYACY.index(mes)
+    return f'{god}-{m + 1:02}-{LAT[m]}'
+
+
+def Pechat(papka, fayly, etalony, put):
+    """PDF для типографии: каждый лист — через Inkscape, весь текст в кривых (переменный
+    Inter Chromium кладёт в PDF шрифтом Type 3 — типографии его не любят), страницы склеиваются
+    pdfunite. Каждая страница отрисовывается и сверяется со снимком макета."""
+    import subprocess, tempfile
+    with tempfile.TemporaryDirectory() as tmp:
+        # шрифты из shrifty/ — Inkscape видит их через свой fonts.conf, в систему не ставятся
+        conf = os.path.join(tmp, 'fonts.conf')
+        open(conf, 'w').write(f'<?xml version="1.0"?><fontconfig><include ignore_missing="yes">/etc/fonts/fonts.conf</include>'
+                              f'<dir>{os.path.join(papka, "shrifty")}</dir><cachedir>{tmp}</cachedir></fontconfig>')
+        env = dict(os.environ, FONTCONFIG_FILE=conf)
+        stranicy, oshibki = [], 0
+        for i, f in enumerate(fayly):
+            pdf = os.path.join(tmp, f'{i:02}.pdf')
+            subprocess.run(['inkscape', f, '--export-type=pdf', '--export-text-to-path', f'--export-filename={pdf}'],
+                           env=env, check=True, capture_output=True)
+            dpi = etalony[i].shape[1] / (297 / 25.4)
+            subprocess.run(['pdftoppm', '-r', f'{dpi:.4f}', '-png', '-singlefile', pdf, pdf[:-4]], check=True)
+            kadr = cv2.imread(pdf[:-4] + '.png')
+            kadr = cv2.resize(kadr, (etalony[i].shape[1], etalony[i].shape[0]))
+            raz = cv2.absdiff(kadr, etalony[i]).max(axis=2)
+            d = float(cv2.morphologyEx(np.uint8(raz > 60), cv2.MORPH_OPEN, np.ones((5, 5), np.uint8)).mean()) * 100
+            print(f'  печать {os.path.basename(f)}: пятна {d:.3f} % — {"сходится" if d < POROG else "РАСХОДИТСЯ"}')
+            oshibki += d >= POROG
+            stranicy.append(pdf)
+        subprocess.run(['pdfunite', *stranicy, put], check=True)
+        shrifty = subprocess.run(['pdffonts', put], capture_output=True, text=True).stdout.splitlines()[2:]
+        if shrifty:
+            print(f'  ! в PDF остались шрифты: {len(shrifty)}'); oshibki += 1
+    return oshibki
 
 def Server():
     class Tihiy(http.server.SimpleHTTPRequestHandler):
@@ -107,19 +151,24 @@ def main():
             pg.evaluate('document.body.classList.add("setka")')
             itog = pg.evaluate(f'VyvestiSvg("#var-{v}")')
             X = v.upper()
-            open(os.path.join(papka, f'{X}-sborka.svg'), 'w').write(itog['polnyy'])
+            open(os.path.join(papka, f'{VARIANTY[v]}-sborka.svg' if v == 'jm' else f'{X}-sborka.svg'), 'w').write(itog['polnyy'])
             print(f'{X}: {len(itog["polnyy"]) // 1024} КБ сборка')
+            X = 'J' if v == 'jm' else X
             for i, l in enumerate(itog['otdelno']):
-                open(os.path.join(papka, f'{X}-{FAYLY_LISTOV[i]}.svg'), 'w').write(l['svg'])
+                open(os.path.join(papka, f'{X}-{ImyaFayla(v, i, l["imya"])}.svg'), 'w').write(l['svg'])
             for sem, fayl in Shrifty(itog['shrifty']):
                 shutil.copy(os.path.join(KOREN, 'maket', fayl), os.path.join(papka, 'shrifty'))
                 print(f'  шрифт {sem}: {os.path.basename(fayl)}')
             for pr in itog['preduprezhdeniya']:
                 print('  ·', pr)
             for i, l in enumerate(itog['otdelno']):
-                d = Sverit(pg, url, l['svg'], etalony[i], f'{v}-{FAYLY_LISTOV[i]}')
+                d = Sverit(pg, url, l['svg'], etalony[i], f'{v}-{ImyaFayla(v, i, l["imya"])}')
                 print(f'  сверка {l["imya"]}: пятна расхождения {d:.3f} % — {"сходится" if d < POROG else "РАСХОДИТСЯ"}')
                 oshibki += d >= POROG
+            if v == 'jm':
+                # блоки одного размера — одним PDF для типографии, страница на месяц
+                fayly = [os.path.join(papka, f'{X}-{ImyaFayla(v, i, l["imya"])}.svg') for i, l in enumerate(itog['otdelno'])]
+                oshibki += Pechat(papka, fayly, etalony, os.path.join(papka, f'{VARIANTY[v]}-pechat.pdf'))
             with zipfile.ZipFile(papka + '.zip', 'w', zipfile.ZIP_DEFLATED) as z:
                 for kor, _, fayly in os.walk(papka):
                     for f in sorted(fayly):
