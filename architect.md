@@ -1420,6 +1420,18 @@ G–I — на дизайнерских сетках, J–K — G и H на мо
     - Inter переменный, ось `opsz` задаётся явно по кеглю в px;
     - картинка ставится в поле содержимого, фон `<img>` рисуется;
     - у растров атрибут `xlink:href`, иначе Inkscape их не видит.
+- `peregen-maslo.py` — варианты картинки с маслом по образцу: SD-Turbo img2img на
+  процессоре, кадр 512×384, итог ×4 Real-ESRGAN → `assets/maslo-gen-*.jpg`.
+  - Где что лежит:
+    - библиотеки — `exchange/sdlib` (через `PYTHONPATH`, Python из
+      `/opt/video2x/torch-venv`);
+    - UNet — `rupeshs/sd-turbo-openvino`, пересохранённый с весами fp16, в
+      `exchange/aevit/fon/unet-fp16`.
+  - Память. bfloat16 процессор не умеет, а в OpenVINO веса UNet разворачиваются
+    в fp32, это 2,4 ГБ. Поэтому:
+    - этапы идут отдельными процессами: tekst, kod, unet, dekod;
+    - на время этапа unet нужна дополнительная подкачка около 4 ГБ.
+  - NNCF 2.19 с OpenVINO 2026.4 не работает, так что int8 не получить.
 - `assets/qr.svg` — векторный QR на `https://aevit.ru` (segno, уровень Q), во всех
   вариантах вместо `qr.png`.
 - `opisanie-variantov.md` — записка к вариантам; PDF лежит в «Файлах проекта».
