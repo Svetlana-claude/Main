@@ -915,6 +915,85 @@ function initProjectFiles(opts) {
     });
 }
 
+/* ── Загрузка файлов и папок в проект ─────────────────────────────── */
+
+function initProjectUpload(opts) {
+    // Файлы уходят по одному: предел стоит на каждый файл, а пачка
+    // в одном запросе упёрлась бы в предел nginx на весь запрос.
+    const form = document.getElementById('upload-form');
+    if (!form) return;
+    const inputs = [document.getElementById('upload-files'), document.getElementById('upload-folder')];
+    const send = document.getElementById('upload-send');
+    const status = document.getElementById('upload-status');
+    let busy = false;
+
+    function paket() {
+        // Общий признак файлов одного выбора: файлы папки ложатся на диске вместе
+        const bytes = crypto.getRandomValues(new Uint8Array(16));
+        return Array.from(bytes, b => b.toString(16).padStart(2, '0')).join('');
+    }
+
+    window.addEventListener('beforeunload', function (e) {
+        if (busy) e.preventDefault();
+    });
+
+    form.addEventListener('submit', async function (e) {
+        e.preventDefault();
+        if (busy) return;
+        const files = [];
+        for (const input of inputs) {
+            if (input) files.push(...input.files);
+        }
+        if (!files.length) {
+            status.textContent = 'Выберите файлы или папку';
+            return;
+        }
+
+        busy = true;
+        send.disabled = true;
+        const id = paket();
+        const big = [];
+        const failed = [];
+        for (let i = 0; i < files.length; i++) {
+            const file = files[i];
+            const path = file.webkitRelativePath || file.name;
+            status.textContent = 'Загружается ' + (i + 1) + ' из ' + files.length + ': ' + path;
+            if (file.size > opts.maxBytes) {
+                big.push(path);
+                continue;
+            }
+            const body = new FormData();
+            body.append('upload', file, file.name);
+            body.append('put', path);
+            body.append('paket', id);
+            try {
+                const res = await fetch(form.action, {
+                    method: 'POST', body: body, headers: { 'X-Zagruzka': '1' }
+                });
+                if (res.status === 413) big.push(path);
+                else if (!res.ok) failed.push(path);
+            } catch (err) {
+                failed.push(path);
+            }
+        }
+        busy = false;
+        send.disabled = false;
+
+        if (!big.length && !failed.length) {
+            location.reload();
+            return;
+        }
+        // Неудачи называются поимённо: «не всё загрузилось» без имён
+        // заставило бы сверять список руками
+        const done = files.length - big.length - failed.length;
+        let text = 'Загружено ' + done + ' из ' + files.length + '.';
+        if (big.length) text += ' Больше предела: ' + big.join(', ') + '.';
+        if (failed.length) text += ' Не загрузились: ' + failed.join(', ') + '.';
+        if (done) text += ' Обновите страницу, чтобы увидеть принятые.';
+        status.textContent = text;
+    });
+}
+
 /* ── Панель VPN ───────────────────────────────────────────────────── */
 
 function initVpnPanel(opts) {

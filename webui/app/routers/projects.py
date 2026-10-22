@@ -745,22 +745,47 @@ def project_tree_download(request: Request, project_id: int, path: str = ""):
     )
 
 
-@router.post("/projects/{project_id}/upload", name="project_upload")
-async def project_upload(
-    request: Request, project_id: int, upload: UploadFile = File(...)
-):
-    user, redirect = _guard(request)
-    if redirect:
-        return redirect
+def _upload_parts(raw: str) -> list[str]:
+    """Путь файла из браузера — по частям, без `..`, пустых и корня.
 
-    project = db.query_one("SELECT id FROM projects WHERE id = %s", (project_id,))
-    if not project:
-        return RedirectResponse(request.url_for("projects"), status_code=303)
+    При выборе папки браузер присылает путь внутри неё («папка/подпапка/кадр.png»),
+    и это чужие данные: `../` в нём не должен вывести запись из `uploads/`.
+    """
+    parts = [p.strip() for p in re.split(r"[\\/]+", raw or "")]
+    parts = [p for p in parts if p not in ("", ".", "..")]
+    return parts or ["файл"]
 
-    config.UPLOADS_DIR.mkdir(parents=True, exist_ok=True)
-    original = Path(upload.filename or "файл").name          # без путей из имени
-    stored_name = f"{uuid.uuid4().hex}_{_slugify(Path(original).stem)}{Path(original).suffix}"
+
+def _upload_target(parts: list[str], batch: str) -> str:
+    """Имя на диске относительно `uploads/`.
+
+    Отдельный файл — как прежде, `<uuid>_<имя>`. Файлы одной папки ложатся
+    вместе в `<пакет>_<папка>/…` с её же вложенностью — так загруженную папку
+    видно на диске целиком, а не россыпью среди прочих загрузок.
+    """
+    def name(part: str, last: bool) -> str:
+        stem, suffix = (Path(part).stem, Path(part).suffix) if last else (part, "")
+        return (_slugify(stem) if stem else "fayl") + suffix.lower()
+
+    if len(parts) == 1:
+        return f"{uuid.uuid4().hex}_{name(parts[0], True)}"
+    inner = [name(p, i == len(parts) - 2) for i, p in enumerate(parts[1:])]
+    stored = "/".join([f"{batch}_{name(parts[0], False)}", *inner])
+    # Два разных имени могут дать одно после транслитерации («a b» и «a-b»)
+    candidate, n = stored, 1
+    while (config.UPLOADS_DIR / candidate).exists():
+        n += 1
+        path = Path(stored)
+        candidate = str(path.with_name(f"{path.stem}-{n}{path.suffix}"))
+    return candidate
+
+
+async def _save_upload(project_id: int, upload: UploadFile, raw_path: str, batch: str) -> bool:
+    """Один файл — на диск и в базу. Ложь — файл больше предела и не принят."""
+    parts = _upload_parts(raw_path or upload.filename or "")
+    stored_name = _upload_target(parts, batch)
     target = config.UPLOADS_DIR / stored_name
+    target.parent.mkdir(parents=True, exist_ok=True)
 
     size = 0
     with target.open("wb") as sink:
@@ -769,12 +794,10 @@ async def project_upload(
             if size > config.MAX_UPLOAD_BYTES:
                 sink.close()
                 target.unlink(missing_ok=True)
-                return RedirectResponse(
-                    str(request.url_for("projects")) + f"?id={project_id}&err=big",
-                    status_code=303,
-                )
+                return False
             sink.write(chunk)
 
+    original = "/".join(parts)
     db.execute(
         "INSERT INTO files (project_id, filename, stored_name, size_bytes, mime) "
         "VALUES (%s, %s, %s, %s, %s)",
@@ -783,11 +806,53 @@ async def project_upload(
             original,
             stored_name,
             size,
-            upload.content_type or mimetypes.guess_type(original)[0],
+            upload.content_type or mimetypes.guess_type(parts[-1])[0],
         ),
     )
+    return True
+
+
+@router.post("/projects/{project_id}/upload", name="project_upload")
+async def project_upload(
+    request: Request,
+    project_id: int,
+    upload: list[UploadFile] = File(...),
+    put: str = Form(""),
+    paket: str = Form(""),
+):
+    """Загрузка одного или нескольких файлов, в том числе целой папки.
+
+    Страница шлёт файлы по одному (`put` — путь внутри выбранной папки,
+    `paket` — общий признак файлов одного выбора) и ждёт JSON: тогда предел
+    в 512 МБ действует на каждый файл, а не на всю пачку в одном запросе,
+    которую nginx отбил бы целиком. Без скриптов форма шлёт всё разом —
+    это тоже принимается, и ответ тогда переадресация на страницу.
+    """
+    wants_json = request.headers.get("x-zagruzka") == "1"
+    user, redirect = _guard(request)
+    if redirect:
+        return JSONResponse({"error": "нужен вход"}, status_code=401) if wants_json else redirect
+
+    project = db.query_one("SELECT id FROM projects WHERE id = %s", (project_id,))
+    if not project:
+        if wants_json:
+            return JSONResponse({"error": "проект не найден"}, status_code=404)
+        return RedirectResponse(request.url_for("projects"), status_code=303)
+
+    config.UPLOADS_DIR.mkdir(parents=True, exist_ok=True)
+    batch = paket if re.fullmatch(r"[0-9a-f]{32}", paket) else uuid.uuid4().hex
+    rejected = 0
+    for item in upload:
+        if not await _save_upload(project_id, item, put if len(upload) == 1 else "", batch):
+            rejected += 1
+
+    if wants_json:
+        if rejected:
+            return JSONResponse({"error": "больше предела"}, status_code=413)
+        return JSONResponse({"ok": True})
     return RedirectResponse(
-        str(request.url_for("projects")) + f"?id={project_id}", status_code=303
+        str(request.url_for("projects")) + f"?id={project_id}" + ("&err=big" if rejected else ""),
+        status_code=303,
     )
 
 
@@ -822,7 +887,17 @@ def project_file_delete(request: Request, file_id: int):
         "SELECT project_id, stored_name FROM files WHERE id = %s", (file_id,)
     )
     if row:
-        (config.UPLOADS_DIR / row["stored_name"]).unlink(missing_ok=True)
+        path = config.UPLOADS_DIR / row["stored_name"]
+        path.unlink(missing_ok=True)
+        # Файл из загруженной папки: опустевшие папки над ним тоже убираются
+        uploads = config.UPLOADS_DIR.resolve()
+        for parent in path.resolve().parents:
+            if parent == uploads or uploads not in parent.parents:
+                break
+            try:
+                parent.rmdir()                 # только пустую — иначе OSError
+            except OSError:
+                break
         db.execute("DELETE FROM files WHERE id = %s", (file_id,))
     target = str(request.url_for("projects"))
     if row:
