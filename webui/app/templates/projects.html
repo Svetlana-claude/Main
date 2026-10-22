@@ -169,17 +169,25 @@
             </div>
 
             <div class="rail__body tabpanel" role="tabpanel" id="panel-upload" aria-labelledby="tab-upload">
-              {# Файлы — сколько угодно разом; папка — вторым полем, со всей
-                 вложенностью. Скрипт шлёт их по одному (initProjectUpload),
-                 без него форма уходит целиком, и это тоже принимается. #}
               <form method="post" action="{{ url_for('project_upload', project_id=project.id) }}"
-                    enctype="multipart/form-data" style="padding:8px" id="upload-form">
-                <label class="field__hint" for="upload-files">Файлы (можно несколько)</label>
+                    enctype="multipart/form-data" style="padding:8px">
+                <input class="input" type="file" name="upload" required style="margin-bottom:6px">
+                <button class="btn" type="submit" style="width:100%;justify-content:center">Загрузить</button>
+                <div class="field__hint">До {{ max_upload_mb if max_upload_mb is defined else 64 }} МБ</div>
+              </form>
+              {# Второй, отдельный способ: несколько файлов или папка целиком.
+                 Скрипт шлёт их по одному (initProjectUpload), без него форма
+                 уходит целиком, и это тоже принимается. #}
+              <form method="post" action="{{ url_for('project_upload', project_id=project.id) }}"
+                    enctype="multipart/form-data" id="upload-form"
+                    style="padding:8px;border-top:1px solid var(--line-soft)">
+                <div style="font-weight:600;margin-bottom:4px">Несколько файлов или папка</div>
+                <label class="field__hint" for="upload-files">Файлы (выделите несколько)</label>
                 <input class="input" type="file" name="upload" multiple id="upload-files" style="margin-bottom:6px">
                 <label class="field__hint" for="upload-folder">Или папка целиком</label>
                 <input class="input" type="file" name="upload" multiple webkitdirectory id="upload-folder" style="margin-bottom:6px">
-                <button class="btn" type="submit" id="upload-send" style="width:100%;justify-content:center">Загрузить</button>
-                <div class="field__hint">До {{ max_upload_mb if max_upload_mb is defined else 64 }} МБ на файл</div>
+                <button class="btn" type="submit" id="upload-send" style="width:100%;justify-content:center">Загрузить все</button>
+                <div class="field__hint">До {{ max_upload_mb if max_upload_mb is defined else 64 }} МБ на каждый файл</div>
                 <div class="field__hint breakable" id="upload-status" role="status" aria-live="polite"></div>
               </form>
               {% for f in files %}

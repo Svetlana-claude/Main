@@ -232,7 +232,10 @@ def check_nginx(tmp: Path) -> None:
         return
     finally:
         body.unlink(missing_ok=True)
-    check(code != 413, f"живой nginx не рубит тело в 80 МБ (ответ {code})")
+    # Не только 413: 500 — это nginx, не сумевший записать тело во временную
+    # папку (`/var/lib/nginx/body` не его владельца, 22.10.2026). Прежнее
+    # условие `!= 413` пропустило именно этот отказ, а загрузка не работала
+    check(code < 500 and code != 413, f"живой nginx пропускает тело в 80 МБ до приложения (ответ {code})")
 
 
 def main() -> int:
