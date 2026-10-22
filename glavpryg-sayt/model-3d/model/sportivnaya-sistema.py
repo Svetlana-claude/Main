@@ -10,111 +10,8 @@ import math
 
 import numpy as np
 
-from osnova import (STEPEN, Setka, Sborka, bazis, cilindr, gladko, lenta, matr, norm,
-                    okrugl_korobka, poverh, profil, put_po_torsu, setka_iz_reshetki, tor, vypustit)
-
-
-class Rakovina:
-    """Обтекаемый ранец: контур со спины — «щит», толщина спадает к краю по суперэллипсу,
-    так что борта скруглены. Плоская сторона прилегает к спине торса."""
-    KONTUR = [(0.0, 0.875), (0.075, 0.88), (0.125, 0.905), (0.152, 0.96), (0.163, 1.08),
-              (0.172, 1.25), (0.176, 1.40), (0.168, 1.50), (0.14, 1.555), (0.085, 1.575)]
-    C = np.array([0.0, 1.22])
-    Q = 3.0  # скругление борта
-
-    def __init__(self):
-        pol = self.KONTUR + [(-x, y) for x, y in reversed(self.KONTUR[1:])]
-        self.kont = gladko(np.array([[x, y, 0] for x, y in pol]), 240, zamk=True)[:, :2]
-        d = self.kont - self.C
-        self.ug = np.arctan2(d[:, 1], d[:, 0])
-        por = np.argsort(self.ug)
-        self.ug, self.rad = self.ug[por], np.linalg.norm(d, axis=1)[por]
-
-    def R(self, t):
-        return np.interp(t, self.ug, self.rad, period=2 * math.pi)
-
-    @staticmethod
-    def tolshchina(y):
-        return float(np.interp(y, [0.86, 0.95, 1.15, 1.40, 1.58], [0.10, 0.15, 0.165, 0.14, 0.10]))
-
-    @staticmethod
-    def spina(x, y):
-        a, b = profil(y)
-        xx = min(abs(x), 0.8 * a) / a
-        return -b * (1 - xx ** STEPEN) ** (1 / STEPEN) - 0.004
-
-    def kontur(self, n):
-        t = np.linspace(-math.pi, math.pi, n, endpoint=False)
-        return [self.C + self.R(u) * np.array([math.cos(u), math.sin(u)]) for u in t]
-
-    def _p(self, x, y, s_):
-        return np.array([x, y, self.spina(x, y) - self.tolshchina(y) * max(0.0, 1 - s_ ** self.Q) ** (1 / self.Q)])
-
-    def tochka(self, x, y, otstup=0.0, s_=None):
-        """Точка внешней поверхности над (x, y) со спины и её нормаль (наружу)."""
-        d = np.array([x, y]) - self.C
-        t = math.atan2(d[1], d[0])
-        if s_ is None:
-            s_ = min(0.999, np.linalg.norm(d) / self.R(t))
-        else:
-            x, y = self.C + s_ * self.R(t) * np.array([math.cos(t), math.sin(t)])
-
-        def f(xx, yy):
-            dd = np.array([xx, yy]) - self.C
-            tt = math.atan2(dd[1], dd[0])
-            return self._p(xx, yy, min(0.9995, np.linalg.norm(dd) / self.R(tt)))
-        e = 1e-4
-        p = f(x, y)
-        n = norm(np.cross(f(x, y + e) - f(x, y - e), f(x + e, y) - f(x - e, y)))
-        if n[2] > 0:
-            n = -n
-        return p + n * otstup, n
-
-    def setka(self, nt=96, ns=20):
-        """Внешний купол (s = cos^(2/Q) φ — борт скруглён) и плоская сторона к спине."""
-        t = np.linspace(-math.pi, math.pi, nt, endpoint=False)
-        P = np.zeros((nt, 2 * ns, 3))
-        for i, u in enumerate(t):
-            r = self.R(u)
-            e = np.array([math.cos(u), math.sin(u)])
-            for j in range(ns):  # от центра купола к краю
-                f = (math.pi / 2) * (1 - j / (ns - 1))
-                s_ = max(0.0, math.cos(f)) ** (2 / self.Q)
-                x, y = self.C + s_ * r * e
-                t_ = self.tolshchina(y) * max(0.0, math.sin(f)) ** (2 / self.Q)
-                P[i, j] = (x, y, self.spina(x, y) - t_)
-            for j in range(ns):  # от края по спине к центру
-                s_ = 1 - j / (ns - 1)
-                x, y = self.C + s_ * r * e
-                P[i, ns + j] = (x, y, self.spina(x, y))
-        # нормали — по соседям решётки
-        dU = np.roll(P, -1, 0) - np.roll(P, 1, 0)
-        dV = np.gradient(P, axis=1)
-        N = norm(np.cross(dV, dU))
-        return setka_iz_reshetki(P, N, zamk_u=True)
-
-    @staticmethod
-    def razrezat(st, y0):
-        """Делит сетку по высоте центров треугольников: выше y0 и ниже."""
-        tri = st.i.reshape(-1, 3)
-        cy = st.p[tri][:, :, 1].mean(axis=1)
-        verh = Setka(st.p, st.n, tri[cy >= y0].reshape(-1))
-        niz = Setka(st.p, st.n, tri[cy < y0].reshape(-1))
-        return verh, niz
-
-    def naklejka(self, forma, otstup, na=8, nv=16):
-        """Накладка по поверхности: forma(a, v) → (x, y), a ∈ [−1, 1] поперёк, v ∈ [0, 1] вдоль."""
-        P = np.zeros((na, nv, 3))
-        N = np.zeros((na, nv, 3))
-        for i, a in enumerate(np.linspace(-1, 1, na)):
-            for j, v in enumerate(np.linspace(0, 1, nv)):
-                P[i, j], N[i, j] = self.tochka(*forma(a, v), otstup=otstup)
-        return setka_iz_reshetki(P, N)
-
-    def po_poverhnosti(self, opory, otstup, n=30):
-        pts = gladko(np.array([[x, y, 0] for x, y in opory]), n)
-        tn = [self.tochka(x, y, otstup=otstup) for x, y, _ in pts]
-        return np.array([a for a, _ in tn]), np.array([b for _, b in tn])
+from osnova import (Rakovina, Sborka, bazis, cilindr, gladko, lenta, matr, norm, okrugl_korobka,
+                    poverh, put_po_torsu, tor, vypustit)
 
 
 def postroit():
@@ -124,7 +21,10 @@ def postroit():
     # Ранец — по фотографиям заказчика (Aerodyne Icon): одна обтекаемая чёрная «раковина»
     # от лопаток до поясницы, сверху запасной, снизу основной; по центру бежевая вставка
     # клином вниз, клапаны основного сходятся крест-накрест к чеке внизу.
-    rak = Rakovina()
+    rak = Rakovina(
+        [(0.0, 0.875), (0.075, 0.88), (0.125, 0.905), (0.152, 0.96), (0.163, 1.08),
+         (0.172, 1.25), (0.176, 1.40), (0.168, 1.50), (0.14, 1.555), (0.085, 1.575)],
+        centr=(0.0, 1.22), tolsh=([0.86, 0.95, 1.15, 1.40, 1.58], [0.10, 0.15, 0.165, 0.14, 0.10]))
     verh_s, niz_s = rak.razrezat(rak.setka(), 1.29)
     dobavit("zap_otsek", "chernyy", verh_s)
     dobavit("osn_otsek", "chernyy", niz_s)

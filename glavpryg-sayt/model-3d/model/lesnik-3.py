@@ -5,7 +5,8 @@
 и 1.14): ранец с **верхним** отсеком основного и **нижним** запасного, двухконусный
 замок на спинке, стабилизирующий парашют в камере, ППК-У в кармане справа; кольцо ОП
 на левой лямке, кольцо ЗПС и звено отсоединения — на правой. Передние лямки сверху
-переходят в свободные концы запасного. Цвета и формы клапанов условные — до фото.
+переходят в свободные концы запасного. Внешний вид — по фотографиям системы
+заказчика (22.10.2026): синий ранец, серая камера стабилизатора сверху, синие лямки.
 
     /usr/bin/python3 lesnik-3.py
 """
@@ -13,7 +14,7 @@ import math
 
 import numpy as np
 
-from osnova import (Sborka, bazis, cilindr, gladko, lenta, matr, norm, obhvat_bedra,
+from osnova import (Rakovina, Sborka, bazis, cilindr, gladko, lenta, matr, norm, obhvat_bedra,
                     okrugl_korobka, poverh, put_po_torsu, ramka, tor, trubka, vypustit)
 
 OTST = 0.008  # лямки над поверхностью торса
@@ -22,71 +23,85 @@ OTST = 0.008  # лямки над поверхностью торса
 def postroit():
     sb = Sborka()
     dobavit, metka = sb.dobavit, sb.metka
-    zs = -0.10  # спина торса
-
     # ---------- Ранец ----------
-    # 1. верхний отсек — основной (в камере); 4. нижний — запасной (в чехле)
-    osn_c = np.array([0, 1.355, zs - 0.105])
-    dobavit("osn_otsek", "olivka", okrugl_korobka((0.36, 0.33, 0.21), 0.05).preobr(matr(osn_c)))
-    dobavit("osn_otsek", "olivka", okrugl_korobka((0.39, 0.74, 0.03), 0.014).preobr(matr((0, 1.22, zs - 0.005))))
-    zad_osn = osn_c[2] - 0.105
-    metka("osn_otsek", 1, (-0.13, 1.42, zad_osn + 0.012), (-0.6, 0.2, -1))
+    # По фотографиям заказчика: один объёмный синий ранец от плеч до ягодиц, по спине —
+    # узор из чёрных лент «песочными часами»; сверху основной (1), снизу запасной (4)
+    rak = Rakovina(
+        [(0.0, 0.815), (0.09, 0.82), (0.155, 0.845), (0.19, 0.90), (0.203, 1.05), (0.205, 1.30),
+         (0.198, 1.48), (0.178, 1.565), (0.13, 1.605), (0.06, 1.615)],
+        centr=(0.0, 1.22), tolsh=([0.80, 0.90, 1.10, 1.35, 1.62], [0.13, 0.20, 0.225, 0.21, 0.15]),
+        q=2.6, prileganie=0.85)
+    verh_s, niz_s = rak.razrezat(rak.setka(72, 14), 1.17)
+    dobavit("osn_otsek", "siniy_les", verh_s)
+    dobavit("zap_otsek", "siniy_les", niz_s)
+    kr = [rak.tochka(*xy, s_=0.985) for xy in rak.kontur(90)]
+    dobavit("osn_otsek", "lenta", lenta(np.array([t[0] for t in kr]), np.array([t[1] for t in kr]), 0.014, 0.004, zamk=True))
+    # чёрные ленты по спине: от верхних углов к «талии», перемычки, к нижним углам
+    for zn in (-1, 1):
+        for oporы in ([(zn * 0.175, 1.545), (zn * 0.10, 1.33), (zn * 0.06, 1.10), (zn * 0.175, 0.86)],):
+            dobavit("osn_otsek", "lenta", lenta(*rak.po_poverhnosti(oporы, 0.004, 40), 0.022, 0.005))
+    for y, x in ((1.33, 0.10), (1.10, 0.06), (1.545, 0.15)):
+        dobavit("osn_otsek", "lenta", lenta(*rak.po_poverhnosti([(-x, y), (0, y), (x, y)], 0.004, 12), 0.022, 0.005))
+    # чёрный карман справа вверху спины
+    dobavit("osn_otsek", "chernyy", rak.naklejka(lambda a, v: (-0.11 + a * 0.06, 1.52 - 0.20 * v), 0.012))
+    metka("osn_otsek", 1, *rak.tochka(0.12, 1.43, otstup=0.01))
+    metka("zap_otsek", 4, *rak.tochka(0.12, 0.97, otstup=0.01))
+    # шпилька запасного с кольцом контровки — внизу по центру
+    pzs, nzs = rak.tochka(0.0, 0.95, otstup=0.006)
+    dobavit("zap_otsek", "metall", tor(0.008, 0.002, 18, 6).preobr(matr(pzs, bazis(nzs))))
 
-    zap_c = np.array([0, 1.05, zs - 0.09])
-    dobavit("zap_otsek", "olivka_t", okrugl_korobka((0.37, 0.27, 0.18), 0.05).preobr(matr(zap_c)))
-    zad_zap = zap_c[2] - 0.09
-    # клапаны нижнего отсека и кольцо контровки шпильки
-    dobavit("zap_otsek", "olivka_t", okrugl_korobka((0.26, 0.11, 0.012), 0.006).preobr(
-        matr((0, 1.04, zad_zap - 0.004))))
-    dobavit("zap_otsek", "metall", tor(0.008, 0.002, 18, 6).preobr(matr((0, 1.09, zad_zap - 0.012))))
-    metka("zap_otsek", 4, (0.12, 1.0, zad_zap + 0.01), (0.5, 0, -1))
-
-    # 2. Двухконусный замок: пластина жёсткости с окнами вверху спинки и два конуса
-    zamok_y = 1.47
-    dobavit("zamok", "metall", okrugl_korobka((0.16, 0.05, 0.008), 0.006).preobr(
-        matr((0, zamok_y, zad_osn - 0.004))))
+    # 2. Двухконусный замок: пластина жёсткости с окнами на верху спинки, под камерой стабилизатора
+    pz_, nz_ = rak.tochka(0.0, 1.535, otstup=0.006)
+    bz_ = bazis(nz_)
+    dobavit("zamok", "metall", okrugl_korobka((0.16, 0.045, 0.008), 0.006).preobr(matr(pz_, bz_)))
     for x in (-0.045, 0.045):
         dobavit("zamok", "metall", cilindr(0.012, 0.022, 16).preobr(
-            matr((x, zamok_y, zad_osn - 0.015), bazis([0, 1, 0], verh=[0, 0, 1]))))
-    dobavit("zamok", "olivka_t", okrugl_korobka((0.05, 0.035, 0.014), 0.006).preobr(
-        matr((0, zamok_y, zad_osn - 0.012))))
-    metka("zamok", 2, (0.045, zamok_y, zad_osn - 0.03), (0, 0.1, -1))
+            matr(pz_ + nz_ * 0.012 + [x, 0, 0], bazis([0, 1, 0], verh=[0, 0, 1]))))
+    dobavit("zamok", "chernyy", okrugl_korobka((0.05, 0.03, 0.014), 0.006).preobr(matr(pz_ + nz_ * 0.008, bz_)))
+    metka("zamok", 2, pz_ + nz_ * 0.025 + [0.07, 0, 0], nz_)
+    zamok_t = pz_ + nz_ * 0.01
 
-    # 3. Стабилизирующий парашют в камере на спинке, карабин сверху
-    kam_c = np.array([0, 1.33, zad_osn - 0.035])
-    dobavit("stabilizator", "olivka_t", okrugl_korobka((0.22, 0.17, 0.06), 0.025).preobr(matr(kam_c)))
-    dobavit("stabilizator", "akcent", okrugl_korobka((0.225, 0.012, 0.062), 0.005).preobr(
-        matr(kam_c + [0, -0.06, 0])))
-    karabin = tor(0.022, 0.0045, 28, 8, dolya=0.85).preobr(matr((0, 0, 0), bazis([1, 0, 0])))
-    dobavit("stabilizator", "metall", karabin.preobr(matr(kam_c + [0.07, 0.1, -0.012])))
-    # соединительное звено от камеры к силовому треугольнику у замка
-    zveno = gladko([kam_c + [0.07, 0.085, -0.01], kam_c + [0.04, 0.12, -0.015], (0.0, zamok_y - 0.02, zad_osn - 0.02)], 12)
-    dobavit("stabilizator", "lenta_ol", lenta(zveno, np.tile([0, 0, -1], (len(zveno), 1)), 0.022, 0.004))
-    metka("stabilizator", 3, kam_c + [-0.05, 0, -0.035], (0, 0, -1))
+    # 3. Стабилизирующий парашют: серая камера-валик поперёк верха ранца, справа из неё
+    #    выглядывает оранжевый купол; сверху лента с карабином
+    # лежит на скруглённом верху ранца, над серединой его толщины
+    kam_c = np.array([0.0, 1.625, rak.spina(0.0, 1.60) - 0.5 * rak.tolshchina(1.60)])
+    dobavit("stabilizator", "seryy", okrugl_korobka((0.30, 0.095, 0.13), 0.045).preobr(matr(kam_c)))
+    dobavit("stabilizator", "akcent", okrugl_korobka((0.06, 0.08, 0.11), 0.035).preobr(matr(kam_c + [-0.17, -0.005, 0])))
+    dobavit("stabilizator", "lenta", okrugl_korobka((0.03, 0.10, 0.135), 0.006).preobr(matr(kam_c + [0.0, 0.003, 0])))
+    karabin = tor(0.024, 0.0048, 28, 8, dolya=0.85).preobr(matr((0, 0, 0), bazis([0, 1, 0], verh=[0, 0, 1])))
+    dobavit("stabilizator", "metall", karabin.preobr(matr(kam_c + [0.08, 0.05, -0.03])))
+    zveno = gladko([kam_c + [0.06, 0.045, -0.05], kam_c + [0.02, -0.02, -0.075], zamok_t + [0, 0.02, 0]], 12)
+    dobavit("stabilizator", "lenta", lenta(zveno, np.tile([0, 0.3, -1], (len(zveno), 1)), 0.022, 0.004))
+    metka("stabilizator", 3, kam_c + [0.04, 0.045, -0.04], (0, 1, -0.6))
 
-    # 5. ППК-У-240АД в кармане на правой стороне ранца, шланг к замку
-    bok_x = -0.18
-    karman = np.array([bok_x - 0.012, 1.30, osn_c[2] - 0.02])
-    dobavit("ppku", "olivka_t", okrugl_korobka((0.03, 0.15, 0.08), 0.012).preobr(matr(karman)))
-    dobavit("ppku", "pribor", cilindr(0.012, 0.02, 14).preobr(matr(karman + [0, 0.085, 0])))
-    shl = gladko([karman + [0, 0.09, 0], karman + [0.0, 0.15, -0.04], (-0.12, zamok_y + 0.03, zad_osn - 0.02),
-                  (-0.06, zamok_y, zad_osn - 0.02)], 30)
+    # 5. ППК-У-240АД в кармане на правой стороне ранца (на фото — ниже середины), шланг к замку
+    pb_, nb_ = rak.tochka(-0.20, 1.12, s_=0.995)
+    karman = pb_ + nb_ * 0.025
+    dobavit("ppku", "chernyy", okrugl_korobka((0.035, 0.15, 0.07), 0.014).preobr(matr(karman)))
+    dobavit("ppku", "pribor", cilindr(0.013, 0.025, 14).preobr(matr(karman + [0, 0.088, 0])))
+    shl = gladko([karman + [0, 0.10, 0], karman + [-0.005, 0.25, 0.0], karman + [0.0, 0.40, -0.02],
+                  rak.tochka(-0.15, 1.585, otstup=0.01)[0], zamok_t + [-0.06, 0, 0]], 40)
     dobavit("ppku", "shlang", trubka(shl, 0.006))
-    metka("ppku", 5, karman + [-0.02, 0, 0], (-1, 0, -0.2))
+    metka("ppku", 5, karman + [-0.04, 0, 0], (-1, 0, -0.2))
+    zad_osn = zamok_t[2]
+    zamok_y = zamok_t[1]
 
     # ---------- Подвесная система ----------
     for zn in (-1, 1):
         # 11. Передняя лямка: от бедра вверх, через плечо — свободный конец запасного
         put, nr = put_po_torsu([(0.96, zn * 62), (1.08, zn * 52), (1.22, zn * 42),
                                 (1.36, zn * 37), (1.50, zn * 33)], OTST)
-        dobavit("lyamki", "lenta_ol", lenta(put, nr, 0.046, 0.008))
+        dobavit("lyamki", "siniy_les", lenta(put, nr, 0.075, 0.016))
+        put2, nr2 = put_po_torsu([(0.96, zn * 62), (1.08, zn * 52), (1.22, zn * 42),
+                                  (1.36, zn * 37), (1.50, zn * 33)], OTST + 0.016)
+        dobavit("lyamki", "lenta", lenta(put2, nr2, 0.04, 0.006))
         p_verh, n_verh = put[-1], nr[-1]
         cherez = gladko([p_verh, [zn * 0.11, 1.59, 0.05], [zn * 0.115, 1.63, -0.03],
                          [zn * 0.14, 1.59, -0.12], [zn * 0.175, 1.48, -0.17], [zn * 0.19, 1.25, -0.19],
                          [zn * 0.19, 1.13, -0.18]], 50)
         nch = norm(gladko(np.array([n_verh, [0, 1, 0.5], [0, 1, 0], [0, 0.7, -0.7], [zn * 0.3, 0.2, -1],
                                     [zn * 0.5, 0, -1], [zn * 0.5, 0, -1]]), 50))
-        dobavit("lyamki", "lenta_ol", lenta(cherez, nch, 0.046, 0.009))
+        dobavit("lyamki", "lenta", lenta(cherez, nch, 0.046, 0.009))
         if zn < 0:
             metka("lyamki", 11, cherez[16] + nch[16] * 0.012, nch[16])
 
@@ -94,9 +109,11 @@ def postroit():
         pb, nb = poverh(0.955, zn * 62, OTST + 0.006)
         dobavit("lyamki", "metall", tor(0.02, 0.005, 28, 8).preobr(matr(pb, bazis(nb))))
         bok, nbk = put_po_torsu([(0.955, zn * 64), (0.95, zn * 95), (0.95, zn * 130), (0.96, zn * 150)], OTST)
-        dobavit("lyamki", "lenta_ol", lenta(bok, nbk, 0.04, 0.007))
+        dobavit("lyamki", "lenta", lenta(bok, nbk, 0.04, 0.007))
         obh, pr, npr = obhvat_bedra(zn, pb, nb)
-        dobavit("obhvaty", "lenta_ol", obh)
+        dobavit("obhvaty", "lenta", obh)
+        # мягкая синяя подкладка обхвата
+        dobavit("obhvaty", "siniy_les", obhvat_bedra(zn, pb, nb, shir=0.065, tol=0.004)[0])
         dobavit("obhvaty", "metall", okrugl_korobka((0.05, 0.026, 0.008), 0.004).preobr(
             matr(pr + npr * 0.007, bazis(npr))))
         if zn > 0:
@@ -113,14 +130,14 @@ def postroit():
         konc = gladko([pd + vverh * 0.06 + nd * 0.012, [zn * 0.125, 1.60, 0.07], [zn * 0.13, 1.645, -0.02],
                        [zn * 0.115, 1.60, -0.13], [zn * 0.10, 1.53, -0.19]], 40)
         nk = norm(gladko(np.array([nd, [0, 1, 0.5], [0, 1, 0], [0, 0.6, -0.8], [0, 0.3, -1]]), 40))
-        dobavit("konci_osn", "olivka", lenta(konc, nk, 0.05, 0.014))
+        dobavit("konci_osn", "lenta", lenta(konc, nk, 0.05, 0.014))
         if zn > 0:
             metka("konci_osn", 6, pd + vverh * 0.035 + nd * 0.02, nd)
 
     # 7. Кольцо ОП — левая лямка: карман и металлическая рамка; шланг к замку через плечо
     pk, nkk = poverh(1.20, 47, OTST + 0.012)
     b = bazis(nkk)
-    dobavit("kolco_op", "olivka_t", okrugl_korobka((0.055, 0.075, 0.014), 0.006).preobr(matr(pk, b)))
+    dobavit("kolco_op", "chernyy", okrugl_korobka((0.055, 0.075, 0.014), 0.006).preobr(matr(pk, b)))
     dobavit("kolco_op", "metall", ramka(0.05, 0.034, 0.008, 0.006).preobr(matr(pk + nkk * 0.014, b)))
     shl_op = []
     for y, u in ((1.24, 47), (1.36, 41), (1.48, 36)):
@@ -130,16 +147,16 @@ def postroit():
     metka("kolco_op", 7, pk + nkk * 0.03, nkk)
 
     # 10. Нож-стропорез — карман над кольцом ОП, рукоять наружу
-    pn, nn = poverh(1.31, 46, OTST + 0.014)
-    dobavit("nozh", "olivka_t", okrugl_korobka((0.045, 0.06, 0.012), 0.005).preobr(matr(pn, bazis(nn))))
-    dobavit("nozh", "akcent", okrugl_korobka((0.016, 0.04, 0.012), 0.006).preobr(
-        matr(pn + nn * 0.01 + [0, 0.035, 0], bazis(nn))))
+    pn, nn = poverh(1.33, 47, OTST + 0.03)
+    dobavit("nozh", "chernyy", okrugl_korobka((0.05, 0.09, 0.022), 0.008).preobr(matr(pn, bazis(nn))))
+    dobavit("nozh", "pribor", okrugl_korobka((0.016, 0.04, 0.012), 0.006).preobr(
+        matr(pn + nn * 0.016 + [0, 0.05, 0], bazis(nn))))
     metka("nozh", 10, pn + nn * 0.03 + [0, 0.02, 0], nn)
 
     # 8. Кольцо ЗПС — правая лямка: карман, рамка, трос со шпилькой уходит к нижнему отсеку
     pz, nz = poverh(1.20, -47, OTST + 0.012)
     bz = bazis(nz)
-    dobavit("kolco_zps", "olivka_t", okrugl_korobka((0.055, 0.075, 0.014), 0.006).preobr(matr(pz, bz)))
+    dobavit("kolco_zps", "chernyy", okrugl_korobka((0.055, 0.075, 0.014), 0.006).preobr(matr(pz, bz)))
     dobavit("kolco_zps", "metall", ramka(0.05, 0.034, 0.008, 0.006).preobr(matr(pz + nz * 0.014, bz)))
     dobavit("kolco_zps", "krasnyy", okrugl_korobka((0.03, 0.012, 0.008), 0.004).preobr(
         matr(pz + nz * 0.02 + [0, -0.012, 0], bz)))
@@ -149,7 +166,7 @@ def postroit():
     #    два троса в боуденах к D-пряжкам (короткий — к правой, длинный — через грудь к левой)
     po, no = poverh(1.31, -44, OTST + 0.014)
     bo = bazis(no)
-    dobavit("zveno_otc", "olivka", okrugl_korobka((0.05, 0.06, 0.012), 0.005).preobr(matr(po, bo)))
+    dobavit("zveno_otc", "chernyy", okrugl_korobka((0.05, 0.06, 0.012), 0.005).preobr(matr(po, bo)))
     dobavit("zveno_otc", "krasnyy", cilindr(0.008, 0.045, 14).preobr(
         matr(po + no * 0.012, bo @ np.array([[0, 1, 0], [1, 0, 0], [0, 0, 1]]))))
     pd_l = poverh(1.40, 36, OTST + 0.02)[0]
@@ -164,7 +181,7 @@ def postroit():
 
     # 12. Грудная перемычка: карабин слева, пряжка справа
     gr, ngr = put_po_torsu([(1.27, -40), (1.27, -15), (1.27, 0), (1.27, 15), (1.27, 40)], OTST + 0.007, 40)
-    dobavit("grudnaya", "lenta_ol", lenta(gr, ngr, 0.04, 0.006))
+    dobavit("grudnaya", "lenta", lenta(gr, ngr, 0.045, 0.006))
     pg, ng = poverh(1.27, 30, OTST + 0.014)
     dobavit("grudnaya", "metall", tor(0.02, 0.0045, 26, 8, dolya=0.9).preobr(matr(pg, bazis(ng))))
     pg2, ng2 = poverh(1.27, -30, OTST + 0.012)
