@@ -83,6 +83,9 @@ def main() -> int:
         pole_teksta = forma.locator('textarea[name="message"]')
         if pole_teksta.count():
             pole_teksta.first.fill("Заявка проверки оснастки, удалить.")
+        # С 22.10.2026 без галочки согласия на обработку данных заявка не
+        # уходит: браузер не даёт отправить (required), сервер отвечает 422.
+        forma.locator('input[name="soglasie"]').first.check()
         forma.locator('button[type="submit"]').first.click()
         stranica.wait_for_load_state("load", timeout=60000)
         print(f"ок      форма заявки отправлена нажатием → {stranica.url}")
@@ -92,8 +95,11 @@ def main() -> int:
         for put in STRANICY_S_FORMOY:
             stranica.goto(f"{osnova}/{put}" if put else f"{osnova}/",
                           wait_until="load", timeout=60000)
+            # `method="dialog"` — не заявка, а кнопка закрытия окна <dialog>
+            # (карточки «Дропзоны мира» на главной): адреса у неё быть не должно.
             pustyshki = [f for f in opisat_formy(stranica)
-                         if not f["action"] or not f["polya"]]
+                         if (f["method"] or "").lower() != "dialog"
+                         and (not f["action"] or not f["polya"])]
             if pustyshki:
                 bed += 1
                 print(f"ОШИБКА  /{put or ''}: форма без адреса отправки "

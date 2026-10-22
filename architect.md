@@ -1098,6 +1098,30 @@ PDF A5 без сторонних библиотек и шлёт два пись�
 Подробности и порядок работы — `glavpryg-sayt/README.md`; дефекты поставки —
 `current_questions.md`.
 
+### Право, согласия, SEO и Метрика (с 22.10.2026)
+
+- **Правовые документы** — шесть записей `legal_pages` (privacy, personal-data, terms,
+  marketing, cookies, oferta). Исходник — `glavpryg-sayt/pravo/<slug>.md`, в базу —
+  `tools/pravo-v-bazu.py` (правку из админки без `--zamenit` не затирает; что клал —
+  `pravo/.v-baze.json`). Реквизиты в тексте — метки `[[ПРОДАВЕЦ]] [[ИНН]] [[ОГРН]]
+  [[АДРЕС]] [[EMAIL]] [[ТЕЛЕФОН]] [[САЙТ]] [[АДРЕС_АЭРОДРОМА]]`, подставляет
+  `LegalPage::tekst()` из настроек (`rekv_*`); пустое — жёлтое «[заполнить: …]».
+  Подвал со ссылками и реквизитами — `partials/podval-pravo`.
+- **Согласие** — `partials/soglasie` (галочка + ловушка `sayt_adres`) на всех формах;
+  сервер требует `accepted` и пишет `soglasie_at` (leads, flight_bookings, clients,
+  certificate_orders). Письмо о заявке — `Support\Uvedomlenie` (ошибка почты форму не
+  ломает). Throttle на формах, входе, регистрации, сбросе пароля.
+- **Пароль кабинета** — `Auth\ParolController`, брокер `clients`.
+- **`<head>`** — `partials/seo-head` в обоих макетах: canonical, robots по секции
+  `noindex`, OG (секция `og_image`), коды Вебмастера и Search Console, JSON-LD на главной,
+  загрузчик Метрики (`metrika_id`) и `glavprygCel()`. Метрика грузится только после
+  «Принять» на `partials/cookie-plashka` (localStorage `glavpryg-cookie`).
+  Карта сайта — маршрут `/sitemap.xml`; `public/robots.txt` статичен (строка `Sitemap:`
+  меняется при переезде). Шрифты — `public/fonts` + `css/shrifty.css`.
+- **Переезд на главпрыг.рф** — `deploy/nginx-glavpryg-domen.conf` (сайт в корне домена,
+  301 со старых адресов Tilda), порядок — `glavpryg-sayt/zapusk/pereezd-na-domen.md`.
+- Проверка — `tests/check-zapusk.py`.
+
 ### 3D-модель спортивной системы (`sportivnaya-sistema/`, с 22.10.2026)
 
 Описание — `ustroystvo-sportivnoy-sistemy.md` (номера деталей = номера меток).
