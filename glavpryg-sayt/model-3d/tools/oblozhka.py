@@ -5,7 +5,7 @@
 снимается с той же сцены и той же камеры, что и живая модель: при запуске
 картинка подменяется 3D без скачка. Метки и подсказка на снимок не попадают.
 
-    <venv с playwright>/bin/python oblozhka.py <dist>
+    <venv с playwright>/bin/python oblozhka.py <dist> <система>
 """
 import functools
 import http.server
@@ -22,6 +22,7 @@ SHIR, VYS = 900, 1000
 
 def main():
     dist = Path(sys.argv[1]).resolve()
+    sistema = sys.argv[2]
     class Tihiy(http.server.SimpleHTTPRequestHandler):
         def log_message(self, *a):
             pass
@@ -29,7 +30,7 @@ def main():
     obr = functools.partial(Tihiy, directory=str(dist))
     srv = http.server.ThreadingHTTPServer(("127.0.0.1", 0), obr)
     threading.Thread(target=srv.serve_forever, daemon=True).start()
-    adres = f"http://127.0.0.1:{srv.server_port}/index.html"
+    adres = f"http://127.0.0.1:{srv.server_port}/{sistema}/index.html"
     oshibki = []
     with sync_playwright() as p:
         br = p.chromium.launch(args=["--use-angle=swiftshader", "--enable-unsafe-swiftshader"])
@@ -49,9 +50,9 @@ def main():
     if oshibki:
         sys.exit("Ошибки на странице:\n" + "\n".join(oshibki))
     img = Image.open(io.BytesIO(png)).convert("RGB").resize((SHIR, VYS), Image.LANCZOS)
-    put = dist / "oblozhka.webp"
+    put = dist / sistema / "oblozhka.webp"
     img.save(put, "WEBP", quality=78, method=6)
-    print(f"{put.name}: {put.stat().st_size // 1024} КБ")
+    print(f"{sistema}/{put.name}: {put.stat().st_size // 1024} КБ")
 
 
 if __name__ == "__main__":

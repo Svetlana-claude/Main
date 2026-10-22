@@ -1,15 +1,13 @@
 #!/usr/bin/env python3
-"""Строит 3D-модель спортивной парашютной системы на манекене — `ranec-syroy.glb`.
+"""Основа процедурных 3D-моделей парашютных систем: геометрия, манекен, запись GLB.
 
-Модель процедурная: вся геометрия описана здесь числами, без редактора, поэтому
-правится текстом и пересобирается за секунду. Детали — отдельные узлы glTF с
-именами-ключами (`podushka`, `kolco_pz` …): по ним просмотрщик подсвечивает деталь.
-Рядом пишется `../prosmotr/src/metki.js` — точки меток с номерами и нормалями.
+Модели строятся числами, без редактора, поэтому правятся текстом и пересобираются
+за секунду. Каждая система — свой скрипт рядом (`sportivnaya-sistema.py`,
+`lesnik-3.py`): он описывает детали и зовёт `vypustit()`. Детали — узлы glTF с
+именами-ключами (`podushka`, `kolco_zps` …): по ним просмотрщик подсвечивает деталь.
 
 Оси: y вверх, парашютист смотрит в +z, его правая рука — в −x. Единица — метр.
 Сжатие и квантование — следующим шагом, `gltfpack` (см. `../prosmotr/sobrat.sh`).
-
-    /usr/bin/python3 postroit-model.py
 """
 import json
 import math
@@ -19,8 +17,6 @@ from pathlib import Path
 import numpy as np
 
 ZDES = Path(__file__).resolve().parent
-VYHOD = ZDES / "ranec-syroy.glb"
-METKI = ZDES.parent / "prosmotr" / "src" / "metki.js"
 
 # Материалы: цвет (sRGB), металличность, шероховатость
 MATERIALY = {
@@ -34,6 +30,17 @@ MATERIALY = {
     "zheltyy": ("#ffd400", 0.0, 0.6),
     "pribor": ("#111318", 0.2, 0.4),
     "ekran": ("#8fd3a8", 0.0, 0.3),
+    # спортивная система — по фотографиям заказчика (Aerodyne Icon)
+    "chernyy": ("#1e2025", 0.0, 0.85),
+    "bezh": ("#b9b29f", 0.0, 0.9),
+    "kant": ("#43474f", 0.0, 0.7),
+    "siniy": ("#1f55c8", 0.0, 0.6),
+    "belyy": ("#e9e9e4", 0.0, 0.7),
+    # «Лесник-3»: цвета условные, до фотографий системы заказчика
+    "olivka": ("#5f6b3c", 0.0, 0.8),
+    "olivka_t": ("#4b5530", 0.0, 0.8),
+    "lenta_ol": ("#33381f", 0.0, 0.85),
+    "shlang": ("#23262b", 0.1, 0.5),
 }
 
 
@@ -281,168 +288,49 @@ def konus(r1, r2, dl, n=20):
     return setka_iz_reshetki(P, np.stack([nk, nk], 1), zamk_u=True)
 
 
-# ---------- Детали системы ----------
+def trubka(tochki, r, n=10):
+    """Трубка круглого сечения по ломаной — шланги и тросы."""
+    P = np.asarray(tochki, float)
+    T = norm(np.gradient(P, axis=0))
+    opora = np.where(np.abs(T[:, 1:2]) < 0.9, [[0, 1, 0]], [[1, 0, 0]])
+    A = norm(np.cross(T, opora))
+    B = np.cross(T, A)
+    u = np.linspace(0, 2 * math.pi, n, endpoint=False)
+    N = A[:, None, :] * np.cos(u)[None, :, None] + B[:, None, :] * np.sin(u)[None, :, None]
+    return setka_iz_reshetki(np.transpose(P[:, None, :] + N * r, (1, 0, 2)),
+                             np.transpose(N, (1, 0, 2)), zamk_u=True)
 
-def postroit():
-    detali = {}  # ключ → {материал: Setka}
-    metki = []
 
-    def dobavit(kl, mat, s):
-        detali.setdefault(kl, {})
-        detali[kl][mat] = detali[kl].get(mat, Setka()) + s
+def ramka(shir, vys, r_ugla, tol):
+    """Плоская металлическая рамка со скруглёнными углами в плоскости xy."""
+    pts = []
+    hx, hy = shir / 2 - r_ugla, vys / 2 - r_ugla
+    for cx, cy, a0 in ((hx, hy, 0), (-hx, hy, 90), (-hx, -hy, 180), (hx, -hy, 270)):
+        for k in range(7):
+            a = math.radians(a0 + k * 15)
+            pts.append([cx + r_ugla * math.cos(a), cy + r_ugla * math.sin(a), 0])
+    pts = np.array(pts)
+    return lenta(pts, np.tile([0, 0, 1], (len(pts), 1)), tol, tol, zamk=True)
 
-    def metka(kl, nomer, p, n):
-        metki.append({"kl": kl, "n": nomer, "p": [round(float(x), 4) for x in p],
-                      "nr": [round(float(x), 3) for x in norm(n)]})
 
-    dobavit("manekan", "manekan", manekan())
-
-    # Ранец: нижний отсек — основной, верхний — запасной. Спина торса — z ≈ −0.10.
-    zs = -0.10
-    osn_c = np.array([0, 1.09, zs - 0.095])
-    dobavit("osn_otsek", "ranec", okrugl_korobka((0.35, 0.40, 0.19), 0.045).preobr(matr(osn_c)))
-    # спинка-подложка за обоими отсеками
-    dobavit("osn_otsek", "ranec", okrugl_korobka((0.37, 0.66, 0.03), 0.014).preobr(matr((0, 1.20, zs - 0.005))))
-    zap_c = np.array([0, 1.395, zs - 0.08])
-    dobavit("zap_otsek", "ranec_zap", okrugl_korobka((0.34, 0.20, 0.16), 0.045).preobr(matr(zap_c)))
-    # 2. Клапан основного с чекой — на задней стенке основного отсека
-    zad_osn = osn_c[2] - 0.095
-    dobavit("klapan_osn", "ranec", okrugl_korobka((0.20, 0.13, 0.012), 0.006).preobr(
-        matr((0, 1.07, zad_osn - 0.004))))
-    dobavit("klapan_osn", "akcent", okrugl_korobka((0.05, 0.03, 0.01), 0.004).preobr(
-        matr((0, 1.115, zad_osn - 0.012))))
-    metka("klapan_osn", 2, (0, 1.07, zad_osn - 0.012), (0, 0, -1))
-    metka("osn_otsek", 1, (0.13, 0.98, zad_osn + 0.01), (0.5, 0, -1))
-
-    # 3. Бобышка медузы: карман внизу справа, бобышка торчит вбок
-    dobavit("bobyshka", "ranec", okrugl_korobka((0.12, 0.012, 0.09), 0.005).preobr(
-        matr((-0.10, 0.884, osn_c[2]))))
-    bob_p = np.array([-0.175, 0.905, osn_c[2] - 0.03])
-    dobavit("bobyshka", "zheltyy", cilindr(0.016, 0.055, 20).preobr(
-        matr(bob_p, bazis([0, 0, 1], verh=[1, 0, 0]) @ np.eye(3))))
-    usd = gladko([[-0.14, 0.89, osn_c[2] - 0.02], [-0.16, 0.90, osn_c[2] - 0.03], bob_p + [0.0, 0, 0]], 12)
-    dobavit("bobyshka", "lenta", lenta(usd, np.tile([0, 1, 0], (len(usd), 1)), 0.012, 0.004))
-    metka("bobyshka", 3, bob_p + [-0.02, 0, 0], (-1, -0.3, -0.4))
-
-    # 4–6. Запасной: клапан сверху, на нём блок страхующего прибора
-    zad_zap = zap_c[2] - 0.08
-    metka("zap_otsek", 4, (0.14, 1.40, zad_zap + 0.012), (0.6, 0.2, -1))
-    klap = okrugl_korobka((0.30, 0.012, 0.15), 0.006)
-    dobavit("klapan_zap", "ranec_zap", klap.preobr(matr((0, 1.497, zap_c[2] - 0.005))))
-    yazyk = okrugl_korobka((0.24, 0.10, 0.012), 0.006)
-    dobavit("klapan_zap", "ranec_zap", yazyk.preobr(matr((0, 1.445, zad_zap - 0.004))))
-    dobavit("klapan_zap", "akcent", okrugl_korobka((0.25, 0.012, 0.014), 0.005).preobr(
-        matr((0, 1.395, zad_zap - 0.005))))
-    metka("klapan_zap", 5, (-0.08, 1.505, zap_c[2] - 0.02), (0, 1, -0.3))
-    dobavit("pribor", "pribor", okrugl_korobka((0.065, 0.04, 0.014), 0.006).preobr(
-        matr((0.05, 1.45, zad_zap - 0.014))))
-    dobavit("pribor", "ekran", okrugl_korobka((0.034, 0.016, 0.004), 0.002).preobr(
-        matr((0.05, 1.452, zad_zap - 0.022))))
-    metka("pribor", 6, (0.05, 1.45, zad_zap - 0.024), (0, 0, -1))
-
-    # Главные лямки: от замков КЗУ на ключицах вниз к бёдрам
-    otst = 0.008
-    for zn, storona in ((-1, "prav"), (1, "lev")):
-        put, nr = put_po_torsu([(1.47, zn * 34), (1.36, zn * 37), (1.22, zn * 42),
-                                (1.08, zn * 52), (0.96, zn * 62)], otst)
-        dobavit("lyamki", "lenta", lenta(put, nr, 0.046, 0.007))
-        # подложка под лямкой — двойная лента, как на настоящих системах
-        if zn < 0:
-            metka("lyamki", 12, *poverh(1.19, zn * 44, otst + 0.006))
-
-        # замки КЗУ: три кольца, большое внизу
-        p0, n0 = poverh(1.47, zn * 34, otst + 0.008)
-        vverh = norm(np.array([0, 1, 0]) - n0 * n0[1])
-        for k, (R, r) in enumerate(((0.021, 0.0042), (0.014, 0.0035), (0.009, 0.003))):
-            c = p0 + vverh * (0.0 + k * 0.022) + n0 * (0.004 * k)
-            dobavit("kzu", "metall", tor(R, r, 32, 8).preobr(matr(c, bazis(n0))))
-        if zn > 0:
-            metka("kzu", 8, p0 + vverh * 0.02 + n0 * 0.01, n0)
-
-        # свободные концы: от колец через плечо назад к ранцу, под клапанами
-        konc = gladko([p0 + vverh * 0.05 + n0 * 0.006, [zn * 0.125, 1.585, 0.045],
-                       [zn * 0.125, 1.615, -0.03], [zn * 0.12, 1.575, -0.12],
-                       [zn * 0.115, 1.50, -0.165]], 40)
-        nk = norm(np.vstack([n0, [0, 1, 0.4], [0, 1, 0], [0, 1, -0.6], [0, 0.3, -1]]))
-        nk = norm(gladko(nk, 40))
-        dobavit("konci", "lenta", lenta(konc, nk, 0.044, 0.012))
-        # клапан свободных концов: шире и толще, на верхней части плеча
-        kl_put = konc[14:]
-        dobavit("konci", "ranec", lenta(kl_put + nk[14:] * 0.012, nk[14:], 0.07, 0.016))
-        dobavit("konci", "akcent", lenta(kl_put[:3] + nk[14:17] * 0.012, nk[14:17], 0.072, 0.017))
-        if zn > 0:
-            metka("konci", 7, kl_put[6] + nk[20] * 0.03, nk[20])
-
-        # транзит — на правом свободном конце, тянется к клапану запасного
-        if zn < 0:
-            sm = norm(np.cross(np.gradient(konc, axis=0), nk))
-            tr = konc[3:] + nk[3:] * 0.016 + sm[3:] * 0.026
-            tr = np.vstack([tr, [[-0.07, 1.505, -0.17], [-0.03, 1.50, -0.175]]])
-            tr = gladko(tr[::3], 40)
-            ntr = norm(gladko(np.vstack([nk[3::3], [[0, 0.5, -1], [0, 0.5, -1]]]), 40))
-            dobavit("tranzit", "krasnyy", lenta(tr, ntr, 0.016, 0.005))
-            dobavit("tranzit", "metall", okrugl_korobka((0.018, 0.03, 0.008), 0.003).preobr(
-                matr(tr[2] + ntr[2] * 0.004, bazis(ntr[2]))))
-            metka("tranzit", 9, tr[12] + ntr[12] * 0.01, ntr[12])
-
-        # кольцо на бедре, куда сходятся лямка, обхват и боковая лента
-        pb, nb = poverh(0.955, zn * 62, otst + 0.006)
-        dobavit("lyamki", "metall", tor(0.02, 0.005, 28, 8).preobr(matr(pb, bazis(nb))))
-
-        # боковые ленты: от кольца на бедре вокруг пояса к низу ранца
-        bok, nbk = put_po_torsu([(0.955, zn * 64), (0.95, zn * 95), (0.95, zn * 130),
-                                 (0.96, zn * 150)], otst)
-        dobavit("lyamki", "lenta", lenta(bok, nbk, 0.04, 0.007))
-
-        # ножной обхват: петля вокруг бедра, высоко спереди-снаружи, низко сзади-изнутри
-        cb = np.array([zn * 0.088, 0.0, 0.015])
-        rb = 0.096
-        f0 = math.atan2(0.9, zn * 0.45)  # направление «спереди-снаружи» в плоскости xz
-        pts, nrs = [], []
-        for k in range(64):
-            f = 2 * math.pi * k / 64
-            d = np.array([math.cos(f), 0, math.sin(f)])
-            y = 0.79 + 0.055 * math.cos(f - f0)
-            pts.append(cb + d * rb + [0, y, 0])
-            nrs.append(d)
-        dobavit("obhvaty", "lenta", lenta(np.array(pts), np.array(nrs), 0.04, 0.007, zamk=True))
-        # ход от кольца на бедре к петле и пряжка обхвата
-        k0 = int(round((f0 % (2 * math.pi)) / (2 * math.pi) * 64)) % 64
-        vhod = gladko([pb, (pb + pts[k0]) / 2 + nb * 0.01, pts[k0]], 14)
-        dobavit("obhvaty", "lenta", lenta(vhod, np.tile(nb, (len(vhod), 1)), 0.04, 0.007))
-        pr = pts[(k0 + zn * 6) % 64]
-        npr = nrs[(k0 + zn * 6) % 64]
-        dobavit("obhvaty", "metall", okrugl_korobka((0.05, 0.026, 0.008), 0.004).preobr(
-            matr(np.array(pr) + np.array(npr) * 0.007, bazis(npr))))
-        if zn > 0:
-            metka("obhvaty", 14, np.array(pr) + np.array(npr) * 0.012, npr)
-
-    # 13. Грудная перемычка с пряжкой и хвостом
-    gr, ngr = put_po_torsu([(1.30, -40), (1.30, -15), (1.30, 0), (1.30, 15), (1.30, 40)], otst + 0.007, 40)
-    dobavit("grudnaya", "lenta", lenta(gr, ngr, 0.04, 0.006))
-    pg, ng = poverh(1.30, 24, otst + 0.012)
-    dobavit("grudnaya", "metall", okrugl_korobka((0.03, 0.05, 0.008), 0.004).preobr(matr(pg, bazis(ng))))
-    hv, nhv = put_po_torsu([(1.30, 27), (1.295, 31), (1.285, 34)], otst + 0.014, 8)
-    dobavit("grudnaya", "lenta", lenta(hv, nhv, 0.034, 0.004))
-    metka("grudnaya", 13, poverh(1.30, 6, otst + 0.012)[0], ng * [-1, 1, 1])
-
-    # 10. Подушка отцепки — правая лямка, уровень живота, красная
-    pp, npp = poverh(1.12, -50, otst + 0.018)
-    dobavit("podushka", "krasnyy", okrugl_korobka((0.07, 0.048, 0.022), 0.01).preobr(
-        matr(pp, bazis(npp))))
-    metka("podushka", 10, pp + npp * 0.012, npp)
-
-    # 11. Кольцо ПЗ — левая лямка, уровень живота: кармашек и металлическая ручка
-    pk, nk_ = poverh(1.12, 50, otst + 0.012)
-    b = bazis(nk_)
-    dobavit("kolco_pz", "lenta", okrugl_korobka((0.05, 0.06, 0.012), 0.005).preobr(matr(pk, b)))
-    ruchka = tor(0.024, 0.0055, 30, 10, dolya=0.62).preobr(
-        matr((0, 0, 0), np.array([[0, -1, 0], [1, 0, 0], [0, 0, 1]]) @ rot_y(math.radians(0))))
-    ruchka = ruchka.preobr(matr((-0.004, 0, 0)))
-    dobavit("kolco_pz", "metall", ruchka.preobr(matr(pk + nk_ * 0.012, b @ bazis([0, 0.55, 1]))))
-    metka("kolco_pz", 11, pk + nk_ * 0.03, nk_)
-
-    return detali, sorted(metki, key=lambda m: m["n"])
+def obhvat_bedra(zn, pb, nb, shir=0.04, tol=0.007):
+    """Ножной обхват: петля вокруг бедра и ход к кольцу на бедре pb.
+    Возвращает сетку и точку с нормалью для пряжки."""
+    cb = np.array([zn * 0.088, 0.0, 0.015])
+    rb = 0.096
+    f0 = math.atan2(0.9, zn * 0.45)
+    pts, nrs = [], []
+    for k in range(64):
+        f = 2 * math.pi * k / 64
+        d = np.array([math.cos(f), 0, math.sin(f)])
+        pts.append(cb + d * rb + [0, 0.79 + 0.055 * math.cos(f - f0), 0])
+        nrs.append(d)
+    s = lenta(np.array(pts), np.array(nrs), shir, tol, zamk=True)
+    k0 = int(round((f0 % (2 * math.pi)) / (2 * math.pi) * 64)) % 64
+    vhod = gladko([pb, (pb + pts[k0]) / 2 + nb * 0.01, pts[k0]], 14)
+    s = s + lenta(vhod, np.tile(nb, (len(vhod), 1)), shir, tol)
+    k1 = (k0 + zn * 6) % 64
+    return s, np.array(pts[k1]), np.array(nrs[k1])
 
 
 # ---------- Запись GLB ----------
@@ -506,18 +394,29 @@ def zapisat_glb(detali, put):
         f.write(struct.pack("<II", len(buf), 0x004E4942) + bytes(buf))
 
 
-def main():
-    detali, metki = postroit()
-    zapisat_glb(detali, VYHOD)
-    tri = sum(len(s.i) // 3 for d in detali.values() for s in d.values())
-    METKI.parent.mkdir(parents=True, exist_ok=True)
-    METKI.write_text("// Сгенерировано model/postroit-model.py — руками не править.\n"
-                     "// kl — ключ детали (имя узла в GLB), n — номер метки, p — точка, nr — нормаль.\n"
-                     "export const METKI = " + json.dumps(metki, ensure_ascii=False) + ";\n",
-                     encoding="utf-8")
-    print(f"{VYHOD.name}: {VYHOD.stat().st_size // 1024} КБ, {tri} треугольников, "
-          f"{len(detali)} деталей, {len(metki)} меток")
+class Sborka:
+    """Детали системы по материалам и метки с номерами."""
+
+    def __init__(self):
+        self.detali = {}  # ключ → {материал: Setka}
+        self.metki = []
+        self.dobavit("manekan", "manekan", manekan())
+
+    def dobavit(self, kl, mat, s):
+        self.detali.setdefault(kl, {})
+        self.detali[kl][mat] = self.detali[kl].get(mat, Setka()) + s
+
+    def metka(self, kl, nomer, p, n):
+        self.metki.append({"kl": kl, "n": nomer, "p": [round(float(x), 4) for x in p],
+                           "nr": [round(float(x), 3) for x in norm(n)]})
 
 
-if __name__ == "__main__":
-    main()
+def vypustit(sborka, imya):
+    """Пишет `<imya>.glb` (несжатый) и `<imya>.metki.json` рядом со скриптами."""
+    glb = ZDES / f"{imya}.glb"
+    zapisat_glb(sborka.detali, glb)
+    metki = sorted(sborka.metki, key=lambda m: m["n"])
+    (ZDES / f"{imya}.metki.json").write_text(json.dumps(metki, ensure_ascii=False), encoding="utf-8")
+    tri = sum(len(s.i) // 3 for d in sborka.detali.values() for s in d.values())
+    print(f"{glb.name}: {glb.stat().st_size // 1024} КБ, {tri} треугольников, "
+          f"{len(sborka.detali)} деталей, {len(metki)} меток")

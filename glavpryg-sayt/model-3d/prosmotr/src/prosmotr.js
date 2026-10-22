@@ -5,7 +5,6 @@
 // в покое показ не тратит ни процессор, ни батарею.
 
 import { MeshoptDecoder } from 'meshoptimizer/meshopt_decoder.module.js';
-import { METKI } from './metki.js';
 
 const CEL = [0, 1.13, 0];
 const NACHALO = { azimut: 0.42, polyar: 1.36, radius: 2.55 };
@@ -164,6 +163,8 @@ async function zagruzitGlb(gl, adres) {
 
 // ---------- Показ ----------
 export async function zapustit(koren, { model, vybor }) {
+  // точки меток вписаны в страницу при сборке — код показа один на все модели
+  const METKI = JSON.parse(document.getElementById('m3d-metki').textContent);
   const scena = koren.querySelector('.m3d-scena');
   const sloyMetok = koren.querySelector('.m3d-metki');
   const kartochka = koren.querySelector('.m3d-kartochka');

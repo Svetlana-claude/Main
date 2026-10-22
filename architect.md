@@ -1135,19 +1135,30 @@ PDF A5 без сторонних библиотек и шлёт два пись�
   301 со старых адресов Tilda), порядок — `glavpryg-sayt/zapusk/pereezd-na-domen.md`.
 - Проверка — `tests/check-zapusk.py`.
 
-### 3D-модель спортивной системы (`sportivnaya-sistema/`, с 22.10.2026)
+### 3D-модели парашютных систем (`glavpryg-sayt/model-3d/`, с 22.10.2026)
 
-Описание — `ustroystvo-sportivnoy-sistemy.md` (номера деталей = номера меток).
-Адрес — `/glavpryg/model-3d/sportivnaya-sistema/`, чистая статика в
-`public/model-3d/sportivnaya-sistema/` сайта; на страницы сайта пока не врезана.
+Две системы: спортивная (`sportivnaya-sistema`, внешний вид — по фото системы
+заказчика, ранец Aerodyne Icon) и «Лесник-3» (`lesnik-3`, по своду ТО, цвета
+условные). Описание спортивной — `model-3d/ustroystvo-sportivnoy-sistemy.md`
+(номера деталей = номера меток). Адреса — `/glavpryg/model-3d/<система>/`,
+чистая статика в `public/model-3d/` сайта: `obshchee/` (код и стиль, общие) и по
+каталогу на систему (`index.html`, `model.glb`, `oblozhka.webp`).
+
+**На главной** — блок «Парашюты» сразу после «Выбери своё приключение»
+(`partials/home/parashyuty.blade.php`, врезан через `@yield('posleAdventure')` в
+`layouts/redesign.blade.php`). Две карточки с обложками (лениво); нажатие открывает
+`<dialog>` поверх сайта, iframe `…/index.html?vstroen=1` создаётся по нажатию и
+убирается при закрытии. `?vstroen` — встроенный режим страницы модели: шапка
+скрыта, 3D сразу, список сбоку (на телефоне — под моделью); Esc внутри iframe
+передаётся сайту через `postMessage`.
 
 | Шаг | Чем |
 |---|---|
-| Геометрия | `model/postroit-model.py` (системный python + numpy): процедурная, детали — узлы GLB с ключами (`podushka`, `kolco_pz` …); пишет и `prosmotr/src/metki.js` (точки и нормали меток) |
-| Сжатие | `gltfpack -cc -kn -km -vp 12 -vn 8` — meshopt + квантование: 700 → 120 КБ, по сети 51 КБ |
-| Показ | `prosmotr/src/prosmotr.js` — **свой рендер на WebGL2**, без three.js; распаковщик — `meshoptimizer` |
-| Сборка и выкладка | `prosmotr/sobrat.sh [--vylozhit]`: esbuild, обложка, `.gz` рядом с файлами; Node 22 — `~/.local/node` |
-| Проверка | `tools/proverka-3d.py <dist или адрес>` — нажатиями, компьютер и телефон |
+| Геометрия | `model/<система>.py` на общих помощниках `model/osnova.py` (системный python + numpy): процедурная, детали — узлы GLB с ключами; рядом пишет `<система>.metki.json` (точки и нормали меток) |
+| Сжатие | `gltfpack -cc -kn -km -vp 12 -vn 8` — meshopt + квантование: ≈ 800 → 135 КБ, по сети 62–65 КБ |
+| Показ | `prosmotr/src/prosmotr.js` — **свой рендер на WebGL2**, без three.js; распаковщик — `meshoptimizer`; метки — из `<script id="m3d-metki">` страницы |
+| Сборка и выкладка | `prosmotr/sobrat.sh [--vylozhit]`: esbuild, модели, страницы `src/<система>.html`, обложки, `.gz`; Node 22 — `~/.local/node`. ⚠️ mokeeva не в группе www-data: права ставятся на `dist`, каталог сайта пересоздаётся и наследует группу от `public/` (setgid); `chmod` по сайту снимает setgid → 403 |
+| Проверка | `tools/proverka-3d.py <dist или адрес …/model-3d>` — обе системы нажатиями; `tools/proverka-glavnaya.py [адрес]` — блок на главной: окно, 3D, закрытие Esc и крестиком, фокус; компьютер и телефон |
 
 **Почему не three.js.** three.js даже собранный esbuild весит 155 КБ сжатым — втрое
 больше самой модели. Модели нужны только свет, вращение, выбор детали и

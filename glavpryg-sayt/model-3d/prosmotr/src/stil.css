@@ -130,3 +130,18 @@ body {
 @media (prefers-reduced-motion: reduce) {
   .m3d-gruzitsya .m3d-zapusk-znak { animation: none; }
 }
+
+/* Встроенный режим (?vstroen): страница в окне поверх сайта — заголовок даёт само окно,
+   модель занимает всю высоту, список прокручивается сбоку (на телефоне — под моделью) */
+.m3d-vstroen, .m3d-vstroen body { height: 100%; overflow: hidden; background: #fff; }
+.m3d-vstroen .m3d-stranica { max-width: none; height: 100%; padding: 12px; }
+.m3d-vstroen .m3d-shapka { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); }
+.m3d-vstroen .m3d { height: 100%; grid-template-columns: minmax(0, 1.6fr) minmax(260px, 1fr); gap: 12px; }
+.m3d-vstroen .m3d-okno { aspect-ratio: auto; height: 100%; max-height: none; }
+.m3d-vstroen .m3d-spisok { max-height: 100%; overflow-y: auto; overscroll-behavior: contain; align-content: start; }
+.m3d-vstroen .m3d-spisok li { background: var(--fon); }
+@media (max-width: 820px) {
+  .m3d-vstroen .m3d-stranica { padding: 8px; }
+  .m3d-vstroen .m3d { grid-template-columns: 1fr; grid-template-rows: minmax(0, 64%) minmax(0, 1fr); gap: 8px; }
+  .m3d-vstroen .m3d-okno { aspect-ratio: auto; max-height: none; }
+}

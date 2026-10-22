@@ -1,0 +1,76 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Парашютная система «Лесник-3» — 3D-модель | Главпрыг</title>
+<meta name="description" content="Парашютная система специального назначения «Лесник-3» для лесных пожарных: ранец, двухконусный замок, стабилизирующий парашют, кольца ОП и ЗПС. 3D-модель с подписями.">
+<link rel="stylesheet" href="../obshchee/stil.css">
+</head>
+<body>
+<main class="m3d-stranica">
+  <header class="m3d-shapka">
+    <h1>Парашютная система «Лесник-3»</h1>
+    <p>Система специального назначения для парашютистов-пожарных: основной парашют
+      раскрывается со стабилизацией, а запасной лежит в нижнем отсеке того же ранца.
+      Покрутите модель и нажмите на номер, чтобы узнать, что это за деталь.</p>
+  </header>
+
+  <section class="m3d" data-m3d="model.glb" aria-label="3D-модель">
+    <div class="m3d-okno">
+      <img class="m3d-oblozhka" src="oblozhka.webp" width="900" height="1000"
+        alt="Парашютная система «Лесник-3» на манекене: ранец на спине, лямки, кольца ОП и ЗПС спереди"
+        decoding="async" fetchpriority="high">
+      <div class="m3d-scena"></div>
+      <div class="m3d-metki"></div>
+      <button class="m3d-zapusk" type="button">
+        <span class="m3d-zapusk-znak" aria-hidden="true">⟳</span>
+        Покрутить в 3D
+        <small>__RAZMER__</small>
+      </button>
+      <p class="m3d-oshibka-tekst" role="alert">Не удалось загрузить модель. Нажмите ещё раз.</p>
+      <div class="m3d-kartochka" hidden aria-live="polite">
+        <span class="m3d-k-nomer"></span>
+        <div>
+          <strong class="m3d-k-imya"></strong>
+          <p class="m3d-k-opisanie"></p>
+        </div>
+        <button class="m3d-k-zakryt" type="button" aria-label="Закрыть описание и вернуть общий вид">×</button>
+      </div>
+      <p class="m3d-podskazka" aria-hidden="true">Вращайте пальцем или мышью, масштаб — колёсиком или щипком</p>
+    </div>
+
+    <ol class="m3d-spisok">
+      <li data-detal="osn_otsek"><button type="button" aria-pressed="false">Отсек основного парашюта — верхний</button>
+        <p>Основной купол в камере. Купол — крыло на 9 секций, 23 м².</p></li>
+      <li data-detal="zamok"><button type="button" aria-pressed="false">Двухконусный замок</button>
+        <p>Держит отсек основного закрытым. Его открывает трос кольца ОП или страхующий прибор ППК-У.</p></li>
+      <li data-detal="stabilizator"><button type="button" aria-pressed="false">Стабилизирующий парашют в камере</button>
+        <p>Вводится принудительно сразу после отделения: камеру цепляют карабином к тросу в самолёте. Снижение на нём — 5 с, потом кольцо ОП.</p></li>
+      <li data-detal="zap_otsek"><button type="button" aria-pressed="false">Отсек запасного парашюта — нижний</button>
+        <p>Запасной — такое же крыло, как основной, в чехле, с пружинным вытяжным парашютом.</p></li>
+      <li data-detal="ppku"><button type="button" aria-pressed="false">Страхующий прибор ППК-У-240АД</button>
+        <p>В кармане на правой стороне ранца. Включается сам на отделении и в заданное время или на заданной высоте открывает двухконусный замок — то есть раскрывает основной.</p></li>
+      <li data-detal="konci_osn"><button type="button" aria-pressed="false">Свободные концы основного и замки КЗУ</button>
+        <p>Крепятся к D-образным пряжкам передних лямок кольцевыми замками. Звено отсоединения размыкает их, и основной уходит.</p></li>
+      <li data-detal="kolco_op"><button type="button" aria-pressed="false">Кольцо раскрытия основного</button>
+        <p>На левой лямке. Его выдёргивают правой рукой через 5 с снижения на стабилизирующем парашюте: трос в шланге открывает двухконусный замок.</p></li>
+      <li data-detal="kolco_zps"><button type="button" aria-pressed="false">Кольцо раскрытия запасного</button>
+        <p>На правой лямке. Одно действие делает всё: отцепляет основной и раскрывает запасной. Все попытки исправить основной — до 600 м.</p></li>
+      <li data-detal="zveno_otc"><button type="button" aria-pressed="false">Звено отсоединения</button>
+        <p>На правой лямке, на текстильной застёжке. Два троса в шлангах идут к замкам КЗУ; срабатывает вместе с кольцом запасного.</p></li>
+      <li data-detal="nozh"><button type="button" aria-pressed="false">Нож-стропорез</button>
+        <p>В кармане на левой лямке, над кольцом основного.</p></li>
+      <li data-detal="lyamki"><button type="button" aria-pressed="false">Передние лямки — свободные концы запасного</button>
+        <p>Несущая часть подвесной системы. Сверху, за плечами, лямки сами становятся свободными концами запасного парашюта.</p></li>
+      <li data-detal="grudnaya"><button type="button" aria-pressed="false">Грудная перемычка</button>
+        <p>Карабин слева, пряжка справа.</p></li>
+      <li data-detal="obhvaty"><button type="button" aria-pressed="false">Ножные обхваты</button>
+        <p>Петли вокруг бёдер с предохранителями, держат парашютиста при раскрытии.</p></li>
+    </ol>
+  </section>
+</main>
+<script type="application/json" id="m3d-metki">__METKI__</script>
+<script type="module" src="../obshchee/stranica.js"></script>
+</body>
+</html>

@@ -58,4 +58,5 @@ glavpryg-sayt/makety/.kusok.png
 glavpryg-sayt/igra/maket/pogoda-dnya.json
 
 # Несжатая 3D-модель — пересобирается model/postroit-model.py
-glavpryg-sayt/sportivnaya-sistema/model/ranec-syroy.glb
+glavpryg-sayt/model-3d/model/*.glb
+glavpryg-sayt/model-3d/model/*.metki.json

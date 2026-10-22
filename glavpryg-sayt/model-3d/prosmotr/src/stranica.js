@@ -1,5 +1,5 @@
 // Лёгкая часть страницы: обложка, список деталей и кнопка «Покрутить в 3D».
-// Тяжёлое (three.js и модель) подгружается только по нажатию — до этого
+// Тяжёлое (код показа и модель) подгружается только по нажатию — до этого
 // страница весит столько же, сколько картинка-обложка.
 
 const koren = document.querySelector('[data-m3d]');
@@ -40,6 +40,16 @@ function otmetitVSpiske(kl) {
 }
 
 knopka.addEventListener('click', zapustit);
+
+// Встроенный режим (окно поверх сайта): посетитель уже нажал на систему — 3D сразу
+if (new URLSearchParams(location.search).has('vstroen')) {
+  document.documentElement.classList.add('m3d-vstroen');
+  zapustit();
+  // Esc внутри окна до сайта не доходит (фокус в iframe) — передаём просьбу закрыть
+  document.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape') parent.postMessage({ m3d: 'zakryt' }, location.origin);
+  });
+}
 
 // Нажатие на деталь в списке: запускает 3D, если ещё не запущено, и показывает деталь
 spisok.addEventListener('click', (e) => {
