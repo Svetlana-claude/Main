@@ -6,8 +6,11 @@
 
 import { MeshoptDecoder } from 'meshoptimizer/meshopt_decoder.module.js';
 
-const CEL = [0, 1.13, 0];
-const NACHALO = { azimut: 0.42, polyar: 1.36, radius: 2.55 };
+const CEL = [0, 1.14, 0];
+const NACHALO = { azimut: 0.42, polyar: 1.36, radius: 2.2 };
+// ?vid=азимут,полярный,радиус — начальная камера для снимков превью (tools/oblozhka.py)
+const VID = new URLSearchParams(location.search).get('vid')?.split(',').map(Number);
+if (VID?.length === 3 && VID.every(Number.isFinite)) [NACHALO.azimut, NACHALO.polyar, NACHALO.radius] = VID;
 const PODSVETKA = [0.95, 0.42, 0.1];
 const bezDvizheniya = matchMedia('(prefers-reduced-motion: reduce)').matches;
 

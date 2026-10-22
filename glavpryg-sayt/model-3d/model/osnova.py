@@ -269,15 +269,28 @@ def manekan():
         for j, y in enumerate(ys):
             P[i, j], N[i, j] = poverh(y, u)
     s = setka_iz_reshetki(P, N, zamk_u=True)
-    # низ и шея — шары-заглушки, бёдра и голова
-    s = s + sfera(0.05, 16, 10).preobr(matr((0, 1.66, 0)))
-    # шея-подставка вместо головы, как у портновского манекена
-    s = s + cilindr(0.035, 0.08, 18, True).preobr(matr((0, 1.70, 0)))
+    # Манекен без головы: корпус, короткая шея со срезом, руки до локтей, ноги чуть выше колен
+    s = s + sfera(0.05, 16, 10).preobr(matr((0, 1.645, 0)))
+    s = s + cilindr(0.05, 0.07, 20, True).preobr(matr((0, 1.68, 0.005)))
     for zn in (-1, 1):
-        bedro = konus(0.088, 0.062, 0.48, 24).preobr(
-            matr((zn * 0.088, 0.58, 0.015), bazis([0, 0.05, 1], verh=[zn * -0.06, 1, 0])))
-        s = s + bedro + sfera(0.088, 20, 12).preobr(matr((zn * 0.088, 0.82, 0.015)))
-        s = s + sfera(0.062, 16, 10).preobr(matr((zn * 0.088, 0.34, 0.03)))
+        # бедро: от тазобедренного шара до среза над коленом
+        s = s + sfera(0.088, 20, 12).preobr(matr((zn * 0.088, 0.82, 0.015)))
+        s = s + konechnost((zn * 0.088, 0.82, 0.015), (zn * 0.095, 0.56, 0.03), 0.088, 0.066, srez=True)
+        # плечо: шар плечевого сустава, рука чуть отведена, круглый локоть
+        s = s + sfera(0.054, 18, 10).preobr(matr((zn * 0.172, 1.535, -0.005)))
+        s = s + konechnost((zn * 0.172, 1.535, -0.005), (zn * 0.232, 1.255, 0.01), 0.048, 0.037)
+        s = s + sfera(0.037, 14, 8).preobr(matr((zn * 0.232, 1.255, 0.01)))
+    return s
+
+
+def konechnost(verh, niz, r1, r2, n=24, srez=False):
+    """Усечённый конус от точки verh (радиус r1) до niz (r2); srez — плоский торец внизу."""
+    verh, niz = np.asarray(verh, float), np.asarray(niz, float)
+    dl = float(np.linalg.norm(verh - niz))
+    m = matr((verh + niz) / 2, bazis([0, 0, 1], verh=verh - niz))
+    s = konus(r1, r2, dl, n).preobr(m)
+    if srez:
+        s = s + cilindr(r2, 0.002, n, True).preobr(m @ matr((0, -dl / 2, 0)))
     return s
 
 

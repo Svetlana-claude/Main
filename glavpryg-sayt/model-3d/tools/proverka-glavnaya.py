@@ -3,7 +3,7 @@
     <venv с playwright>/bin/python proverka-glavnaya.py [адрес главной] [--snimki каталог]
 
 По умолчанию — https://mokeevasky.ru/glavpryg/. Проверяется на компьютере и на телефоне:
-- до нажатия ни модель, ни код показа не грузятся (обложки — можно);
+- до нажатия ни модель, ни код показа не грузятся (превью — можно), превью загружены;
 - нажатие карточки открывает модальное окно с заголовком системы, прокрутка сайта заперта;
 - в окне встроенная страница: шапки и кнопки запуска не видно, 3D запущено само,
   метки видны, нажатие метки открывает карточку детали;
@@ -40,6 +40,12 @@ def progon(br, adres, shirina, vysota, snimki, metka_):
     st.wait_for_timeout(800)
     nado(not any(t in u for u in zaprosy for t in TYAZHELOE), "до нажатия модель и код показа не грузятся")
     nado(st.evaluate("document.documentElement.scrollWidth <= innerWidth"), "сайт не едет по горизонтали")
+    for kl, nazv in SISTEMY:
+        img = st.locator(f'[data-par*="/{kl}/"] img')
+        img.scroll_into_view_if_needed()
+        st.wait_for_timeout(300)
+        nado(img.evaluate("i => i.complete && i.naturalWidth > 0 && i.src.endsWith('/prevyu.webp')"),
+             f"{nazv}: превью на карточке загружено")
 
     for kl, nazv in SISTEMY:
         karta = st.locator(f'[data-par*="/{kl}/"]')
