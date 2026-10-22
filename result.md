@@ -28,6 +28,10 @@
 
 ### В работе
 
+**22.10.2026. 3d — мужской манекен для Blender.** `3d/downloads/maneken-muzhskoy.blend`
+(«Файлы проекта» → 3d): цельная фигура и манекен из частей, набор Blender
+Human Base Meshes (CC0). На сервере стоит Blender 4.5 LTS без окна (`architect.md`).
+
 **22.10.2026. Главпрыг — готовность к открытому запуску и переезду на главпрыг.рф.**
 Свод для заказчика — `glavpryg-sayt/zapusk/podgotovka-k-zapusku.md`, план переезда —
 `zapusk/pereezd-na-domen.md` (PDF обоих — «Файлы проекта»), конфиг домена —

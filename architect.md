@@ -1451,6 +1451,18 @@ zapret}`. «Куда» — в градусах мира игры. На серв�
   затем `~/.cache/huggingface/token`.
 - `.venv/` — вне версий, ставится заново: `python3 -m venv 3d/.venv &&
   3d/.venv/bin/pip install gradio_client`.
+- **Blender на сервере:** 4.5 LTS в `/opt/blender`, ссылка `/usr/local/bin/blender`,
+  работает без окна (`blender -b`). Чужие `.blend` открывать только с
+  `--factory-startup --disable-autoexec` — в файле могут быть скрипты.
+  `spisok-blend.py` — список объектов файла (имя, тип, вершины, модификаторы,
+  размеры, коллекция, родитель).
+- `maneken.py` — мужской манекен из официального набора Blender «Human Base
+  Meshes» (CC0, mirror.blender.org/demo/asset-bundles/human-base-meshes/; набор
+  лежит в `exchange/zagruzka-human-base-meshes/`): цельная реалистичная фигура
+  (1,69 м, Multires) и манекен из частей (1,70 м, 49 частей цепочкой родителей —
+  поза ставится поворотом частей), ступни на полу. Результат —
+  `downloads/maneken-muzhskoy.blend` (≈ 13 МБ, бинарный, в git не идёт —
+  пересобирается скриптом) и превью `.png` рядом.
 
 ## Проект: `griby` — календарь Aevit 2027 (`kalendar-2027/`)
 
