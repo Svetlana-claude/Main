@@ -20,7 +20,8 @@ ZDES = Path(__file__).resolve().parent
 
 # Материалы: цвет (sRGB), металличность, шероховатость
 MATERIALY = {
-    "manekan": ("#b9bfcb", 0.0, 0.9),
+    "manekan": ("#c4c8cf", 0.0, 0.8),
+    "manekan_srez": ("#6c717a", 0.0, 0.9),
     "ranec": ("#31384d", 0.0, 0.75),
     "ranec_zap": ("#3b4560", 0.0, 0.75),
     "akcent": ("#f26a1b", 0.0, 0.6),
@@ -225,11 +226,14 @@ def rot_y(a):
 
 
 # ---------- Манекен: торс как суперэллипс по высоте ----------
+# Образец заказчика — магазинный мужской торс-манекен: без головы, толстая шея со
+# скошенным срезом, руки обрезаны выше локтя, бёдра — на середине, срезы тёмные.
 
-# высота → (полуширина по x, полуглубина по z)
-PROFIL = [(0.80, 0.150, 0.105), (0.90, 0.165, 0.110), (1.05, 0.148, 0.098),
+# высота → (полуширина по x, полуглубина по z); ниже 0,80 торс сходится между бёдер
+PROFIL = [(0.725, 0.020, 0.020), (0.745, 0.060, 0.060), (0.775, 0.090, 0.090),
+          (0.80, 0.115, 0.104), (0.84, 0.150, 0.108), (0.90, 0.168, 0.110), (1.05, 0.148, 0.098),
           (1.25, 0.168, 0.108), (1.42, 0.182, 0.105), (1.52, 0.175, 0.095),
-          (1.58, 0.140, 0.080), (1.62, 0.075, 0.060), (1.66, 0.050, 0.050)]
+          (1.58, 0.140, 0.080), (1.62, 0.085, 0.068), (1.66, 0.064, 0.058)]
 STEPEN = 2.6
 
 
@@ -238,8 +242,46 @@ def profil(y):
     return np.interp(y, ys, [p[1] for p in PROFIL]), np.interp(y, ys, [p[2] for p in PROFIL])
 
 
+def _g(x, s):
+    return math.exp(-(x / s) ** 2)
+
+
+def rel_ef(y, u):
+    """Рельеф спереди, м по нормали: грудные, ключицы, пресс, паховые линии, шов на бёдрах.
+    Спина гладкая — по ней прилегает ранец (Rakovina.spina считает от голого профиля)."""
+    r = 0.0
+    au = abs(u)
+    if au < 110:
+        # грудные мышцы: мягкий верх, чёткий нижний край
+        for zn in (-1, 1):
+            dy = y - 1.40
+            r += 0.016 * _g(u - zn * 25, 21) * _g(dy, 0.075 if dy > 0 else 0.032)
+        # ложбинка между грудными и белая линия живота
+        r -= 0.005 * _g(u, 5) * _g(y - 1.38, 0.08)
+        r -= 0.0028 * _g(u, 3.2) * (1 if 0.99 < y < 1.30 else 0)
+        # ключицы: валик от яремной ямки к плечу
+        if 6 < au < 50:
+            r += 0.005 * _g(y - (1.548 - 0.0005 * au), 0.012)
+        r -= 0.006 * _g(u, 7) * _g(y - 1.585, 0.02)
+        # пресс: три ряда «кубиков» и нижний, пологий
+        for yk, amp in ((1.235, 0.0055), (1.165, 0.006), (1.095, 0.0055), (1.025, 0.004)):
+            for zn in (-1, 1):
+                r += amp * _g(u - zn * 11, 7.5) * _g(y - yk, 0.027)
+        # пупок
+        r -= 0.004 * _g(u, 3) * _g(y - 0.995, 0.01)
+        # косые мышцы к паху: «V» от боков к лобку
+        if 18 < au < 60:
+            r -= 0.0035 * _g(y - (0.885 + 0.0024 * (au - 18)), 0.012)
+        # пах — гладкая выпуклость, как у магазинного манекена
+        r += 0.022 * _g(u, 15) * _g(y - 0.795, 0.035)
+    # шов: торс снимается с бёдер (на образце — тонкая линия по кругу)
+    r -= 0.0012 * _g(y - 0.905, 0.0035)
+    return r
+
+
 def poverh(y, ugol_gr, otstup=0.0):
-    """Точка на торсе: ugol 0° — грудь (+z), +90° — левый бок парашютиста (+x)."""
+    """Точка на торсе: ugol 0° — грудь (+z), +90° — левый бок парашютиста (+x).
+    Рельеф манекена учтён в точке — ленты ложатся по грудным, а не сквозь них."""
     a, b = profil(y)
     t = math.radians(ugol_gr)
     s, c = math.sin(t), math.cos(t)
@@ -250,7 +292,7 @@ def poverh(y, ugol_gr, otstup=0.0):
     nx = np.sign(s) * abs(p[0] / a) ** (STEPEN - 1) / a
     nz = np.sign(c) * abs(p[2] / b) ** (STEPEN - 1) / b
     n = norm([nx, 0, nz])
-    return p + n * otstup, n
+    return p + n * (otstup + rel_ef(y, ugol_gr)), n
 
 
 def put_po_torsu(opory, otstup, n=50):
@@ -260,27 +302,101 @@ def put_po_torsu(opory, otstup, n=50):
     return np.array(pt), np.array(nr)
 
 
+def normali_reshetki(P, zamk_u, naruzhu):
+    """Нормали решётки разностями — у рельефа они свои, не как у гладкого профиля.
+    naruzhu — точка или ось внутри тела: по ней нормали разворачиваются наружу."""
+    if zamk_u:
+        du = np.roll(P, -1, 0) - np.roll(P, 1, 0)
+    else:
+        du = np.gradient(P, axis=0)
+    dv = np.gradient(P, axis=1)
+    N = norm(np.cross(du, dv))
+    if np.sum(N * (P - naruzhu)) < 0:
+        N = -N
+    return N
+
+
+def obrubok(nachalo, konec, r1, r2, n_sreza, n=28, sloi=8, okrug=0.0):
+    """Обрубок конечности: усечённый конус от nachalo (r1) к konec (r2), торец konec —
+    плоский скошенный срез с нормалью n_sreza. okrug — скругление у начала (плечо, шея).
+    Возвращает (поверхность, срез)."""
+    A, B = np.asarray(nachalo, float), np.asarray(konec, float)
+    os_ = norm(B - A)
+    ns = norm(n_sreza)
+    x = norm(np.cross(os_, [0, 0, 1] if abs(os_[2]) < 0.9 else [1, 0, 0]))
+    z = np.cross(x, os_)
+    ug = np.linspace(0, 2 * math.pi, n, endpoint=False)
+    kr = np.outer(np.cos(ug), x) + np.outer(np.sin(ug), z)
+    P = np.zeros((n, sloi, 3))
+    for j, t in enumerate(np.linspace(0, 1, sloi)):
+        r = r1 + (r2 - r1) * t
+        if okrug and t < 0.35:
+            r *= 1 - okrug * (1 - t / 0.35) ** 2
+        c = A + (B - A) * t
+        kol = c + kr * r
+        # сдвиг вдоль оси до плоскости среза, плавно по длине — без складок
+        sdv = -((kol - B) @ ns) / (os_ @ ns)
+        P[:, j] = kol + np.outer(sdv * t, os_)
+    s = setka_iz_reshetki(P, normali_reshetki(P, True, (A + B) / 2))
+    kraj = P[:, -1]
+    c = kraj.mean(0)
+    p = np.vstack([c, kraj])
+    tri = []
+    for k in range(n):
+        tri += [0, 1 + k, 1 + (k + 1) % n]
+    return s, Setka(p, np.tile(ns, (n + 1, 1)), tri)
+
+
+def ellipsoid(c, r, nu=22, nv=12):
+    s = sfera(1.0, nu, nv)
+    p = s.p * r + c
+    return Setka(p, norm(s.n / np.asarray(r, float)), s.i)
+
+
+# бедро: ось от таза к срезу на середине бедра, радиусы вверху и внизу (для левого, zn = +1)
+BEDRO = ((0.077, 0.84, -0.004), (0.094, 0.585, 0.02), 0.108, 0.078)
+BEDRO_OKRUG = 0.25
+
+
+def bedro(zn, y):
+    """Центр и радиус сечения бедра на высоте y — по ним ложатся ножные обхваты."""
+    (x1, y1, z1), (x2, y2, z2), r1, r2 = BEDRO
+    t = (y1 - y) / (y1 - y2)
+    r = r1 + (r2 - r1) * t
+    if t < 0.35:  # скругление у таза — как obrubok(okrug=BEDRO_OKRUG)
+        r *= 1 - BEDRO_OKRUG * (1 - t / 0.35) ** 2
+    return np.array([zn * (x1 + (x2 - x1) * t), y, z1 + (z2 - z1) * t]), r
+
+
 def manekan():
-    ys = np.linspace(0.78, 1.66, 34)
-    ug = np.linspace(-180, 180, 48, endpoint=False)
+    """Манекен по образцу заказчика → {материал: сетка}."""
+    # углы гуще спереди (там рельеф), высоты гуще от паха до ключиц
+    ug = np.concatenate([np.arange(-180, -70, 7.5), np.arange(-70, 70, 3.0), np.arange(70, 180, 7.5)])
+    ys = np.unique(np.round(np.concatenate([
+        np.linspace(0.725, 0.775, 4), np.arange(0.775, 1.62, 0.014), np.linspace(1.62, 1.66, 4),
+        [0.9015, 0.905, 0.9085]]), 4))
     P = np.zeros((len(ug), len(ys), 3))
-    N = np.zeros_like(P)
     for i, u in enumerate(ug):
         for j, y in enumerate(ys):
-            P[i, j], N[i, j] = poverh(y, u)
-    s = setka_iz_reshetki(P, N, zamk_u=True)
-    # Манекен без головы: корпус, короткая шея со срезом, руки до локтей, ноги чуть выше колен
-    s = s + sfera(0.05, 16, 10).preobr(matr((0, 1.645, 0)))
-    s = s + cilindr(0.05, 0.07, 20, True).preobr(matr((0, 1.68, 0.005)))
+            P[i, j] = poverh(y, u)[0]
+    os_ = np.zeros_like(P)
+    os_[..., 1] = P[..., 1]
+    telo = setka_iz_reshetki(P, normali_reshetki(P, True, os_), zamk_u=True)
+    srez = Setka()
+    # шея: толстая, срез скошен — сзади выше, чем спереди
+    s, c = obrubok((0, 1.60, 0.0), (0, 1.69, 0.008), 0.070, 0.060, (0, 1, 0.5), n=32)
+    telo, srez = telo + s, srez + c
     for zn in (-1, 1):
-        # бедро: от тазобедренного шара до среза над коленом
-        s = s + sfera(0.088, 20, 12).preobr(matr((zn * 0.088, 0.82, 0.015)))
-        s = s + konechnost((zn * 0.088, 0.82, 0.015), (zn * 0.095, 0.56, 0.03), 0.088, 0.066, srez=True)
-        # плечо: шар плечевого сустава, рука чуть отведена, круглый локоть
-        s = s + sfera(0.054, 18, 10).preobr(matr((zn * 0.172, 1.535, -0.005)))
-        s = s + konechnost((zn * 0.172, 1.535, -0.005), (zn * 0.232, 1.255, 0.01), 0.048, 0.037)
-        s = s + sfera(0.037, 14, 8).preobr(matr((zn * 0.232, 1.255, 0.01)))
-    return s
+        # бедро: от таза до плоского среза на середине бедра
+        (x1, y1, z1), (x2, y2, z2), r1, r2 = BEDRO
+        s, c = obrubok((zn * x1, y1, z1), (zn * x2, y2, z2), r1, r2, (0, -1, 0), n=32, okrug=BEDRO_OKRUG)
+        telo, srez = telo + s, srez + c
+        # плечо: дельтовидная, рука висит вдоль тела, срез выше локтя скошен наружу-вверх
+        telo = telo + ellipsoid((zn * 0.185, 1.49, -0.002), (0.070, 0.085, 0.070))
+        s, c = obrubok((zn * 0.188, 1.50, -0.002), (zn * 0.214, 1.275, 0.01), 0.056, 0.046,
+                       (zn * 0.45, -1, 0.1), n=28)
+        telo, srez = telo + s, srez + c
+    return {"manekan": telo, "manekan_srez": srez}
 
 
 def konechnost(verh, niz, r1, r2, n=24, srez=False):
@@ -331,14 +447,13 @@ def ramka(shir, vys, r_ugla, tol):
 def obhvat_bedra(zn, pb, nb, shir=0.04, tol=0.007):
     """Ножной обхват: петля вокруг бедра и ход к кольцу на бедре pb.
     Возвращает сетку и точку с нормалью для пряжки."""
-    cb = np.array([zn * 0.088, 0.0, 0.015])
-    rb = 0.096
     f0 = math.atan2(0.9, zn * 0.45)
     pts, nrs = [], []
     for k in range(64):
         f = 2 * math.pi * k / 64
         d = np.array([math.cos(f), 0, math.sin(f)])
-        pts.append(cb + d * rb + [0, 0.79 + 0.055 * math.cos(f - f0), 0])
+        cb, rb = bedro(zn, 0.79 + 0.055 * math.cos(f - f0))
+        pts.append(cb + d * (rb + tol / 2 + 0.003))
         nrs.append(d)
     s = lenta(np.array(pts), np.array(nrs), shir, tol, zamk=True)
     k0 = int(round((f0 % (2 * math.pi)) / (2 * math.pi) * 64)) % 64
@@ -514,7 +629,8 @@ class Sborka:
     def __init__(self):
         self.detali = {}  # ключ → {материал: Setka}
         self.metki = []
-        self.dobavit("manekan", "manekan", manekan())
+        for mat, s in manekan().items():
+            self.dobavit("manekan", mat, s)
 
     def dobavit(self, kl, mat, s):
         self.detali.setdefault(kl, {})

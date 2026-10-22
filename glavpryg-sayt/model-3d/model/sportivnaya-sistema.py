@@ -10,7 +10,7 @@ import math
 
 import numpy as np
 
-from osnova import (Rakovina, Sborka, bazis, cilindr, gladko, lenta, matr, norm, okrugl_korobka,
+from osnova import (Rakovina, Sborka, bazis, bedro, cilindr, gladko, lenta, matr, norm, okrugl_korobka,
                     poverh, put_po_torsu, tor, vypustit)
 
 
@@ -129,15 +129,13 @@ def postroit():
         dobavit("lyamki", "lenta", lenta(bok, nbk, 0.04, 0.007))
 
         # ножной обхват: петля вокруг бедра, высоко спереди-снаружи, низко сзади-изнутри
-        cb = np.array([zn * 0.088, 0.0, 0.015])
-        rb = 0.096
         f0 = math.atan2(0.9, zn * 0.45)  # направление «спереди-снаружи» в плоскости xz
         pts, nrs = [], []
         for k in range(64):
             f = 2 * math.pi * k / 64
             d = np.array([math.cos(f), 0, math.sin(f)])
-            y = 0.79 + 0.055 * math.cos(f - f0)
-            pts.append(cb + d * rb + [0, y, 0])
+            cb, rb = bedro(zn, 0.79 + 0.055 * math.cos(f - f0))
+            pts.append(cb + d * (rb + 0.0065))
             nrs.append(d)
         dobavit("obhvaty", "lenta", lenta(np.array(pts), np.array(nrs), 0.04, 0.007, zamk=True))
         # ход от кольца на бедре к петле и пряжка обхвата
