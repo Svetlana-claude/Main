@@ -1,0 +1,78 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Спортивная парашютная система — 3D-модель | Главпрыг</title>
+<meta name="description" content="Из чего состоит спортивная парашютная система: ранец, подвесная система, подушка отцепки, кольцо запасного, замки КЗУ. 3D-модель с подписями.">
+<link rel="stylesheet" href="stil.css">
+<link rel="modulepreload" href="stranica.js">
+</head>
+<body>
+<main class="m3d-stranica">
+  <header class="m3d-shapka">
+    <h1>Спортивная парашютная система</h1>
+    <p>Ранец с основным и запасным парашютами на подвесной системе — в том виде, в каком
+      его надевают перед прыжком. Покрутите модель и нажмите на номер, чтобы узнать, что
+      это за деталь.</p>
+  </header>
+
+  <section class="m3d" data-m3d="ranec.glb" aria-label="3D-модель">
+    <div class="m3d-okno">
+      <img class="m3d-oblozhka" src="oblozhka.webp" width="900" height="1000"
+        alt="Спортивная парашютная система на манекене: ранец на спине, лямки, подушка отцепки и кольцо запасного спереди"
+        decoding="async" fetchpriority="high">
+      <div class="m3d-scena"></div>
+      <div class="m3d-metki"></div>
+      <button class="m3d-zapusk" type="button">
+        <span class="m3d-zapusk-znak" aria-hidden="true">⟳</span>
+        Покрутить в 3D
+        <small>__RAZMER__</small>
+      </button>
+      <p class="m3d-oshibka-tekst" role="alert">Не удалось загрузить модель. Нажмите ещё раз.</p>
+      <div class="m3d-kartochka" hidden aria-live="polite">
+        <span class="m3d-k-nomer"></span>
+        <div>
+          <strong class="m3d-k-imya"></strong>
+          <p class="m3d-k-opisanie"></p>
+        </div>
+        <button class="m3d-k-zakryt" type="button" aria-label="Закрыть описание и вернуть общий вид">×</button>
+      </div>
+      <p class="m3d-podskazka" aria-hidden="true">Вращайте пальцем или мышью, масштаб — колёсиком или щипком</p>
+    </div>
+
+    <ol class="m3d-spisok">
+      <li data-detal="osn_otsek"><button type="button" aria-pressed="false">Отсек основного парашюта</button>
+        <p>Нижняя часть ранца. В нём уложены основной купол в камере, стропы и слайдер.</p></li>
+      <li data-detal="klapan_osn"><button type="button" aria-pressed="false">Клапан основного с чекой</button>
+        <p>Держит отсек основного закрытым. Чеку выдёргивает уздечка вытяжного парашюта — медузы.</p></li>
+      <li data-detal="bobyshka"><button type="button" aria-pressed="false">Бобышка медузы</button>
+        <p>Внизу ранца, справа. За неё выбрасывают вытяжной парашют — так раскрывается основной. Основной раскрыт не ниже 800 м.</p></li>
+      <li data-detal="zap_otsek"><button type="button" aria-pressed="false">Отсек запасного парашюта</button>
+        <p>Верхняя часть ранца. В нём запасной купол в камере и пружинный вытяжной парашют.</p></li>
+      <li data-detal="klapan_zap"><button type="button" aria-pressed="false">Клапан запасного</button>
+        <p>Закрывает шпильку запасного. Открывают его три способа: кольцо, транзит при отцепке и страхующий прибор.</p></li>
+      <li data-detal="pribor"><button type="button" aria-pressed="false">Страхующий прибор</button>
+        <p>Сам раскрывает запасной на 225 м при скорости больше 35 м/с. Включают утром, проверяют перед каждым прыжком. Надеяться на него нельзя.</p></li>
+      <li data-detal="konci"><button type="button" aria-pressed="false">Свободные концы под клапанами</button>
+        <p>Ленты от купола к подвесной системе, по две на плечо. При раскрытии выходят из-под клапанов; за них раскручивают закрутку строп.</p></li>
+      <li data-detal="kzu"><button type="button" aria-pressed="false">Замки КЗУ — три кольца</button>
+        <p>Соединяют свободные концы основного с подвесной системой. Подушка отцепки размыкает их, и основной уходит. Проверка «три по три»: три кольца.</p></li>
+      <li data-detal="tranzit"><button type="button" aria-pressed="false">Транзит</button>
+        <p>Стропа от правого свободного конца к запасному: при отцепке уходящий конец выдёргивает шпильку запасного. Кольцо всё равно тянут самому.</p></li>
+      <li data-detal="podushka"><button type="button" aria-pressed="false">Подушка отцепки</button>
+        <p>Справа, на уровне живота, красная. Отцепляет основной: двумя руками, резко вниз-вперёд на всю длину рук. Сначала найти взглядом.</p></li>
+      <li data-detal="kolco_pz"><button type="button" aria-pressed="false">Кольцо запасного</button>
+        <p>Слева, на уровне живота. Раскрывает запасной: левая рука основным хватом, большой палец в кольце, правая помогает. Решение — не ниже 600 м.</p></li>
+      <li data-detal="lyamki"><button type="button" aria-pressed="false">Главные лямки</button>
+        <p>Несущая часть подвесной системы: от плеч к бёдрам. На них подушка отцепки и кольцо запасного.</p></li>
+      <li data-detal="grudnaya"><button type="button" aria-pressed="false">Грудная перемычка</button>
+        <p>Стягивает лямки на груди. Первая из «трёх пряжек» проверки «три по три».</p></li>
+      <li data-detal="obhvaty"><button type="button" aria-pressed="false">Ножные обхваты</button>
+        <p>Петли вокруг бёдер, держат парашютиста при раскрытии. Ещё две из «трёх пряжек».</p></li>
+    </ol>
+  </section>
+</main>
+<script type="module" src="stranica.js"></script>
+</body>
+</html>

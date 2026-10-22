@@ -1,0 +1,15 @@
+{
+  "name": "glavpryg-3d-sportivnaya-sistema",
+  "private": true,
+  "description": "Просмотрщик 3D-модели спортивной парашютной системы для сайта Главпрыг",
+  "scripts": {
+    "sobrat": "bash sobrat.sh"
+  },
+  "devDependencies": {
+    "esbuild": "0.24.0",
+    "gltfpack": "0.22.0"
+  },
+  "dependencies": {
+    "meshoptimizer": "0.22.0"
+  }
+}

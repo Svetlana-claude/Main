@@ -56,3 +56,6 @@ glavpryg-sayt/makety/.kusok.png
 
 # Сводка погоды игры «Точно в круг» — пишет igra/tools/pogoda-dnya.py (crontab на сервере), каждый день своя
 glavpryg-sayt/igra/maket/pogoda-dnya.json
+
+# Несжатая 3D-модель — пересобирается model/postroit-model.py
+glavpryg-sayt/sportivnaya-sistema/model/ranec-syroy.glb
