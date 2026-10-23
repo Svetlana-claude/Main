@@ -281,7 +281,7 @@ const UROVNI = [
   { veter:15, razbros:400, podskazka:false },
 ];
 
-// Физика по учебнику AFF: свободное падение ≈50 м/с; купол — полный режим 9–10 м/с,
+// Физика по учебнику AFF: свободное падение ≈50 м/с; купол — полный режим 12 м/с вперёд и 5 вниз (по заказчику; в AFF 9–10),
 // средний 3–4 м/с; 360° — около 5 с с потерей 50–70 м.
 // Купол отвечает с запаздыванием: клеванты затягиваются руками не мгновенно
 // (klevantaVniz/Vverh — доля хода в секунду), разворот и скорость набираются плавно
@@ -292,12 +292,14 @@ const F = {
   padenie:50, povorotFF:55, tauFF:0.5,
   vperedFF:14, nazadFF:6, tauGorFF:1.4, spinaVert:56, figuryOt:2000,
   saltoDlit:3, bochkaDlit:2,
-  kupolGor:10, kupolVert:5, tormozGor:4, tormozVert:3, glubGor:1.5, glubVert:4,
-  povorot:42, povorotVert:3.5, tauPovorot:0.9, tauGor:1.2, tauVert:1.2, podemnaya:1.0,
+  kupolGor:12, kupolVert:5, tormozGor:4, tormozVert:3, glubGor:1.5, glubVert:4,
+  povorot:42, povorotVert:3.5, tauPovorot:0.9, tauGor:1.0, tauVert:1.2, podemnaya:0.8,
   klevantaVniz:1.5, klevantaVverh:1.8,
   // сваливание: глубокое торможение дольше glubDo с; резкий разворот ниже rezkoNizhe м дольше rezkoDo с
   glubDo:2.5, rezkoNizhe:40, rezkoDolya:0.6, rezkoDo:0.4, svalDlit:2.2, svalVert:13, zhestko:7, myagko:2.5,
   raskrytieMin:900, zapasnoy:350, raskrytieDlit:2.5,
+  // фитиль: купол вышел, но не наполнился — 35 м/с вниз; бывает при раскрытии не лицом к земле
+  fitilVert:35, fitilShans:0.5,
   // ускорение игрового времени: падение и спуск под куполом идут быстрее настоящих
   uskFF:2, uskKupol:2.5, uskNizko:1.5,
   // посадка: ниже bokOt м — вид сбоку и настоящее время, чтобы подушку можно было сделать «на раз-два»
@@ -674,7 +676,7 @@ addEventListener('keydown', e => {
   // ↑ в падении — вперёд, под куполом — подушка (как пробел)
   else if (e.code === 'ArrowUp' || e.code === 'KeyW') { nazh.vverh = true; if (s && s.faza === 'kupol') nazh.podushka = true; }
   else if (e.code === 'Space') {
-    if (s && s.faza === 'padenie') raskryt(); else if (s && s.faza === 'kupol') nazh.podushka = true; else return;
+    if (s && (s.faza === 'padenie' || s.fitil)) raskryt(); else if (s && s.faza === 'kupol') nazh.podushka = true; else return;
   }
   else return;
   e.preventDefault();
@@ -773,11 +775,20 @@ function turbulentnost() {
   return 0;
 }
 
+// для проверок: ?fitil=1 — фитиль при любом раскрытии, ?fitil=0 — никогда
+const FITIL = new URLSearchParams(location.search).get('fitil');
+function zapasnoyRaskryt(tekst) {
+  s.bylFitil = s.fitil; s.zapasnoy = true; s.fitil = false; s.faza = 'raskrytie'; s.t = 0; s.raskrytVys = Math.round(s.h); s.fig = null; s.poza = 'zhivot';
+  pokazat(tekst, 3, true);
+}
 function raskryt() {
+  // фитиль: кнопка «Раскрыть» — отцепка и запасной
+  if (s && s.faza === 'raskrytie' && s.fitil) { zapasnoyRaskryt('Отцепка! Раскрыт запасной на ' + Math.round(s.h) + ' м'); return; }
   if (!s || s.faza !== 'padenie') return;
   s.faza = 'raskrytie'; s.t = 0; s.raskrytVys = Math.round(s.h);
   // раскрываться — только из коробочки, лицом к земле: на спине и в фигуре купол может захлестнуть
   if (s.fig || s.poza === 'spina') { s.nestab = true; s.fig = null; s.poza = 'zhivot'; }
+  s.fitil = FITIL != null ? FITIL === '1' : s.nestab && Math.random() < F.fitilShans;
   if (s.vOblake) s.raskrytVOblake = true;
   if (s.h < F.raskrytieMin) { s.nizkoe = true; pokazat('Низкое раскрытие! Норма — не ниже 900 м', 2.5, true); }
   else if (s.raskrytVOblake) pokazat('Раскрытие в облаке! Облачность должна быть выше высоты раскрытия', 2.5, true);
@@ -908,17 +919,21 @@ function shag(dtReal) {
     if (s.poza === 'spina' && s.h < F.figuryOt && !s.trevogaBylo.sp) { s.trevogaBylo.sp = 1; pokazat('На спине ниже 2000 м — прогнись, ляг на живот!', 2.2, true); }
     if (s.h < 1600 && !s.trevogaBylo.r1) { s.trevogaBylo.r1 = 1; pokazat('1500 м — приготовься к раскрытию', 2); }
     if (s.h < 1050 && !s.trevogaBylo.r2) { s.trevogaBylo.r2 = 1; pokazat('РАСКРЫВАЙСЯ!', 2, true); }
-    if (s.h <= F.zapasnoy) {
-      s.zapasnoy = true; s.faza = 'raskrytie'; s.t = 0; s.raskrytVys = F.zapasnoy; s.fig = null; s.poza = 'zhivot';
-      pokazat('Сработал прибор — раскрыт запасной на 350 м', 3, true);
-    }
+    if (s.h <= F.zapasnoy) zapasnoyRaskryt('Сработал прибор — раскрыт запасной на 350 м');
   } else if (s.faza === 'raskrytie') {
     s.t += dt;
     const k = Math.min(1, s.t / F.raskrytieDlit);
-    const vz = F.padenie + (F.kupolVert - F.padenie) * k;
     const [wx, wy] = veterNa(s.h);
-    s.x += wx * dt; s.y += wy * dt; s.h -= vz * dt * 0.5;
-    if (s.t >= F.raskrytieDlit) { s.faza = 'kupol'; s.om = 0; knopkaPodushka(true); }
+    s.x += wx * dt; s.y += wy * dt;
+    if (s.fitil) {
+      // фитиль не тормозит: снижение выходит на 35 м/с и держится, пока не отцепится или не сработает прибор
+      s.vz += (F.fitilVert - s.vz) * Math.min(1, dt / 1.5); s.h -= s.vz * dt;
+      if (s.t >= F.raskrytieDlit && !s.trevogaBylo.fitil) { s.trevogaBylo.fitil = 1; pokazat('ФИТИЛЬ! Купол не наполнился — жми «Раскрыть»: отцепка и запасной', 4, true); }
+      if (s.h <= F.zapasnoy) zapasnoyRaskryt('Сработал прибор — отцепка и запасной на 350 м');
+    } else {
+      s.vz = F.padenie + (F.kupolVert - F.padenie) * k; s.h -= s.vz * dt * 0.5;
+      if (s.t >= F.raskrytieDlit) { s.faza = 'kupol'; s.om = 0; knopkaPodushka(true); }
+    }
   } else if (s.faza === 'kupol') {
     // клеванты: куда тянет игрок — подушка до упора, обе кнопки — средний режим, одна — разворот
     const cel = nazh.podushka ? [1, 1] : oba ? [0.5, 0.5] : [L ? 1 : 0, P ? 1 : 0];
@@ -959,13 +974,14 @@ function shag(dtReal) {
     // работает только с полной скорости и только пока скорость гасится (≈ 4–6 м над землёй)
     s.vzK += (vzCel - s.vzK) * Math.min(1, dt / (s.svalT > 0 ? 0.5 : F.tauVert)) - (s.svalT > 0 ? 0 : F.podemnaya * Math.max(0, -dv));
     s.vzK = Math.max(0.2, s.vzK);
-    s.vzTek = s.vzK;
+    s.vzTek = s.vzK;                                                // ветер на снижение не влияет
     s.turb = turbulentnost();
     if (s.turb > 0) {
-      s.vzTek += s.turb * (1.6 + 1.4 * (Math.sin(s.vremya * 7.3) * 0.6 + Math.sin(s.vremya * 3.1 + 1) * 0.4));   // в среднем — вниз
-      s.om += s.turb * 40 * Math.sin(s.vremya * 5.7) * dt;
       if (!s.trevogaBylo.turb) { s.trevogaBylo.turb = 1; pokazat('Турбулентность за лесом! С подветренной стороны леса не заходят', 2.4, true); }
     }
+    // турбулентность крутит купол отдельно от клевант: на снижение (через разворот) она не влияет
+    s.omT = (s.omT || 0) + s.turb * 40 * Math.sin(s.vremya * 5.7) * dt;
+    s.omT -= s.omT * Math.min(1, dt / F.tauPovorot); s.kurs += s.omT * dt;
     const [kx, ky] = vec(s.kurs), [wx, wy] = veterNa(s.h);
     s.x += (kx * s.v + wx) * dt; s.y += (ky * s.v + wy) * dt; s.h -= s.vzTek * dt;
     s.put += (s.v + wx * kx + wy * ky) * dt;                        // путь вдоль курса — для вида сбоку
@@ -1067,7 +1083,7 @@ function prizemlenie() {
     razbor.push([zona + ' · ' + Math.round(d) + ' м от центра', baza]);
     razbor.push([s.pogoda.imya + ' · выброска ' + s.vys + ' м', '']);
     ochki = baza;
-    if (s.zapasnoy) { ochki = Math.round(ochki * 0.25); razbor.push(['Не раскрылся — запасной на 350 м', '×0,25']); }
+    if (s.zapasnoy) { ochki = Math.round(ochki * 0.25); razbor.push([s.bylFitil ? 'Фитиль — запасной на ' + s.raskrytVys + ' м' : 'Не раскрылся — запасной на 350 м', '×0,25']); }
     else if (s.nizkoe) { ochki = Math.round(ochki * 0.5); razbor.push(['Раскрытие ниже 900 м (' + s.raskrytVys + ' м)', '×0,5']); }
     else razbor.push(['Раскрытие на ' + s.raskrytVys + ' м', 'норма']);
     if (s.raskrytVOblake && !s.zapasnoy) { ochki = Math.round(ochki * 0.5); razbor.push(['Раскрытие в облаке — других не видно', '×0,5']); }
@@ -1242,7 +1258,7 @@ function risovat() {
   ctx.save(); ctx.translate(SH / 2, VY * 0.58);
   if (s.faza === 'samolet') risovatSamolet();
   else if (s.faza === 'padenie') risovatPadenie();
-  else risovatKupol(s.faza === 'raskrytie' ? Math.min(1, s.t / F.raskrytieDlit) : 1);
+  else risovatKupol(s.faza === 'raskrytie' ? Math.min(s.fitil ? 0.12 : 1, s.t / F.raskrytieDlit) : 1);
   ctx.restore();
   osvetit();
 

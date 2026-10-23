@@ -65,14 +65,14 @@ with sync_playwright() as p:
     s.keyboard.up('ArrowRight')
     proverit('жёсткое' in zag, f'резкий разворот на 38 м — {zag}')
     # 3. подушка вовремя
-    do_kupola(s, 60)
+    do_kupola(s, 45)
     s.wait_for_function("s.h < 5", timeout=60000, polling=16)
     s.evaluate("nazh.podushka = true")
     zag, razbor = itog(s)
     s.evaluate("nazh.podushka = false")
     proverit('на ноги' in razbor and '+10' in razbor, f'подушка на 5 м — {razbor[:120]}')
     # 4. без подушки
-    do_kupola(s, 60)
+    do_kupola(s, 45)
     zag, razbor = itog(s)
     proverit('без подушки' in razbor, f'без подушки — {razbor[:120]}')
     b.close()

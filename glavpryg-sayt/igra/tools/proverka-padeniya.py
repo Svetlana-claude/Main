@@ -13,6 +13,8 @@ import sys
 from playwright.sync_api import sync_playwright
 
 adres, kuda = sys.argv[1], sys.argv[2]
+# раскрытие на спине даёт фитиль с вероятностью 1/2 — здесь он не нужен
+BEZ_FITILYA = adres + ('&' if '?' in adres else '?') + 'fitil=0'
 oshibki, provaly = [], []
 
 
@@ -42,7 +44,7 @@ with sync_playwright() as p:
     s = c.new_page()
     s.on('pageerror', lambda e: oshibki.append(str(e)))
     s.on('console', lambda m: m.type == 'error' and oshibki.append(m.text))
-    s.goto(adres); s.wait_for_timeout(800)
+    s.goto(BEZ_FITILYA); s.wait_for_timeout(800)
     s.click('#b-upr')
     proverit(s.is_visible('#e-upr') and 'Сальто вперёд' in s.inner_text('#e-upr') and not s.is_visible('#e-upr th.tolko-sensor'),
              'экран «Управление» открывается, на компьютере — колонка клавиш')
@@ -105,7 +107,7 @@ with sync_playwright() as p:
     s.on('pageerror', lambda e: oshibki.append(str(e)))
     s.on('console', lambda m: m.type == 'error' and oshibki.append(m.text))
     cdp = c.new_cdp_session(s)
-    s.goto(adres); s.wait_for_timeout(800)
+    s.goto(BEZ_FITILYA); s.wait_for_timeout(800)
     s.click('#urovni button >> nth=0')
     v_padenie(s)
     L = s.locator('#k-levo').bounding_box(); P = s.locator('#k-pravo').bounding_box()
