@@ -180,26 +180,18 @@ def postroit():
     nz_r = norm(nz + np.array([1.8, 0, 0]))
     bz = bazis(nz_r)
     dobavit("kolco_zps", "metall", ramka(0.03, 0.085, 0.008, 0.0055).preobr(matr(pz, bz)))
-    dobavit("kolco_zps", "krasnyy", tor(0.011, 0.004, 20, 8).preobr(
-        matr(pz + [0, -0.05, 0.004], bazis(norm(nz + np.array([-0.4, 0, 0]))))))
     metka("kolco_zps", 8, pz + nz * 0.012 + [0, 0.02, 0], nz)
 
-    # 9. Звено отсоединения — правая лямка над кольцом ЗПС: основа на застёжке, ручка-втулка,
-    #    два троса в боуденах к D-пряжкам (короткий — к правой, длинный — через грудь к левой)
-    po, no = poverh(1.19, -44, OTST + 0.014)
-    bo = bazis(no)
-    dobavit("zveno_otc", "chernyy", okrugl_korobka((0.05, 0.06, 0.012), 0.005).preobr(matr(po, bo)))
-    dobavit("zveno_otc", "krasnyy", cilindr(0.008, 0.045, 14).preobr(
-        matr(po + no * 0.012, bo @ np.array([[0, 1, 0], [1, 0, 0], [0, 0, 1]]))))
-    pd_l = poverh(1.40, 36, OTST + 0.02)[0]
+    # 9. Звено отсоединения — по фото заказчика: красное кольцо-втулка, подвешенное шнуром
+    #    к низу рамки ЗПС; трос в боудене от него вверх по лямке к правой D-пряжке
+    niz = pz - bz[:, 1] * 0.0425
+    bo = bazis(nz)
+    po = niz - bz[:, 1] * 0.003 + np.array([0, -0.016, 0]) + nz * 0.004
+    dobavit("zveno_otc", "krasnyy", tor(0.012, 0.0055, 22, 10).preobr(matr(po, bo)))
+    dobavit("zveno_otc", "krasnyy", trubka(gladko([niz, (niz + po) / 2 + nz * 0.003, po + bo[:, 1] * 0.012], 10), 0.0018))
     pd_p = poverh(1.40, -36, OTST + 0.02)[0]
-    dobavit("zveno_otc", "shlang", trubka(gladko([po + no * 0.01 + [0, 0.03, 0], (po + pd_p) / 2 + no * 0.012, pd_p], 16), 0.004))
-    grud = [po + no * 0.01 + [0.01, 0.03, 0]]
-    for u in (-30, -10, 10, 30):
-        grud.append(poverh(1.385, u, OTST + 0.016)[0])
-    grud.append(pd_l)
-    dobavit("zveno_otc", "shlang", trubka(gladko(grud, 40), 0.004))
-    metka("zveno_otc", 9, po + no * 0.03, no)
+    dobavit("zveno_otc", "shlang", trubka(gladko([po - bo[:, 0] * 0.014, poverh(1.33, -37, OTST + 0.012)[0], poverh(1.37, -38, OTST + 0.012)[0], pd_p], 24), 0.004))
+    metka("zveno_otc", 9, po + nz * 0.012 - bo[:, 0] * 0.014, nz)
 
     # 12. Грудная перемычка — по фото заказчика: мягкая синяя подкладка, чёрная лента;
     #     посередине груди Т-образный крюк-карабин заходит в D-пряжку (пряжка правее, крюк левее)
