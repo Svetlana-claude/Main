@@ -42,6 +42,14 @@ s, kb = sys.argv[1], sys.argv[2]
 html = Path(f"src/{s}.html").read_text(encoding="utf-8")
 metki = Path(f"../model/{s}.metki.json").read_text(encoding="utf-8")
 html = html.replace("__RAZMER__", f"{kb} КБ").replace("__METKI__", metki)
+# версия в адресах модели и обложки: новая сборка — новый адрес, и браузер
+# не показывает прежнюю модель из кеша (сама страница отдаётся с no-cache)
+import hashlib
+v = hashlib.md5(Path(f"dist/{s}/model.glb").read_bytes()).hexdigest()[:8]
+for a_, b_ in (('data-m3d="model.glb"', f'data-m3d="model.glb?v={v}"'),
+               ('src="oblozhka.webp"', f'src="oblozhka.webp?v={v}"')):
+    assert html.count(a_) == 1, a_
+    html = html.replace(a_, b_)
 Path(f"dist/{s}/index.html").write_text(html, encoding="utf-8")
 EOF
   # 4. Обложка — снимок первого кадра самой модели

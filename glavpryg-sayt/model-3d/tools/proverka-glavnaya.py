@@ -44,7 +44,7 @@ def progon(br, adres, shirina, vysota, snimki, metka_):
         img = st.locator(f'[data-par*="/{kl}/"] img')
         img.scroll_into_view_if_needed()
         st.wait_for_timeout(300)
-        nado(img.evaluate("i => i.complete && i.naturalWidth > 0 && i.src.endsWith('/prevyu.webp')"),
+        nado(img.evaluate("i => i.complete && i.naturalWidth > 0 && new URL(i.src).pathname.endsWith('/prevyu.webp')"),
              f"{nazv}: превью на карточке загружено")
 
     for kl, nazv in SISTEMY:
