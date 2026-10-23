@@ -14,7 +14,7 @@ import math
 
 import numpy as np
 
-from osnova import (Rakovina, Sborka, bazis, cilindr, gladko, lenta, matr, norm, obhvat_bedra,
+from osnova import (KOLCO_Y, Rakovina, Sborka, bazis, cilindr, gladko, lenta, matr, norm, obhvat_bedra,
                     okrugl_korobka, poverh, put_po_torsu, ramka, tor, trubka, vypustit)
 
 OTST = 0.008  # лямки над поверхностью торса
@@ -89,10 +89,10 @@ def postroit():
     # ---------- Подвесная система ----------
     for zn in (-1, 1):
         # 11. Передняя лямка: от бедра вверх, через плечо — свободный конец запасного
-        put, nr = put_po_torsu([(0.96, zn * 62), (1.08, zn * 52), (1.22, zn * 42),
+        put, nr = put_po_torsu([(KOLCO_Y + 0.005, zn * 62), (1.08, zn * 52), (1.22, zn * 42),
                                 (1.36, zn * 37), (1.50, zn * 33)], OTST)
         dobavit("lyamki", "siniy_les", lenta(put, nr, 0.075, 0.016))
-        put2, nr2 = put_po_torsu([(0.96, zn * 62), (1.08, zn * 52), (1.22, zn * 42),
+        put2, nr2 = put_po_torsu([(KOLCO_Y + 0.005, zn * 62), (1.08, zn * 52), (1.22, zn * 42),
                                   (1.36, zn * 37), (1.50, zn * 33)], OTST + 0.016)
         dobavit("lyamki", "lenta", lenta(put2, nr2, 0.04, 0.006))
         p_verh, n_verh = put[-1], nr[-1]
@@ -106,9 +106,9 @@ def postroit():
             metka("lyamki", 11, cherez[16] + nch[16] * 0.012, nch[16])
 
         # кольцо на бедре, поясной притяг, ножной обхват
-        pb, nb = poverh(0.955, zn * 62, OTST + 0.006)
+        pb, nb = poverh(KOLCO_Y, zn * 62, OTST + 0.006)
         dobavit("lyamki", "metall", tor(0.02, 0.005, 28, 8).preobr(matr(pb, bazis(nb))))
-        bok, nbk = put_po_torsu([(0.955, zn * 64), (0.95, zn * 95), (0.95, zn * 130), (0.96, zn * 150)], OTST)
+        bok, nbk = put_po_torsu([(KOLCO_Y, zn * 64), (0.905, zn * 95), (0.935, zn * 130), (0.96, zn * 150)], OTST)
         dobavit("lyamki", "lenta", lenta(bok, nbk, 0.04, 0.007))
         obh, pr, npr = obhvat_bedra(zn, pb, nb)
         dobavit("obhvaty", "lenta", obh)

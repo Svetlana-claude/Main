@@ -266,6 +266,11 @@ def put_po_torsu(opory, otstup, n=50):
 # строительное бедро: ось от таза вниз, радиусы вверху и внизу (для левого, zn = +1)
 BEDRO = ((0.077, 0.84, -0.004), (0.094, 0.585, 0.02), 0.108, 0.078)
 BEDRO_OKRUG = 0.25
+# ножной обхват: середина петли на бедре ниже паха, подъём спереди-снаружи;
+# кольцо на бедре, куда сходятся лямка, обхват и боковая лента, — у паховой складки
+OBHVAT_Y = 0.70
+OBHVAT_NAKLON = 0.045
+KOLCO_Y = 0.885
 
 
 def bedro(zn, y):
@@ -331,7 +336,7 @@ def obhvat_bedra(zn, pb, nb, shir=0.04, tol=0.007):
     for k in range(64):
         f = 2 * math.pi * k / 64
         d = np.array([math.cos(f), 0, math.sin(f)])
-        cb, rb = bedro(zn, 0.79 + 0.055 * math.cos(f - f0))
+        cb, rb = bedro(zn, OBHVAT_Y + OBHVAT_NAKLON * math.cos(f - f0))
         pts.append(cb + d * (rb + tol / 2 + 0.003))
         nrs.append(d)
     s = lenta(np.array(pts), np.array(nrs), shir, tol, zamk=True)
@@ -550,7 +555,7 @@ class Maneken:
             return pt
         # обхват: ниже паха — по бедру, выше (ход к кольцу на бедре) — плавно к торсу
         pb = self._bedro(p, yn, np.where(p[:, 0] >= 0, 1, -1) if storona is None else storona)
-        w = np.clip((p[:, 1] - 0.82) / 0.08, 0, 1)[:, None]
+        w = np.clip((p[:, 1] - 0.78) / 0.08, 0, 1)[:, None]
         w = w * w * (3 - 2 * w)
         return pb * (1 - w) + pt * w
 

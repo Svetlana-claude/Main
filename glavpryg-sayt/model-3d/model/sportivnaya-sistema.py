@@ -10,7 +10,7 @@ import math
 
 import numpy as np
 
-from osnova import (Rakovina, Sborka, bazis, bedro, cilindr, gladko, lenta, matr, norm, okrugl_korobka,
+from osnova import (KOLCO_Y, OBHVAT_NAKLON, OBHVAT_Y, Rakovina, Sborka, bazis, bedro, cilindr, gladko, lenta, matr, norm, okrugl_korobka,
                     poverh, put_po_torsu, tor, vypustit)
 
 
@@ -78,7 +78,7 @@ def postroit():
     otst = 0.008
     for zn, storona in ((-1, "prav"), (1, "lev")):
         put, nr = put_po_torsu([(1.47, zn * 34), (1.36, zn * 37), (1.22, zn * 42),
-                                (1.08, zn * 52), (0.96, zn * 62)], otst)
+                                (1.08, zn * 52), (KOLCO_Y + 0.005, zn * 62)], otst)
         dobavit("lyamki", "lenta", lenta(put, nr, 0.046, 0.007))
         # подложка под лямкой — двойная лента, как на настоящих системах
         if zn < 0:
@@ -120,11 +120,11 @@ def postroit():
             metka("tranzit", 9, tr[12] + ntr[12] * 0.01, ntr[12])
 
         # кольцо на бедре, куда сходятся лямка, обхват и боковая лента
-        pb, nb = poverh(0.955, zn * 62, otst + 0.006)
+        pb, nb = poverh(KOLCO_Y, zn * 62, otst + 0.006)
         dobavit("lyamki", "metall", tor(0.02, 0.005, 28, 8).preobr(matr(pb, bazis(nb))))
 
         # боковые ленты: от кольца на бедре вокруг пояса к низу ранца
-        bok, nbk = put_po_torsu([(0.955, zn * 64), (0.95, zn * 95), (0.95, zn * 130),
+        bok, nbk = put_po_torsu([(KOLCO_Y, zn * 64), (0.905, zn * 95), (0.935, zn * 130),
                                  (0.96, zn * 150)], otst)
         dobavit("lyamki", "lenta", lenta(bok, nbk, 0.04, 0.007))
 
@@ -134,7 +134,7 @@ def postroit():
         for k in range(64):
             f = 2 * math.pi * k / 64
             d = np.array([math.cos(f), 0, math.sin(f)])
-            cb, rb = bedro(zn, 0.79 + 0.055 * math.cos(f - f0))
+            cb, rb = bedro(zn, OBHVAT_Y + OBHVAT_NAKLON * math.cos(f - f0))
             pts.append(cb + d * (rb + 0.0065))
             nrs.append(d)
         dobavit("obhvaty", "lenta", lenta(np.array(pts), np.array(nrs), 0.04, 0.007, zamk=True))
