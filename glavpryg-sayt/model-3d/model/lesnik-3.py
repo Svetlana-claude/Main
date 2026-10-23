@@ -113,7 +113,7 @@ def postroit():
         obh, pr, npr = obhvat_bedra(zn, pb, nb)
         dobavit("obhvaty", "lenta", obh)
         # мягкая синяя подкладка обхвата
-        dobavit("obhvaty", "siniy_les", obhvat_bedra(zn, pb, nb, shir=0.065, tol=0.004)[0])
+        dobavit("obhvaty", "siniy_les", obhvat_bedra(zn, pb, nb, shir=0.056, tol=0.003)[0])
         dobavit("obhvaty", "metall", okrugl_korobka((0.05, 0.026, 0.008), 0.004).preobr(
             matr(pr + npr * 0.007, bazis(npr))))
         if zn > 0:

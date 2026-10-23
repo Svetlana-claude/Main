@@ -23,7 +23,7 @@ from playwright.sync_api import sync_playwright
 
 SHIR, VYS = 900, 1000
 # превью: камера сзади-справа (азимут π + 0,6), чуть сверху, ближе обложки
-PREVYU_VID = "3.74,1.30,2.35"
+PREVYU_VID = "3.74,1.40,2.3"
 PREVYU_SHIR, PREVYU_VYS = 540, 600
 
 

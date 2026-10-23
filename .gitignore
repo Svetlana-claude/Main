@@ -60,3 +60,5 @@ glavpryg-sayt/igra/maket/pogoda-dnya.json
 # Несжатая 3D-модель — пересобирается model/postroit-model.py
 glavpryg-sayt/model-3d/model/*.glb
 glavpryg-sayt/model-3d/model/*.metki.json
+# STL манекена от заказчика (15 МБ) — исходник лежит рядом, в git идёт прореженный maneken.glb
+glavpryg-sayt/model-3d/model/maneken/*.stl

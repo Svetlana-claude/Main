@@ -21,7 +21,6 @@ ZDES = Path(__file__).resolve().parent
 # Материалы: цвет (sRGB), металличность, шероховатость
 MATERIALY = {
     "manekan": ("#c4c8cf", 0.0, 0.8),
-    "manekan_srez": ("#6c717a", 0.0, 0.9),
     "ranec": ("#31384d", 0.0, 0.75),
     "ranec_zap": ("#3b4560", 0.0, 0.75),
     "akcent": ("#f26a1b", 0.0, 0.6),
@@ -225,9 +224,9 @@ def rot_y(a):
     return np.array([[c, 0, s], [0, 1, 0], [-s, 0, c]])
 
 
-# ---------- Манекен: торс как суперэллипс по высоте ----------
-# Образец заказчика — магазинный мужской торс-манекен: без головы, толстая шея со
-# скошенным срезом, руки обрезаны выше локтя, бёдра — на середине, срезы тёмные.
+# ---------- Строительное тело: торс как суперэллипс по высоте ----------
+# Системы строятся на этом гладком теле, а при выпуске натягиваются на манекен
+# заказчика (см. «Манекен заказчика» ниже) — так их описания не зависят от фигуры.
 
 # высота → (полуширина по x, полуглубина по z); ниже 0,80 торс сходится между бёдер
 PROFIL = [(0.725, 0.020, 0.020), (0.745, 0.060, 0.060), (0.775, 0.090, 0.090),
@@ -242,46 +241,8 @@ def profil(y):
     return np.interp(y, ys, [p[1] for p in PROFIL]), np.interp(y, ys, [p[2] for p in PROFIL])
 
 
-def _g(x, s):
-    return math.exp(-(x / s) ** 2)
-
-
-def rel_ef(y, u):
-    """Рельеф спереди, м по нормали: грудные, ключицы, пресс, паховые линии, шов на бёдрах.
-    Спина гладкая — по ней прилегает ранец (Rakovina.spina считает от голого профиля)."""
-    r = 0.0
-    au = abs(u)
-    if au < 110:
-        # грудные мышцы: мягкий верх, чёткий нижний край
-        for zn in (-1, 1):
-            dy = y - 1.40
-            r += 0.016 * _g(u - zn * 25, 21) * _g(dy, 0.075 if dy > 0 else 0.032)
-        # ложбинка между грудными и белая линия живота
-        r -= 0.005 * _g(u, 5) * _g(y - 1.38, 0.08)
-        r -= 0.0028 * _g(u, 3.2) * (1 if 0.99 < y < 1.30 else 0)
-        # ключицы: валик от яремной ямки к плечу
-        if 6 < au < 50:
-            r += 0.005 * _g(y - (1.548 - 0.0005 * au), 0.012)
-        r -= 0.006 * _g(u, 7) * _g(y - 1.585, 0.02)
-        # пресс: три ряда «кубиков» и нижний, пологий
-        for yk, amp in ((1.235, 0.0055), (1.165, 0.006), (1.095, 0.0055), (1.025, 0.004)):
-            for zn in (-1, 1):
-                r += amp * _g(u - zn * 11, 7.5) * _g(y - yk, 0.027)
-        # пупок
-        r -= 0.004 * _g(u, 3) * _g(y - 0.995, 0.01)
-        # косые мышцы к паху: «V» от боков к лобку
-        if 18 < au < 60:
-            r -= 0.0035 * _g(y - (0.885 + 0.0024 * (au - 18)), 0.012)
-        # пах — гладкая выпуклость, как у магазинного манекена
-        r += 0.022 * _g(u, 15) * _g(y - 0.795, 0.035)
-    # шов: торс снимается с бёдер (на образце — тонкая линия по кругу)
-    r -= 0.0012 * _g(y - 0.905, 0.0035)
-    return r
-
-
 def poverh(y, ugol_gr, otstup=0.0):
-    """Точка на торсе: ugol 0° — грудь (+z), +90° — левый бок парашютиста (+x).
-    Рельеф манекена учтён в точке — ленты ложатся по грудным, а не сквозь них."""
+    """Точка на строительном торсе: ugol 0° — грудь (+z), +90° — левый бок (+x)."""
     a, b = profil(y)
     t = math.radians(ugol_gr)
     s, c = math.sin(t), math.cos(t)
@@ -292,7 +253,7 @@ def poverh(y, ugol_gr, otstup=0.0):
     nx = np.sign(s) * abs(p[0] / a) ** (STEPEN - 1) / a
     nz = np.sign(c) * abs(p[2] / b) ** (STEPEN - 1) / b
     n = norm([nx, 0, nz])
-    return p + n * (otstup + rel_ef(y, ugol_gr)), n
+    return p + n * otstup, n
 
 
 def put_po_torsu(opory, otstup, n=50):
@@ -302,101 +263,19 @@ def put_po_torsu(opory, otstup, n=50):
     return np.array(pt), np.array(nr)
 
 
-def normali_reshetki(P, zamk_u, naruzhu):
-    """Нормали решётки разностями — у рельефа они свои, не как у гладкого профиля.
-    naruzhu — точка или ось внутри тела: по ней нормали разворачиваются наружу."""
-    if zamk_u:
-        du = np.roll(P, -1, 0) - np.roll(P, 1, 0)
-    else:
-        du = np.gradient(P, axis=0)
-    dv = np.gradient(P, axis=1)
-    N = norm(np.cross(du, dv))
-    if np.sum(N * (P - naruzhu)) < 0:
-        N = -N
-    return N
-
-
-def obrubok(nachalo, konec, r1, r2, n_sreza, n=28, sloi=8, okrug=0.0):
-    """Обрубок конечности: усечённый конус от nachalo (r1) к konec (r2), торец konec —
-    плоский скошенный срез с нормалью n_sreza. okrug — скругление у начала (плечо, шея).
-    Возвращает (поверхность, срез)."""
-    A, B = np.asarray(nachalo, float), np.asarray(konec, float)
-    os_ = norm(B - A)
-    ns = norm(n_sreza)
-    x = norm(np.cross(os_, [0, 0, 1] if abs(os_[2]) < 0.9 else [1, 0, 0]))
-    z = np.cross(x, os_)
-    ug = np.linspace(0, 2 * math.pi, n, endpoint=False)
-    kr = np.outer(np.cos(ug), x) + np.outer(np.sin(ug), z)
-    P = np.zeros((n, sloi, 3))
-    for j, t in enumerate(np.linspace(0, 1, sloi)):
-        r = r1 + (r2 - r1) * t
-        if okrug and t < 0.35:
-            r *= 1 - okrug * (1 - t / 0.35) ** 2
-        c = A + (B - A) * t
-        kol = c + kr * r
-        # сдвиг вдоль оси до плоскости среза, плавно по длине — без складок
-        sdv = -((kol - B) @ ns) / (os_ @ ns)
-        P[:, j] = kol + np.outer(sdv * t, os_)
-    s = setka_iz_reshetki(P, normali_reshetki(P, True, (A + B) / 2))
-    kraj = P[:, -1]
-    c = kraj.mean(0)
-    p = np.vstack([c, kraj])
-    tri = []
-    for k in range(n):
-        tri += [0, 1 + k, 1 + (k + 1) % n]
-    return s, Setka(p, np.tile(ns, (n + 1, 1)), tri)
-
-
-def ellipsoid(c, r, nu=22, nv=12):
-    s = sfera(1.0, nu, nv)
-    p = s.p * r + c
-    return Setka(p, norm(s.n / np.asarray(r, float)), s.i)
-
-
-# бедро: ось от таза к срезу на середине бедра, радиусы вверху и внизу (для левого, zn = +1)
+# строительное бедро: ось от таза вниз, радиусы вверху и внизу (для левого, zn = +1)
 BEDRO = ((0.077, 0.84, -0.004), (0.094, 0.585, 0.02), 0.108, 0.078)
 BEDRO_OKRUG = 0.25
 
 
 def bedro(zn, y):
-    """Центр и радиус сечения бедра на высоте y — по ним ложатся ножные обхваты."""
+    """Центр и радиус строительного бедра на высоте y — по ним строятся ножные обхваты."""
     (x1, y1, z1), (x2, y2, z2), r1, r2 = BEDRO
     t = (y1 - y) / (y1 - y2)
     r = r1 + (r2 - r1) * t
-    if t < 0.35:  # скругление у таза — как obrubok(okrug=BEDRO_OKRUG)
+    if t < 0.35:  # бедро сужается к тазу
         r *= 1 - BEDRO_OKRUG * (1 - t / 0.35) ** 2
     return np.array([zn * (x1 + (x2 - x1) * t), y, z1 + (z2 - z1) * t]), r
-
-
-def manekan():
-    """Манекен по образцу заказчика → {материал: сетка}."""
-    # углы гуще спереди (там рельеф), высоты гуще от паха до ключиц
-    ug = np.concatenate([np.arange(-180, -70, 7.5), np.arange(-70, 70, 3.0), np.arange(70, 180, 7.5)])
-    ys = np.unique(np.round(np.concatenate([
-        np.linspace(0.725, 0.775, 4), np.arange(0.775, 1.62, 0.014), np.linspace(1.62, 1.66, 4),
-        [0.9015, 0.905, 0.9085]]), 4))
-    P = np.zeros((len(ug), len(ys), 3))
-    for i, u in enumerate(ug):
-        for j, y in enumerate(ys):
-            P[i, j] = poverh(y, u)[0]
-    os_ = np.zeros_like(P)
-    os_[..., 1] = P[..., 1]
-    telo = setka_iz_reshetki(P, normali_reshetki(P, True, os_), zamk_u=True)
-    srez = Setka()
-    # шея: толстая, срез скошен — сзади выше, чем спереди
-    s, c = obrubok((0, 1.60, 0.0), (0, 1.69, 0.008), 0.070, 0.060, (0, 1, 0.5), n=32)
-    telo, srez = telo + s, srez + c
-    for zn in (-1, 1):
-        # бедро: от таза до плоского среза на середине бедра
-        (x1, y1, z1), (x2, y2, z2), r1, r2 = BEDRO
-        s, c = obrubok((zn * x1, y1, z1), (zn * x2, y2, z2), r1, r2, (0, -1, 0), n=32, okrug=BEDRO_OKRUG)
-        telo, srez = telo + s, srez + c
-        # плечо: дельтовидная, рука висит вдоль тела, срез выше локтя скошен наружу-вверх
-        telo = telo + ellipsoid((zn * 0.185, 1.49, -0.002), (0.070, 0.085, 0.070))
-        s, c = obrubok((zn * 0.188, 1.50, -0.002), (zn * 0.214, 1.275, 0.01), 0.056, 0.046,
-                       (zn * 0.45, -1, 0.1), n=28)
-        telo, srez = telo + s, srez + c
-    return {"manekan": telo, "manekan_srez": srez}
 
 
 def konechnost(verh, niz, r1, r2, n=24, srez=False):
@@ -461,6 +340,247 @@ def obhvat_bedra(zn, pb, nb, shir=0.04, tol=0.007):
     s = s + lenta(vhod, np.tile(nb, (len(vhod), 1)), shir, tol)
     k1 = (k0 + zn * 6) % 64
     return s, np.array(pts[k1]), np.array(nrs[k1])
+
+
+# ---------- Манекен заказчика и натяжка систем на него ----------
+# Манекен — STL заказчика (`maneken-opty.stl`: торс с шеей, руками выше локтя и бёдрами до
+# середины, высоты — метры от пола), прорежен Blender'ом (`maneken/iz-stl.py`) и не меняется.
+# Системы строятся на строительном теле выше, а при выпуске каждая их точка
+# переносится на манекен: высота — по ориентирам фигуры (пах, талия, грудь, плечи,
+# шея), угол вокруг оси торса сохраняется, отступ от поверхности — тоже. Поверхность
+# манекена берётся выпуклой оболочкой сечения: ленты и ранец перекрывают ложбины
+# (позвоночник, межгрудную), как на живом человеке.
+
+MANEKEN_GLB = ZDES / "maneken" / "maneken.glb"
+# высота на строительном теле → высота на манекене: пах, талия, грудные, плечи, основание и верх шеи
+OPORY_STAR = [0.585, 0.785, 1.05, 1.40, 1.56, 1.62, 1.70]
+OPORY_NOV = [0.575, 0.775, 1.03, 1.26, 1.41, 1.445, 1.475]
+PAH = 0.775        # высота паха манекена: ниже — два бедра
+SHAG_Y = 0.004     # шаг таблицы сечений
+UGLY = 360         # лучей на сечение
+SHIR_TORSA = 0.175  # полуширина торса без рук, м
+
+
+def chitat_glb(put):
+    """Позиции, нормали и индексы всех примитивов GLB без сжатия."""
+    d = Path(put).read_bytes()
+    dl = struct.unpack("<I", d[12:16])[0]
+    js = json.loads(d[20:20 + dl])
+    buf = d[20 + dl + 8:]
+
+    def acc(i):
+        a = js["accessors"][i]
+        bv = js["bufferViews"][a["bufferView"]]
+        tip = {5126: np.float32, 5125: np.uint32, 5123: np.uint16}[a["componentType"]]
+        k = {"VEC3": 3, "SCALAR": 1}[a["type"]]
+        x = np.frombuffer(buf, tip, a["count"] * k, bv.get("byteOffset", 0) + a.get("byteOffset", 0))
+        return x.reshape(-1, 3) if k == 3 else x
+
+    P, N, I = [], [], []
+    for m in js["meshes"]:
+        for pr in m["primitives"]:
+            sm = sum(len(x) for x in P)
+            P.append(acc(pr["attributes"]["POSITION"]).astype(float))
+            N.append(acc(pr["attributes"]["NORMAL"]).astype(float))
+            I.append(acc(pr["indices"]).astype(np.int64) + sm)
+    return np.vstack(P), np.vstack(N), np.concatenate(I)
+
+
+def _srez(T, y):
+    """Сечение треугольников T (k, 3, 3) плоскостью y → отрезки (m, 2, 2) в (x, z)."""
+    d = T[:, :, 1] - y
+    vyshe = (d > 0).sum(1)
+    m = (vyshe == 1) | (vyshe == 2)
+    T, d = T[m], d[m]
+    konci = []
+    for a, b in ((0, 1), (1, 2), (2, 0)):
+        ok = (d[:, a] > 0) != (d[:, b] > 0)
+        t = np.where(ok, d[:, a] / np.where(ok, d[:, a] - d[:, b], 1), 0)
+        konci.append((ok, (T[:, a] + (T[:, b] - T[:, a]) * t[:, None])[:, [0, 2]]))
+    ok = np.stack([k[0] for k in konci], 1)
+    pts = np.stack([k[1] for k in konci], 1)
+    dva = ok.sum(1) == 2
+    ok, pts = ok[dva], pts[dva]
+    pervyy = np.argmax(ok, 1)
+    vtoroy = 2 - np.argmax(ok[:, ::-1], 1)
+    r = np.arange(len(pts))
+    return np.stack([pts[r, pervyy], pts[r, vtoroy]], 1)
+
+
+def _luchi(seg, c, ugly):
+    """Первое пересечение лучей из c (угол 0 — +z, 90° — +x) с отрезками → расстояния."""
+    dv = np.stack([np.sin(ugly), np.cos(ugly)], 1)[:, None, :]
+    a = seg[None, :, 0] - c
+    e = seg[None, :, 1] - seg[None, :, 0]
+    den = dv[..., 0] * e[..., 1] - dv[..., 1] * e[..., 0]
+    with np.errstate(divide="ignore", invalid="ignore"):
+        t = (a[..., 0] * e[..., 1] - a[..., 1] * e[..., 0]) / den
+        s = (a[..., 0] * dv[..., 1] - a[..., 1] * dv[..., 0]) / den
+    t = np.where((t > 1e-6) & (s >= 0) & (s <= 1), t, np.inf)
+    return t.min(1)
+
+
+def _obolochka(pts):
+    """Выпуклая оболочка точек на плоскости (монотонная цепь)."""
+    pts = sorted(set(map(tuple, np.round(pts, 5))))
+    if len(pts) < 3:
+        return np.array(pts)
+
+    def povorot(o, a, b):
+        return (a[0] - o[0]) * (b[1] - o[1]) - (a[1] - o[1]) * (b[0] - o[0])
+
+    niz, verh = [], []
+    for p in pts:
+        while len(niz) >= 2 and povorot(niz[-2], niz[-1], p) <= 0:
+            niz.pop()
+        niz.append(p)
+    for p in reversed(pts):
+        while len(verh) >= 2 and povorot(verh[-2], verh[-1], p) <= 0:
+            verh.pop()
+        verh.append(p)
+    return np.array(niz[:-1] + verh[:-1])
+
+
+def _radiusy_obolochki(pts, c, ugly):
+    ob = _obolochka(pts)
+    seg = np.stack([ob, np.roll(ob, -1, 0)], 1)
+    return _luchi(seg, c, ugly)
+
+
+class Maneken:
+    """Манекен заказчика: сетка для показа и таблицы сечений для натяжки систем."""
+
+    def __init__(self, put=MANEKEN_GLB):
+        self.P, self.N, self.I = chitat_glb(put)
+        T = self.P[self.I.reshape(-1, 3)]
+        self.ugly = np.linspace(-math.pi, math.pi, UGLY, endpoint=False)
+        # торс: от паха до верха шеи
+        self.ys = np.arange(PAH + 0.002, OPORY_NOV[-1] + 1e-9, SHAG_Y)
+        zc, R = [], []
+        for y in self.ys:
+            seg = _srez(T, y)
+            u = np.abs(seg.mean(1)[:, 0]) < 0.03
+            zc.append((seg[u, :, 1].min() + seg[u, :, 1].max()) / 2)
+        # центр сглажен по высоте — лучи не дёргаются от сечения к сечению
+        zc = np.convolve(np.pad(zc, 4, mode="edge"), np.ones(9) / 9, mode="valid")
+        for y, z in zip(self.ys, zc):
+            seg = _srez(T, y)
+            c = np.array([0.0, z])
+            r = _luchi(seg, c, self.ugly)  # первое попадание — торс, руки отдельно
+            ok = np.isfinite(r)
+            pts = c + r[ok, None] * np.stack([np.sin(self.ugly[ok]), np.cos(self.ugly[ok])], 1)
+            # выше подмышек сечение сливается с плечом: руку в торс не берём,
+            # иначе углы ранца ложатся на плечевые обрубки
+            pts = pts[np.abs(pts[:, 0]) <= SHIR_TORSA]
+            R.append(_radiusy_obolochki(pts, c, self.ugly))
+        self.zc, self.R = np.array(zc), np.array(R)
+        # бёдра: ниже паха, левое (zn = +1) и правое
+        self.ys_b = np.arange(self.P[:, 1].min() + 0.008, PAH - 0.01, SHAG_Y)
+        self.bedra = {}
+        for zn in (-1, 1):
+            cs, Rs = [], []
+            for y in self.ys_b:
+                seg = _srez(T, y)
+                m = seg.mean(1)
+                # у паха середину не берём — там не бедро; внутренний край замыкает оболочка
+                vnutr = 0.035 if y > 0.66 else 0.0
+                tochki = seg[(m[:, 0] * zn > vnutr) & (np.abs(m[:, 0]) < 0.3)].reshape(-1, 2)
+                c = tochki.mean(0)
+                cs.append(c)
+                Rs.append(_radiusy_obolochki(tochki, c, self.ugly))
+            self.bedra[zn] = (np.array(cs), np.array(Rs))
+
+    @staticmethod
+    def _tabl(ys, R, y, u):
+        """Билинейно из таблицы R[высота, угол]."""
+        fy = np.clip((y - ys[0]) / (ys[1] - ys[0]), 0, len(ys) - 1.001)
+        iy = fy.astype(int)
+        ty = fy - iy
+        fu = (u + math.pi) / (2 * math.pi) * UGLY
+        iu = np.floor(fu).astype(int) % UGLY
+        tu = fu - np.floor(fu)
+        iu2 = (iu + 1) % UGLY
+        r0 = R[iy, iu] * (1 - tu) + R[iy, iu2] * tu
+        r1 = R[iy + 1, iu] * (1 - tu) + R[iy + 1, iu2] * tu
+        return r0 * (1 - ty) + r1 * ty
+
+    def setka(self):
+        return Setka(self.P, self.N, self.I)
+
+    # --- натяжка ---
+
+    def _tors(self, p, yn):
+        """Перенос точек по торсу: угол и отступ от строительной поверхности сохраняются."""
+        u = np.arctan2(p[:, 0], p[:, 2])
+        r = np.hypot(p[:, 0], p[:, 2])
+        a, b = profil(p[:, 1])
+        s, c = np.sin(u), np.cos(u)
+        r_star = (np.abs(s / a) ** STEPEN + np.abs(c / b) ** STEPEN) ** (-1 / STEPEN)
+        r_nov = self._tabl(self.ys, self.R, yn, u) + (r - r_star)
+        zc = np.interp(yn, self.ys, self.zc)
+        return np.stack([s * r_nov, yn, zc + c * r_nov], 1)
+
+    def _bedro(self, p, yn, storona):
+        """Перенос точек по бедру — для ножных обхватов; storona — нога каждой точки (±1)."""
+        out = np.zeros_like(p)
+        yb = np.minimum(yn, self.ys_b[-1])
+        for zn in (-1, 1):
+            m = storona == zn
+            if not m.any():
+                continue
+            q = p[m]
+            ystar = np.array([bedro(zn, y) for y in q[:, 1]], dtype=object)
+            c_st = np.stack([x[0] for x in ystar])
+            r_st = np.array([x[1] for x in ystar])
+            d = q - c_st
+            u = np.arctan2(d[:, 0], d[:, 2])
+            cs, Rs = self.bedra[zn]
+            c_nov = np.stack([np.interp(yb[m], self.ys_b, cs[:, k]) for k in (0, 1)], 1)
+            r_nov = self._tabl(self.ys_b, Rs, yb[m], u) + (np.hypot(d[:, 0], d[:, 2]) - r_st)
+            out[m] = np.stack([c_nov[:, 0] + np.sin(u) * r_nov, yn[m], c_nov[:, 1] + np.cos(u) * r_nov], 1)
+        return out
+
+    def natyanut(self, p, po_bedru=False, storona=None):
+        """Точки систем со строительного тела → на манекен."""
+        p = np.asarray(p, float)
+        yn = np.interp(p[:, 1], OPORY_STAR, OPORY_NOV)
+        pt = self._tors(p, np.maximum(yn, self.ys[0]))
+        pt[:, 1] = yn
+        if not po_bedru:
+            return pt
+        # обхват: ниже паха — по бедру, выше (ход к кольцу на бедре) — плавно к торсу
+        pb = self._bedro(p, yn, np.where(p[:, 0] >= 0, 1, -1) if storona is None else storona)
+        w = np.clip((p[:, 1] - 0.82) / 0.08, 0, 1)[:, None]
+        w = w * w * (3 - 2 * w)
+        return pb * (1 - w) + pt * w
+
+    def natyanut_setku(self, s, po_bedru=False):
+        e = 0.002
+        # нога — по связной части сетки: петля обхвата заходит за середину,
+        # и по знаку x её внутренний край ушёл бы на чужое бедро
+        storona = _storony(s) if po_bedru else None
+        p = self.natyanut(s.p, po_bedru, storona)
+        n = norm(self.natyanut(s.p + s.n * e, po_bedru, storona) - p)
+        return Setka(p, n, s.i)
+
+
+def _storony(s):
+    """Для каждой вершины — знак x середины её связной части сетки."""
+    rod = np.arange(len(s.p))
+
+    def koren(a):
+        while rod[a] != a:
+            rod[a] = rod[rod[a]]
+            a = rod[a]
+        return a
+
+    for a, b in s.i.reshape(-1, 3)[:, :2].tolist() + s.i.reshape(-1, 3)[:, 1:].tolist():
+        ra, rb = koren(a), koren(b)
+        if ra != rb:
+            rod[ra] = rb
+    k = np.array([koren(a) for a in range(len(s.p))])
+    sx = np.bincount(k, s.p[:, 0], len(s.p)) / np.maximum(np.bincount(k, None, len(s.p)), 1)
+    return np.where(sx[k] >= 0, 1, -1)
 
 
 # ---------- Запись GLB ----------
@@ -624,29 +744,38 @@ def zapisat_glb(detali, put):
 
 
 class Sborka:
-    """Детали системы по материалам и метки с номерами."""
+    """Детали системы по материалам и метки с номерами — на строительном теле."""
+
+    # детали, которые натягиваются по бедру, а не по торсу
+    PO_BEDRU = {"obhvaty"}
 
     def __init__(self):
         self.detali = {}  # ключ → {материал: Setka}
         self.metki = []
-        for mat, s in manekan().items():
-            self.dobavit("manekan", mat, s)
 
     def dobavit(self, kl, mat, s):
         self.detali.setdefault(kl, {})
         self.detali[kl][mat] = self.detali[kl].get(mat, Setka()) + s
 
     def metka(self, kl, nomer, p, n):
-        self.metki.append({"kl": kl, "n": nomer, "p": [round(float(x), 4) for x in p],
-                           "nr": [round(float(x), 3) for x in norm(n)]})
+        self.metki.append({"kl": kl, "n": nomer, "p": np.asarray(p, float), "nr": norm(n)})
 
 
 def vypustit(sborka, imya):
-    """Пишет `<imya>.glb` (несжатый) и `<imya>.metki.json` рядом со скриптами."""
+    """Натягивает систему на манекен заказчика и пишет `<imya>.glb` (несжатый)
+    и `<imya>.metki.json` рядом со скриптами."""
+    man = Maneken()
+    detali = {"manekan": {"manekan": man.setka()}}
+    for kl, po_mat in sborka.detali.items():
+        detali[kl] = {mat: man.natyanut_setku(s, kl in Sborka.PO_BEDRU) for mat, s in po_mat.items()}
+    metki = []
+    for m in sorted(sborka.metki, key=lambda m: m["n"]):
+        s = man.natyanut_setku(Setka(m["p"][None], m["nr"][None], []), m["kl"] in Sborka.PO_BEDRU)
+        metki.append({"kl": m["kl"], "n": m["n"], "p": [round(float(x), 4) for x in s.p[0]],
+                      "nr": [round(float(x), 3) for x in s.n[0]]})
     glb = ZDES / f"{imya}.glb"
-    zapisat_glb(sborka.detali, glb)
-    metki = sorted(sborka.metki, key=lambda m: m["n"])
+    zapisat_glb(detali, glb)
     (ZDES / f"{imya}.metki.json").write_text(json.dumps(metki, ensure_ascii=False), encoding="utf-8")
-    tri = sum(len(s.i) // 3 for d in sborka.detali.values() for s in d.values())
+    tri = sum(len(s.i) // 3 for d in detali.values() for s in d.values())
     print(f"{glb.name}: {glb.stat().st_size // 1024} КБ, {tri} треугольников, "
-          f"{len(sborka.detali)} деталей, {len(metki)} меток")
+          f"{len(detali)} деталей, {len(metki)} меток")
