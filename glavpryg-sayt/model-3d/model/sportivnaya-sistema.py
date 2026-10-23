@@ -10,7 +10,7 @@ import math
 
 import numpy as np
 
-from osnova import (KOLCO_Y, OBHVAT_NAKLON, OBHVAT_Y, Rakovina, Sborka, bazis, bedro, cilindr, gladko, lenta, matr, norm, okrugl_korobka,
+from osnova import (KOLCO_Y, Rakovina, Sborka, bazis, bedro, cilindr, gladko, lenta, matr, norm, obhvat_y, okrugl_korobka,
                     poverh, put_po_torsu, tor, trubka, valik, vypustit)
 
 
@@ -142,15 +142,15 @@ def postroit():
         for k in range(64):
             f = 2 * math.pi * k / 64
             d = np.array([math.cos(f), 0, math.sin(f)])
-            cb, rb = bedro(zn, OBHVAT_Y + OBHVAT_NAKLON * math.cos(f - f0))
+            cb, rb = bedro(zn, obhvat_y(zn, f))
             # зазор с запасом: манекен прорежен, и вплотную лента местами уходит под кожу
-            pods.append(cb + d * (rb + 0.018))
+            pods.append(cb + d * (rb + 0.0205))
             # над подушкой лента лежит поверх неё, в паху подушки нет — лента возвращается
             # к бедру, иначе петли двух ног заходят друг в друга (бёдра там почти сходятся)
             dd = min((k - k_in) % 64, (k_in - k) % 64)
             w = min(1.0, max(0.0, (dd - 5) / 5))
             w = w * w * (3 - 2 * w)
-            pts.append(cb + d * (rb + 0.0115 + 0.019 * w))
+            pts.append(cb + d * (rb + 0.0115 + 0.0215 * w))
             nrs.append(d)
         # мягкая подушка вокруг бедра, лента обхвата — поверх неё; в паху, где бёдра почти
         # сходятся, подушки нет — дуга начинается и кончается за внутренней стороной

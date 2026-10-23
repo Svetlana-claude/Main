@@ -302,11 +302,21 @@ def put_po_torsu(opory, otstup, n=50):
 # строительное бедро: ось от таза вниз, радиусы вверху и внизу (для левого, zn = +1)
 BEDRO = ((0.077, 0.84, -0.004), (0.094, 0.585, 0.02), 0.108, 0.078)
 BEDRO_OKRUG = 0.25
-# ножной обхват: середина петли на бедре ниже паха, подъём спереди-снаружи;
-# кольцо на бедре, куда сходятся лямка, обхват и боковая лента, — у паховой складки
-OBHVAT_Y = 0.70
-OBHVAT_NAKLON = 0.045
+# ножной обхват: петля высоко, у паха, и почти горизонтально; только с внутренней стороны
+# уходит вниз по паховой складке — бёдра у паха сходятся вплотную, и петли двух ног
+# иначе заходят друг в друга. Кольцо на бедре — у паховой складки
+OBHVAT_Y = 0.75
+OBHVAT_PROVAL = 0.075   # насколько петля ниже с внутренней стороны бедра
+OBHVAT_SHIR = 1.6       # полуширина провала, рад
 KOLCO_Y = 0.885
+
+
+def obhvat_y(zn, f):
+    """Высота ножной петли в направлении f (угол в плоскости xz, cos f — по x)."""
+    vnutr = math.pi if zn > 0 else 0.0
+    d = abs((f - vnutr + math.pi) % (2 * math.pi) - math.pi)
+    k = max(0.0, 1 - d / OBHVAT_SHIR)
+    return OBHVAT_Y - OBHVAT_PROVAL * k * k * (3 - 2 * k)
 
 
 def bedro(zn, y):
@@ -372,8 +382,8 @@ def obhvat_bedra(zn, pb, nb, shir=0.04, tol=0.007):
     for k in range(64):
         f = 2 * math.pi * k / 64
         d = np.array([math.cos(f), 0, math.sin(f)])
-        cb, rb = bedro(zn, OBHVAT_Y + OBHVAT_NAKLON * math.cos(f - f0))
-        pts.append(cb + d * (rb + tol / 2 + 0.003))
+        cb, rb = bedro(zn, obhvat_y(zn, f))
+        pts.append(cb + d * (rb + tol / 2 + 0.0065))
         nrs.append(d)
     s = lenta(np.array(pts), np.array(nrs), shir, tol, zamk=True)
     k0 = int(round((f0 % (2 * math.pi)) / (2 * math.pi) * 64)) % 64
