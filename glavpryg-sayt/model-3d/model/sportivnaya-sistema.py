@@ -138,17 +138,22 @@ def postroit():
         # ножной обхват: петля вокруг бедра, высоко спереди-снаружи, низко сзади-изнутри
         f0 = math.atan2(0.9, zn * 0.45)  # направление «спереди-снаружи» в плоскости xz
         pts, nrs, pods = [], [], []
+        k_in = 32 if zn > 0 else 0  # точка петли со стороны паха
         for k in range(64):
             f = 2 * math.pi * k / 64
             d = np.array([math.cos(f), 0, math.sin(f)])
             cb, rb = bedro(zn, OBHVAT_Y + OBHVAT_NAKLON * math.cos(f - f0))
             # зазор с запасом: манекен прорежен, и вплотную лента местами уходит под кожу
             pods.append(cb + d * (rb + 0.018))
-            pts.append(cb + d * (rb + 0.0305))
+            # над подушкой лента лежит поверх неё, в паху подушки нет — лента возвращается
+            # к бедру, иначе петли двух ног заходят друг в друга (бёдра там почти сходятся)
+            dd = min((k - k_in) % 64, (k_in - k) % 64)
+            w = min(1.0, max(0.0, (dd - 5) / 5))
+            w = w * w * (3 - 2 * w)
+            pts.append(cb + d * (rb + 0.0115 + 0.019 * w))
             nrs.append(d)
         # мягкая подушка вокруг бедра, лента обхвата — поверх неё; в паху, где бёдра почти
         # сходятся, подушки нет — дуга начинается и кончается за внутренней стороной
-        k_in = 32 if zn > 0 else 0
         dug = [(k_in + 8 + j) % 64 for j in range(49)]
         dobavit("obhvaty", "chernyy", valik(np.array(pods)[dug], np.array(nrs)[dug], 0.075, 0.018, n=14))
         dobavit("obhvaty", "lenta", lenta(np.array(pts), np.array(nrs), 0.04, 0.007, zamk=True))
