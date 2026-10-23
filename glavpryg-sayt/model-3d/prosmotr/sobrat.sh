@@ -19,7 +19,7 @@ rm -rf dist && mkdir -p dist/obshchee
 
 # 1. Код: лёгкая страница и отдельный кусок показа, который грузится по кнопке
 npx esbuild src/stranica.js --bundle --splitting --format=esm --minify \
-  --target=es2020 --outdir=dist/obshchee --chunk-names='[name]-[hash]' --legal-comments=none --log-level=warning
+  --target=es2020 --outdir=dist/obshchee --chunk-names='[name]-[hash]' --asset-names='[name]-[hash]' --loader:.webp=file --legal-comments=none --log-level=warning
 cp src/stil.css dist/obshchee/
 
 gz() { gzip -9 -c "$1" | wc -c; }

@@ -183,6 +183,42 @@ def lenta(tochki, naruzhu, shir, tol, zamk=False):
     return itog
 
 
+def valik(tochki, naruzhu, shir, tol, n=12, zamk=False, stepen=3.0):
+    """Мягкий валик по ломаной: сечение — суперэллипс (подушки лямок, обхватов, пояса),
+    гладкие нормали; у открытого валика концы сходятся скруглённо."""
+    P = np.asarray(tochki, float)
+    No = norm(naruzhu)
+    T = norm(np.roll(P, -1, 0) - np.roll(P, 1, 0)) if zamk else norm(np.gradient(P, axis=0))
+    S = norm(np.cross(T, No))
+    No = norm(np.cross(S, T))
+    w, t = shir / 2, tol / 2
+    m = len(P)
+    if zamk:
+        k = np.ones(m)
+    else:
+        # скругление концов: сечение плавно сжимается на крайних трёх точках
+        d = np.minimum(np.arange(m), np.arange(m)[::-1]) / 3.0
+        k = np.sqrt(np.clip(1 - (1 - np.clip(d, 0, 1)) ** 2, 0.05, 1))
+    f = np.linspace(0, 2 * math.pi, n, endpoint=False)
+    c, s = np.cos(f), np.sin(f)
+    e = 2 / stepen
+    x, y = np.sign(c) * np.abs(c) ** e, np.sign(s) * np.abs(s) ** e
+    nx = np.sign(c) * np.abs(c) ** (2 - e) / w
+    ny = np.sign(s) * np.abs(s) ** (2 - e) / t
+    Q = (P[:, None] + S[:, None] * (w * x)[None, :, None] * k[:, None, None]
+         + No[:, None] * (t * y)[None, :, None] * k[:, None, None])
+    NN = norm(S[:, None] * nx[None, :, None] + No[:, None] * ny[None, :, None])
+    # решётка: по длине — u, по сечению — v (замкнуто); переставляем, чтобы замкнуть сечение
+    s1 = setka_iz_reshetki(np.transpose(Q, (1, 0, 2)), np.transpose(NN, (1, 0, 2)), zamk_u=True)
+    if zamk:
+        # замыкание по длине: последний ряд сшивается с первым
+        Q2 = np.stack([Q[-1], Q[0]], 1)
+        N2 = np.stack([NN[-1], NN[0]], 1)
+        s1 = s1 + setka_iz_reshetki(Q2, N2, zamk_u=True)
+    s1.i = s1.i.reshape(-1, 3)[:, ::-1].reshape(-1)   # обход — против часовой снаружи
+    return s1
+
+
 def gladko(tochki, n=60, zamk=False):
     """Сплайн Катмулла — Рома через опорные точки."""
     P = np.asarray(tochki, float)

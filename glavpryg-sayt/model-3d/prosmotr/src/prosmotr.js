@@ -5,6 +5,7 @@
 // в покое показ не тратит ни процессор, ни батарею.
 
 import { MeshoptDecoder } from 'meshoptimizer/meshopt_decoder.module.js';
+import tkanAdres from './tkan.webp';
 
 const CEL = [0, 1.04, 0];
 const NACHALO = { azimut: 0.42, polyar: 1.40, radius: 2.3 };
@@ -12,6 +13,14 @@ const NACHALO = { azimut: 0.42, polyar: 1.40, radius: 2.3 };
 const VID = new URLSearchParams(location.search).get('vid')?.split(',').map(Number);
 if (VID?.length === 3 && VID.every(Number.isFinite)) [NACHALO.azimut, NACHALO.polyar, NACHALO.radius] = VID;
 const PODSVETKA = [0.95, 0.42, 0.1];
+// Ткань по снимку системы заказчика (tools/tkan.py): R — кордура, G — канва, B — для лент.
+// Материал → [канал, сила]: насколько рисунок переплетения меняет цвет.
+const TKAN = {
+  chernyy: [0, 0.6], kant: [0, 0.45], bezh: [1, 0.4], lenta: [2, 0.5],
+  olivka: [0, 0.5], olivka_t: [0, 0.5], lenta_ol: [2, 0.5],
+  siniy: [2, 0.3], siniy_les: [2, 0.3], krasnyy: [2, 0.3], zheltyy: [2, 0.3],
+};
+const TKAN_MASSHTAB = 14; // повторов на метр: плитка ~7 см
 const bezDvizheniya = matchMedia('(prefers-reduced-motion: reduce)').matches;
 
 // ---------- Матрицы 4×4 (по столбцам, как в WebGL) ----------
@@ -55,20 +64,29 @@ void main() { vec4 p = uM * vec4(aP, 1.0); vP = p.xyz; vN = mat3(uM) * aN; gl_Po
 const OSN = `#version 300 es
 precision highp float;
 in vec3 vP, vN; uniform vec3 uCvet, uSvechenie, uOko; uniform vec2 uMR; out vec4 o;
+uniform sampler2D uTkan; uniform vec4 uTk; uniform float uTkM;
 const vec3 NEBO = vec3(1.0), ZEMLYA = vec3(0.33, 0.36, 0.43);
-vec3 svet(vec3 n, vec3 v, vec3 l, vec3 c, float blesk, vec3 f0) {
+vec3 svet(vec3 n, vec3 v, vec3 l, vec3 c, float blesk, vec3 f0, vec3 cvet) {
   float d = max(dot(n, l), 0.0);
   float s = pow(max(dot(n, normalize(l + v)), 0.0), blesk) * (blesk + 8.0) / 25.0;
-  return c * d * (uCvet * (1.0 - uMR.x) + f0 * s);
+  return c * d * (cvet * (1.0 - uMR.x) + f0 * s);
 }
 void main() {
   vec3 n = normalize(vN), v = normalize(uOko - vP);
   if (dot(n, v) < 0.0) n = -n;
+  // ткань: три проекции по осям мира, смешанные по нормали, — без развёртки на модели
+  vec3 cvet = uCvet;
+  if (uTk.w > 0.0) {
+    vec3 w = pow(abs(normalize(vN)), vec3(4.0)); w /= w.x + w.y + w.z;
+    vec3 q = vP * uTkM;
+    vec3 t = texture(uTkan, q.zy).rgb * w.x + texture(uTkan, q.xz).rgb * w.y + texture(uTkan, q.xy).rgb * w.z;
+    cvet *= 1.0 + uTk.w * (dot(t, uTk.xyz) - 0.5) * 2.0;
+  }
   float blesk = exp2(10.0 * (1.0 - uMR.y) + 1.0);
-  vec3 f0 = mix(vec3(0.04), uCvet, uMR.x);
-  vec3 c = uCvet * (1.0 - uMR.x) * mix(ZEMLYA, NEBO, n.y * 0.5 + 0.5) * 0.75;
-  c += svet(n, v, normalize(vec3(0.5, 1.0, 0.85)), vec3(1.55), blesk, f0);
-  c += svet(n, v, normalize(vec3(-0.6, 0.4, -0.75)), vec3(0.55, 0.6, 0.72), blesk, f0);
+  vec3 f0 = mix(vec3(0.04), cvet, uMR.x);
+  vec3 c = cvet * (1.0 - uMR.x) * mix(ZEMLYA, NEBO, n.y * 0.5 + 0.5) * 0.75;
+  c += svet(n, v, normalize(vec3(0.5, 1.0, 0.85)), vec3(1.55), blesk, f0, cvet);
+  c += svet(n, v, normalize(vec3(-0.6, 0.4, -0.75)), vec3(0.55, 0.6, 0.72), blesk, f0, cvet);
   vec3 r = reflect(-v, n);
   c += f0 * mix(ZEMLYA, NEBO, smoothstep(-0.3, 0.6, r.y)) * (0.3 + 0.7 * uMR.x);
   c += uSvechenie;
@@ -98,6 +116,29 @@ function programma(gl, vs, fs) {
     u[imya] = gl.getUniformLocation(p, imya);
   }
   return { p, u };
+}
+
+// ---------- Ткань: плитка с мип-уровнями; не загрузилась — модель просто без рисунка ----------
+async function zagruzitTkan(gl) {
+  const tex = gl.createTexture();
+  gl.activeTexture(gl.TEXTURE0);
+  gl.bindTexture(gl.TEXTURE_2D, tex);
+  gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA8, 1, 1, 0, gl.RGBA, gl.UNSIGNED_BYTE, new Uint8Array([128, 128, 128, 255]));
+  try {
+    const r = await fetch(new URL(tkanAdres, import.meta.url));
+    if (!r.ok) throw new Error(r.status);
+    const kartinka = await createImageBitmap(await r.blob());
+    gl.bindTexture(gl.TEXTURE_2D, tex);
+    gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA8, gl.RGBA, gl.UNSIGNED_BYTE, kartinka);
+    gl.generateMipmap(gl.TEXTURE_2D);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR_MIPMAP_LINEAR);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
+    const an = gl.getExtension('EXT_texture_filter_anisotropic');
+    if (an) gl.texParameterf(gl.TEXTURE_2D, an.TEXTURE_MAX_ANISOTROPY_EXT, 4);
+  } catch (e) {
+    console.warn('Ткань не загрузилась:', e);
+  }
+  return tex;
 }
 
 // ---------- Загрузка GLB со сжатием meshopt и квантованием ----------
@@ -152,7 +193,9 @@ async function zagruzitGlb(gl, adres) {
         gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, vidy[ind.bufferView].b);
         gl.bindVertexArray(null);
         const mat = j.materials[pr.material].pbrMetallicRoughness;
+        const [kanal, sila] = TKAN[j.materials[pr.material].name] ?? [0, 0];
         otrisovki.push({
+          tk: [kanal === 0 ? 1 : 0, kanal === 1 ? 1 : 0, kanal === 2 ? 1 : 0, sila],
           vao, m, detal: d, chislo: ind.count, tip: ind.componentType, sdvig: ind.byteOffset ?? 0,
           cvet: mat.baseColorFactor.slice(0, 3), mr: [mat.metallicFactor ?? 1, mat.roughnessFactor ?? 1],
         });
@@ -182,7 +225,7 @@ export async function zapustit(koren, { model, vybor }) {
 
   const osn = programma(gl, VERSH, OSN);
   const sluzh = programma(gl, VERSH, SLUZH);
-  const otrisovki = await zagruzitGlb(gl, model);
+  const [otrisovki] = await Promise.all([zagruzitGlb(gl, model), zagruzitTkan(gl)]);
 
   const detali = [...new Set(otrisovki.map((o) => o.detal))];
   const nomerDetali = (kl) => detali.indexOf(kl) + 1;
@@ -236,10 +279,13 @@ export async function zapustit(koren, { model, vybor }) {
     gl.useProgram(osn.p);
     gl.uniformMatrix4fv(osn.u.uVP, false, VP);
     gl.uniform3fv(osn.u.uOko, oko);
+    gl.uniform1i(osn.u.uTkan, 0);
+    gl.uniform1f(osn.u.uTkM, TKAN_MASSHTAB);
     for (const o of otrisovki) {
       gl.uniformMatrix4fv(osn.u.uM, false, o.m);
       gl.uniform3fv(osn.u.uCvet, o.cvet);
       gl.uniform2fv(osn.u.uMR, o.mr);
+      gl.uniform4fv(osn.u.uTk, o.tk);
       gl.uniform3fv(osn.u.uSvechenie, o.detal === vybrannaya ? PODSVETKA.map((x) => x * 0.35) : [0, 0, 0]);
       gl.bindVertexArray(o.vao);
       gl.drawElements(gl.TRIANGLES, o.chislo, o.tip, o.sdvig);

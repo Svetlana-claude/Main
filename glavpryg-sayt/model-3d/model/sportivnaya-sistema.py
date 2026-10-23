@@ -11,7 +11,7 @@ import math
 import numpy as np
 
 from osnova import (KOLCO_Y, OBHVAT_NAKLON, OBHVAT_Y, Rakovina, Sborka, bazis, bedro, cilindr, gladko, lenta, matr, norm, okrugl_korobka,
-                    poverh, put_po_torsu, tor, vypustit)
+                    poverh, put_po_torsu, tor, trubka, valik, vypustit)
 
 
 def postroit():
@@ -33,10 +33,11 @@ def postroit():
     dobavit("zap_otsek", "bezh", rak.naklejka(lambda a, v: (a * 0.085 * (1 - v) ** 1.15, 1.545 - 0.30 * v), 0.0025))
     # нижний бежевый клин между клапанами основного
     dobavit("osn_otsek", "bezh", rak.naklejka(lambda a, v: (a * 0.05 * (1 - v), 1.17 - 0.16 * v), 0.0025))
-    # кант по краю раковины
-    kr = [rak.tochka(*xy, s_=0.985)[0] for xy in rak.kontur(80)]
-    nkr = [rak.tochka(*xy, s_=0.985)[1] for xy in rak.kontur(80)]
-    dobavit("osn_otsek", "kant", lenta(np.array(kr), np.array(nkr), 0.012, 0.004, zamk=True))
+    # кант-шнур по краю раковины и второй — по боку: между ними боковая панель-«линза»,
+    # как у обтекаемых спортивных ранцев
+    for s_, r_ in ((0.99, 0.0055), (0.88, 0.0038)):
+        kr = np.array([rak.tochka(*xy, s_=s_)[0] for xy in rak.kontur(96)])
+        dobavit("osn_otsek", "kant", trubka(np.vstack([kr, kr[:2]]), r_, 8))
     metka("zap_otsek", 4, rak.tochka(0.12, 1.40)[0] + [0, 0, -0.01], rak.tochka(0.12, 1.40)[1])
     metka("osn_otsek", 1, rak.tochka(0.12, 1.06)[0] + [0, 0, -0.01], rak.tochka(0.12, 1.06)[1])
 
@@ -102,7 +103,7 @@ def postroit():
         dobavit("konci", "siniy", lenta(konc, nk, 0.044, 0.012))
         # клапан свободных концов: шире и толще, на верхней части плеча
         kl_put = konc[14:]
-        dobavit("konci", "chernyy", lenta(kl_put + nk[14:] * 0.012, nk[14:], 0.07, 0.016))
+        dobavit("konci", "chernyy", valik(kl_put + nk[14:] * 0.014, nk[14:], 0.072, 0.022))
         dobavit("konci", "siniy", lenta(kl_put[:3] + nk[14:17] * 0.012, nk[14:17], 0.072, 0.017))
         if zn > 0:
             metka("konci", 7, kl_put[6] + nk[20] * 0.03, nk[20])
@@ -124,20 +125,32 @@ def postroit():
         dobavit("lyamki", "metall", tor(0.02, 0.005, 28, 8).preobr(matr(pb, bazis(nb))))
 
         # боковые ленты: от кольца на бедре вокруг пояса к низу ранца
-        bok, nbk = put_po_torsu([(KOLCO_Y, zn * 64), (0.905, zn * 95), (0.935, zn * 130),
-                                 (0.96, zn * 150)], otst)
-        dobavit("lyamki", "lenta", lenta(bok, nbk, 0.04, 0.007))
+        # поясная подушка-«крыло» от низа ранца к бедру; лента от кольца поднимается на неё
+        kr_p, nkr_p = put_po_torsu([(0.895, zn * 80), (0.915, zn * 105), (0.938, zn * 130),
+                                    (0.96, zn * 152)], otst + 0.006, 30)
+        dobavit("lyamki", "chernyy", valik(kr_p, nkr_p, 0.085, 0.016, n=14))
+        opory = [(KOLCO_Y, zn * 64), (0.905, zn * 95), (0.935, zn * 130), (0.96, zn * 150)]
+        bok, nbk = put_po_torsu(opory, otst)
+        bok2, _ = put_po_torsu(opory, otst + 0.0175)
+        w = np.clip(np.linspace(0, 1, len(bok)) / 0.2, 0, 1)[:, None]
+        dobavit("lyamki", "lenta", lenta(bok * (1 - w) + bok2 * w, nbk, 0.04, 0.007))
 
         # ножной обхват: петля вокруг бедра, высоко спереди-снаружи, низко сзади-изнутри
         f0 = math.atan2(0.9, zn * 0.45)  # направление «спереди-снаружи» в плоскости xz
-        pts, nrs = [], []
+        pts, nrs, pods = [], [], []
         for k in range(64):
             f = 2 * math.pi * k / 64
             d = np.array([math.cos(f), 0, math.sin(f)])
             cb, rb = bedro(zn, OBHVAT_Y + OBHVAT_NAKLON * math.cos(f - f0))
             # зазор с запасом: манекен прорежен, и вплотную лента местами уходит под кожу
-            pts.append(cb + d * (rb + 0.0115))
+            pods.append(cb + d * (rb + 0.018))
+            pts.append(cb + d * (rb + 0.0305))
             nrs.append(d)
+        # мягкая подушка вокруг бедра, лента обхвата — поверх неё; в паху, где бёдра почти
+        # сходятся, подушки нет — дуга начинается и кончается за внутренней стороной
+        k_in = 32 if zn > 0 else 0
+        dug = [(k_in + 8 + j) % 64 for j in range(49)]
+        dobavit("obhvaty", "chernyy", valik(np.array(pods)[dug], np.array(nrs)[dug], 0.075, 0.018, n=14))
         dobavit("obhvaty", "lenta", lenta(np.array(pts), np.array(nrs), 0.04, 0.007, zamk=True))
         # ход от кольца на бедре к петле и пряжка обхвата
         k0 = int(round((f0 % (2 * math.pi)) / (2 * math.pi) * 64)) % 64
@@ -161,8 +174,8 @@ def postroit():
 
     # Плечевые накладки: мягкие чёрные подушки на лямках от колец КЗУ до груди
     for zn in (-1, 1):
-        nak, nnak = put_po_torsu([(1.445, zn * 34.5), (1.40, zn * 35.5), (1.34, zn * 37.5), (1.285, zn * 40)], otst + 0.008, 24)
-        dobavit("lyamki", "chernyy", lenta(nak, nnak, 0.07, 0.016))
+        nak, nnak = put_po_torsu([(1.445, zn * 34.5), (1.40, zn * 35.5), (1.34, zn * 37.5), (1.285, zn * 40)], otst + 0.011, 24)
+        dobavit("lyamki", "chernyy", valik(nak, nnak, 0.075, 0.022))
 
     # 10. Подушка отцепки — правая лямка, сразу под грудной перемычкой, красная, вытянута вниз
     pp, npp = poverh(1.215, -45, otst + 0.02)
