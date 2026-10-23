@@ -134,24 +134,38 @@ def postroit():
         if zn > 0:
             metka("konci_osn", 6, pd + vverh * 0.035 + nd * 0.02, nd)
 
-    # 7. Кольцо ОП — левая лямка: карман и металлическая рамка; шланг к замку через плечо
-    pk, nkk = poverh(1.20, 47, OTST + 0.012)
+    # 7. Кольцо ОП — большое металлическое кольцо-«капля» на левой лямке у грудной перемычки
+    #    (по фото заказчика: кольцо у внутреннего края лямки, над перемычкой); шланг к замку через плечо
+    pk, nkk = poverh(1.30, 29, OTST + 0.016)
     b = bazis(nkk)
-    dobavit("kolco_op", "chernyy", okrugl_korobka((0.055, 0.075, 0.014), 0.006).preobr(matr(pk, b)))
-    dobavit("kolco_op", "metall", ramka(0.05, 0.034, 0.008, 0.006).preobr(matr(pk + nkk * 0.014, b)))
-    shl_op = []
-    for y, u in ((1.24, 47), (1.36, 41), (1.48, 36)):
-        shl_op.append(poverh(y, u + 8, OTST + 0.02)[0])
+    kap = []
+    for k in range(49):
+        f = 2 * math.pi * k / 48
+        # овал 6,4 × 7,6 см, наружный (к лямке) бок спрямлён — как у вытяжного кольца
+        x, y = math.cos(f) * 0.032, math.sin(f) * 0.038
+        kap.append([min(x, 0.022), y, 0])
+    kap = gladko(kap, 72)
+    dobavit("kolco_op", "metall", trubka(kap, 0.0045).preobr(matr(pk, b)))
+    # перемычка-«ушко», которой кольцо держится на лямке
+    dobavit("kolco_op", "krasnyy", okrugl_korobka((0.012, 0.03, 0.006), 0.003).preobr(
+        matr(pk + b[:, 0] * 0.03 + nkk * 0.002, b)))
+    shl_op = [pk + b[:, 1] * 0.038 + nkk * 0.004]
+    for y, u in ((1.38, 33), (1.48, 34)):
+        shl_op.append(poverh(y, u, OTST + 0.02)[0])
     shl_op += [[0.15, 1.61, 0.03], [0.15, 1.64, -0.05], [0.13, 1.56, -0.16], [0.05, zamok_y + 0.01, zad_osn - 0.02]]
     dobavit("kolco_op", "shlang", trubka(gladko(shl_op, 50), 0.006))
-    metka("kolco_op", 7, pk + nkk * 0.03, nkk)
+    metka("kolco_op", 7, pk - b[:, 0] * 0.032 + nkk * 0.01, nkk)
 
-    # 10. Нож-стропорез — карман над кольцом ОП, рукоять наружу
-    pn, nn = poverh(1.33, 47, OTST + 0.03)
-    dobavit("nozh", "chernyy", okrugl_korobka((0.05, 0.09, 0.022), 0.008).preobr(matr(pn, bazis(nn))))
-    dobavit("nozh", "pribor", okrugl_korobka((0.016, 0.04, 0.012), 0.006).preobr(
-        matr(pn + nn * 0.016 + [0, 0.05, 0], bazis(nn))))
-    metka("nozh", 10, pn + nn * 0.03 + [0, 0.02, 0], nn)
+    # 10. Рация — носимая (на фото Kenwood) в чёрном чехле на левой лямке, над кольцом ОП, снаружи
+    pn, nn = poverh(1.37, 50, OTST + 0.03)
+    bn = bazis(nn)
+    dobavit("raciya", "chernyy", okrugl_korobka((0.062, 0.12, 0.034), 0.008).preobr(matr(pn, bn)))
+    # лицевая панель рации в окне чехла и короткая антенна сверху
+    dobavit("raciya", "pribor", okrugl_korobka((0.046, 0.075, 0.006), 0.004).preobr(
+        matr(pn + nn * 0.016 + [0, -0.01, 0], bn)))
+    dobavit("raciya", "chernyy", cilindr(0.006, 0.05, 12).preobr(
+        matr(pn + [0, 0.083, 0] - bn[:, 0] * 0.016, np.eye(3))))
+    metka("raciya", 10, pn + nn * 0.03 + [0, 0.02, 0], nn)
 
     # 8. Кольцо ЗПС — правая лямка: карман, рамка, трос со шпилькой уходит к нижнему отсеку
     pz, nz = poverh(1.20, -47, OTST + 0.012)
@@ -179,14 +193,21 @@ def postroit():
     dobavit("zveno_otc", "shlang", trubka(gladko(grud, 40), 0.004))
     metka("zveno_otc", 9, po + no * 0.03, no)
 
-    # 12. Грудная перемычка: карабин слева, пряжка справа
+    # 12. Грудная перемычка: карабин посередине груди, D-пряжка правее (по фото заказчика)
     gr, ngr = put_po_torsu([(1.27, -40), (1.27, -15), (1.27, 0), (1.27, 15), (1.27, 40)], OTST + 0.007, 40)
     dobavit("grudnaya", "lenta", lenta(gr, ngr, 0.045, 0.006))
-    pg, ng = poverh(1.27, 30, OTST + 0.014)
-    dobavit("grudnaya", "metall", tor(0.02, 0.0045, 26, 8, dolya=0.9).preobr(matr(pg, bazis(ng))))
-    pg2, ng2 = poverh(1.27, -30, OTST + 0.012)
-    dobavit("grudnaya", "metall", okrugl_korobka((0.03, 0.045, 0.008), 0.004).preobr(matr(pg2, bazis(ng2))))
-    metka("grudnaya", 12, poverh(1.27, 8, OTST + 0.012)[0], poverh(1.27, 8)[1])
+    pg, ng = poverh(1.27, 3, OTST + 0.015)
+    bg = bazis(ng)
+    karab = []
+    for k in range(41):
+        f = 2 * math.pi * k / 40
+        karab.append([math.cos(f) * 0.016, math.sin(f) * 0.03, 0])
+    dobavit("grudnaya", "metall", trubka(gladko(karab, 60), 0.0042).preobr(matr(pg, bg)))
+    # защёлка карабина
+    dobavit("grudnaya", "metall", cilindr(0.0028, 0.04, 10).preobr(matr(pg + bg[:, 0] * 0.016 + ng * 0.002, bg)))
+    pg2, ng2 = poverh(1.27, -17, OTST + 0.013)
+    dobavit("grudnaya", "metall", ramka(0.032, 0.05, 0.009, 0.006).preobr(matr(pg2, bazis(ng2))))
+    metka("grudnaya", 12, pg + ng * 0.012 + [0, 0.035, 0], ng)
 
     return sb
 
