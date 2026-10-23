@@ -297,11 +297,12 @@ const F = {
   klevantaVniz:1.5, klevantaVverh:1.8,
   // сваливание: глубокое торможение дольше glubDo с; резкий разворот ниже rezkoNizhe м дольше rezkoDo с
   glubDo:2.5, rezkoNizhe:40, rezkoDolya:0.6, rezkoDo:0.4, svalDlit:2.2, svalVert:13, zhestko:7, myagko:2.5,
-  raskrytieMin:900, zapasnoy:350, raskrytieDlit:2.5,
+  raskrytieMin:900, zapasnoy:350, raskrytieDlit:3,
   // фитиль: купол вышел, но не наполнился — 35 м/с вниз; бывает при раскрытии не лицом к земле
-  fitilVert:35, fitilShans:0.5,
-  // ускорение игрового времени: падение и спуск под куполом идут быстрее настоящих
-  uskFF:2, uskKupol:2.5, uskNizko:1.5,
+  fitilVert:35, fitilShans:0.5, fitilOt:1.4,   // фитилить купол начинает через fitilOt с после начала раскрытия
+  // игровое время — настоящее (требование заказчика: «чем правдоподобнее, тем лучше»);
+  // множители оставлены, чтобы при нужде ускорить падение и спуск
+  uskFF:1, uskKupol:1, uskNizko:1,
   // посадка: ниже bokOt м — вид сбоку и настоящее время, чтобы подушку можно было сделать «на раз-два»
   bokOt:50, uskBok:1,
   // отделение (AFF, с. 21): тело летит вперёд со скоростью самолёта, горизонталь гаснет к 10–12 с
@@ -676,7 +677,7 @@ addEventListener('keydown', e => {
   // ↑ в падении — вперёд, под куполом — подушка (как пробел)
   else if (e.code === 'ArrowUp' || e.code === 'KeyW') { nazh.vverh = true; if (s && s.faza === 'kupol') nazh.podushka = true; }
   else if (e.code === 'Space') {
-    if (s && (s.faza === 'padenie' || s.fitil)) raskryt(); else if (s && s.faza === 'kupol') nazh.podushka = true; else return;
+    if (s && (s.faza === 'padenie' || (s.fitil && s.t >= F.fitilOt))) raskryt(); else if (s && s.faza === 'kupol') nazh.podushka = true; else return;
   }
   else return;
   e.preventDefault();
@@ -783,7 +784,7 @@ function zapasnoyRaskryt(tekst) {
 }
 function raskryt() {
   // фитиль: кнопка «Раскрыть» — отцепка и запасной
-  if (s && s.faza === 'raskrytie' && s.fitil) { zapasnoyRaskryt('Отцепка! Раскрыт запасной на ' + Math.round(s.h) + ' м'); return; }
+  if (s && s.faza === 'raskrytie' && s.fitil && s.t >= F.fitilOt) { zapasnoyRaskryt('Отцепка! Раскрыт запасной на ' + Math.round(s.h) + ' м'); return; }
   if (!s || s.faza !== 'padenie') return;
   s.faza = 'raskrytie'; s.t = 0; s.raskrytVys = Math.round(s.h);
   // раскрываться — только из коробочки, лицом к земле: на спине и в фигуре купол может захлестнуть
@@ -909,7 +910,7 @@ function shag(dtReal) {
     // скорость по воздуху — вниз и вынос вперёд; сопротивление ∝ квадрату скорости, предел — vzCel
     const V = Math.hypot(s.brosok[0], s.brosok[1], s.vz), kS = 9.8 / (vzCel * vzCel);
     s.vz += (9.8 - kS * V * s.vz) * dt;
-    const gas = Math.max(0, 1 - kS * 0.8 * V * dt); s.brosok[0] *= gas; s.brosok[1] *= gas;
+    const gas = Math.max(0, 1 - kS * 0.9 * V * dt); s.brosok[0] *= gas; s.brosok[1] *= gas;
     if (s.tFF < F.potokDlit && !s.fig) omCel += Math.sin(s.tFF * 5 + s.faza0) * 40 * (1 - s.tFF / F.potokDlit);   // поток от винтов
     s.om += (omCel - s.om) * Math.min(1, dt / F.tauFF);
     s.vg += (vgCel - s.vg) * Math.min(1, dt / F.tauGorFF);
@@ -925,13 +926,15 @@ function shag(dtReal) {
     const k = Math.min(1, s.t / F.raskrytieDlit);
     const [wx, wy] = veterNa(s.h);
     s.x += wx * dt; s.y += wy * dt;
-    if (s.fitil) {
-      // фитиль не тормозит: снижение выходит на 35 м/с и держится, пока не отцепится или не сработает прибор
-      s.vz += (F.fitilVert - s.vz) * Math.min(1, dt / 1.5); s.h -= s.vz * dt;
-      if (s.t >= F.raskrytieDlit && !s.trevogaBylo.fitil) { s.trevogaBylo.fitil = 1; pokazat('ФИТИЛЬ! Купол не наполнился — жми «Раскрыть»: отцепка и запасной', 4, true); }
+    if (s.fitil && s.t >= F.fitilOt) {
+      // купол начал наполняться и сложился в фитиль: снова разгон — до 35 м/с, пока не отцепится или не сработает прибор
+      s.vz += (F.fitilVert - s.vz) * Math.min(1, dt / 1.2); s.h -= s.vz * dt;
+      s.kKupol = Math.max(0.12, s.kKupol - dt * 0.6);
+      if (!s.trevogaBylo.fitil) { s.trevogaBylo.fitil = 1; pokazat('ФИТИЛЬ! Купол не наполнился — жми «Раскрыть»: отцепка и запасной', 4, true); }
       if (s.h <= F.zapasnoy) zapasnoyRaskryt('Сработал прибор — отцепка и запасной на 350 м');
     } else {
-      s.vz = F.padenie + (F.kupolVert - F.padenie) * k; s.h -= s.vz * dt * 0.5;
+      // раскрытие: купол наполняется, снижение гаснет с 50 до 5 м/с
+      s.vz = F.padenie + (F.kupolVert - F.padenie) * k; s.h -= s.vz * dt; s.kKupol = k;
       if (s.t >= F.raskrytieDlit) { s.faza = 'kupol'; s.om = 0; knopkaPodushka(true); }
     }
   } else if (s.faza === 'kupol') {
@@ -1258,7 +1261,7 @@ function risovat() {
   ctx.save(); ctx.translate(SH / 2, VY * 0.58);
   if (s.faza === 'samolet') risovatSamolet();
   else if (s.faza === 'padenie') risovatPadenie();
-  else risovatKupol(s.faza === 'raskrytie' ? Math.min(s.fitil ? 0.12 : 1, s.t / F.raskrytieDlit) : 1);
+  else risovatKupol(s.faza === 'raskrytie' ? s.kKupol ?? 0 : 1);
   ctx.restore();
   osvetit();
 

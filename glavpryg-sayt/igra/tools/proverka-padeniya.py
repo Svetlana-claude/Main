@@ -59,7 +59,7 @@ with sync_playwright() as p:
     s.keyboard.up('ArrowUp')
     proverit(vg > 8 and 'ВПЕРЁД' in poza, f'↑ — движение вперёд ({vg:.1f} м/с, «{poza}»)')
     proverit(s.evaluate("s.faza") == 'padenie', '↑ в падении не раскрывает парашют')
-    s.keyboard.down('ArrowDown'); s.wait_for_timeout(1500)
+    s.keyboard.down('ArrowDown'); s.wait_for_timeout(3000)   # время настоящее: с +8 до назад — 2–3 с
     vg = s.evaluate('s.vg'); s.keyboard.up('ArrowDown')
     proverit(vg < -3, f'↓ — движение назад ({vg:.1f} м/с)')
     s.keyboard.down('ArrowLeft'); s.wait_for_timeout(700)

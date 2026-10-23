@@ -3,9 +3,11 @@
 
     python proverka-fitilya.py <адрес index.html> <каталог снимков>
 
+0) Время настоящее: в свободном падении высота уходит ≈ 50 м за секунду, под куполом — 5 м.
 1) Полный режим: купол разгоняется до 12 м/с вперёд и 5 м/с вниз.
 2) За лесом при ветре 8 м/с турбулентность крутит купол, но снижение остаётся 5 м/с — ветер на него не влияет.
-3) Фитиль (?fitil=1): снижение выходит на 35 м/с, строка «ФИТИЛЬ!»; пробел — отцепка и запасной,
+3) Фитиль (?fitil=1): купол начал наполняться — снижение падает, затем фитилит и снова разгоняется до 35 м/с,
+   строка «ФИТИЛЬ!»; пробел — отцепка и запасной,
    в разборе «Фитиль — запасной».
 4) Фитиль без отцепки: прибор раскрывает запасной на 350 м.
 """
@@ -38,14 +40,21 @@ def v_padenie(s, h):
 with sync_playwright() as p:
     b = p.chromium.launch()
 
-    # ── 1–2. скорости в полном режиме ──
+    # ── 0–2. скорости в полном режиме ──
     s = stranica(b, '?fitil=0')
-    v_padenie(s, 2000)
+    v_padenie(s, 3900)
+    s.wait_for_function("s.vz > 49", timeout=30000)                 # разгон после отделения закончился
+    sek = "() => new Promise(ok => { const h0 = s.h, t0 = performance.now(); setTimeout(() => ok((h0 - s.h) / (performance.now() - t0) * 1000), 2000); })"
+    v = s.evaluate(sek)
+    proverit(45 < v < 55, f'свободное падение по часам: {v:.1f} м/с')
+    s.evaluate("s.h = 2000")
     s.evaluate("raskryt()")
     s.wait_for_function("s.faza === 'kupol'", timeout=15000)
     s.evaluate("s.h = 1000; s.v = 4; s.vzK = 3; s.trevogaBylo.k1 = 1")
     s.wait_for_timeout(7000)
     v, vz = s.evaluate("[s.v, s.vzTek]")
+    vch = s.evaluate(sek)
+    proverit(4.5 < vch < 5.5, f'под куполом по часам: {vch:.1f} м/с вниз')
     proverit(abs(v - 12) < 0.3 and abs(vz - 5) < 0.1, f'полный режим: {v:.2f} м/с вперёд, {vz:.2f} вниз')
 
     r = s.evaluate("""() => { pauza = true;
@@ -66,9 +75,16 @@ with sync_playwright() as p:
 
     # ── 3. фитиль и отцепка ──
     s = stranica(b, '?fitil=1')
-    v_padenie(s, 1500)
-    s.evaluate("raskryt()")
-    s.wait_for_timeout(6000)
+    v_padenie(s, 3900)
+    s.wait_for_function("s.vz > 45", timeout=30000)
+    s.evaluate("s.h = 1500; raskryt()")
+    # скорость по ходу раскрытия: сперва гаснет, с началом фитиля растёт
+    hod = s.evaluate("""() => new Promise(ok => { const z = []; const id = setInterval(() => {
+      z.push([s.t, s.vz]); if (s.t > 5) { clearInterval(id); ok(z); } }, 50); })""")
+    vmin = min(v for _, v in hod); tmin = next(t for t, v in hod if v == vmin)
+    proverit(vmin < 32 and tmin < 2 and hod[-1][1] > vmin + 5,
+             f'фитиль: при раскрытии до {vmin:.0f} м/с, потом разгон до {hod[-1][1]:.0f} м/с')
+    s.wait_for_timeout(3000)
     faza, fitil, vz, tekst = s.evaluate("[s.faza, s.fitil, s.vz, document.getElementById('soobshenie').innerText]")
     s.screenshot(path=f'{kuda}/fitil.png')
     proverit(faza == 'raskrytie' and fitil and abs(vz - 35) < 1.5, f'фитиль: снижение {vz:.1f} м/с ({faza})')
