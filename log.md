@@ -6,6 +6,16 @@
 
 ---
 
+## 24.10.2026 — VPN: AmneziaWG для телефона
+
+**Статус:** сервер поднят, ждёт проверки с телефона
+
+**Ход:** `vpn-server/install-amneziawg.sh` — AmneziaWG рядом с wg0: `awg0`, `46.8.178.196:443/udp`, сеть `10.9.0.0/24`, MTU клиента 1280, параметры маскировки в `/etc/amnezia/amneziawg/params`. Клиент `phone` (`10.9.0.2`), QR — `vpn/downloads/awg-phone-qr.png` и `exchange/vpn/awg-phone.*`.
+
+**Суть:** на телефоне WireGuard соединяется, но трафик не идёт (оператор режет протокол). Поднять на сервере AmneziaWG рядом с прежним WireGuard и выдать телефону QR-код для приложения AmneziaWG.
+
+---
+
 ## 23.10.2026 — Главпрыг: выгрузка 3D-моделей в STL и Blender
 
 **Статус:** выполнено — cbd91e0
