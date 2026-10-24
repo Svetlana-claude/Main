@@ -56,9 +56,9 @@ with sync_playwright() as p:
         s.click(f'#urovni button >> nth={ur}'); s.click('#b-start'); s.wait_for_timeout(2000)
         s.screenshot(path=f'{kuda}/igra-{imya}-samolet.png')
         snyato = set(); t0 = time.time()
-        while time.time() - t0 < 420:                                   # прыжок в настоящем времени — ≈ 4–5 мин
+        while time.time() - t0 < 240:                                   # прыжок — 1–2 мин, с запасом
             sost = s.evaluate(AVTOPILOT)
-            if sost == 'itog': break
+            if sost == 'itog': print(f'{imya}: прыжок — {time.time() - t0:.0f} с по часам'); break
             f = (sost or '').split(' ')[0]
             if f in ('padenie', 'kupol') and f not in snyato and s.evaluate('s.h') < (2000 if f == 'padenie' else 250):
                 snyato.add(f); s.screenshot(path=f'{kuda}/igra-{imya}-{f}.png')

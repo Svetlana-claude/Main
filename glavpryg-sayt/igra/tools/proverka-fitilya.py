@@ -3,13 +3,15 @@
 
     python proverka-fitilya.py <адрес index.html> <каталог снимков>
 
-0) Время настоящее: в свободном падении высота уходит ≈ 50 м за секунду, под куполом — 5 м.
+0) Свободное падение — в настоящем времени, ≈ 50 м за секунду по часам; спуск под куполом выше 300 м —
+   с перемоткой ×6 (30 м за секунду по часам), на экране «⏩ ×6».
 1) Полный режим: купол разгоняется до 12 м/с вперёд и 5 м/с вниз.
 2) За лесом при ветре 8 м/с турбулентность крутит купол, но снижение остаётся 5 м/с — ветер на него не влияет.
 3) Фитиль (?fitil=1): купол начал наполняться — снижение падает, затем фитилит и снова разгоняется до 35 м/с,
    строка «ФИТИЛЬ!»; пробел — отцепка и запасной,
    в разборе «Фитиль — запасной».
-4) Фитиль без отцепки: прибор раскрывает запасной на 350 м.
+4) Фитиль без отцепки: прибор раскрывает запасной на 350 м — два купола: строка «ДВА КУПОЛА!»,
+   ≈ 7,8 м/с вперёд и 6,5 вниз, на экране два купола (сверху и сбоку), в разборе «два купола».
 """
 import sys
 from playwright.sync_api import sync_playwright
@@ -54,7 +56,8 @@ with sync_playwright() as p:
     s.wait_for_timeout(7000)
     v, vz = s.evaluate("[s.v, s.vzTek]")
     vch = s.evaluate(sek)
-    proverit(4.5 < vch < 5.5, f'под куполом по часам: {vch:.1f} м/с вниз')
+    per = s.evaluate("document.getElementById('peremotka')?.innerText ?? ''")
+    proverit(27 < vch < 33 and per == '⏩ ×6', f'под куполом выше 300 м по часам: {vch:.1f} м/с вниз, на экране «{per}»')
     proverit(abs(v - 12) < 0.3 and abs(vz - 5) < 0.1, f'полный режим: {v:.2f} м/с вперёд, {vz:.2f} вниз')
 
     r = s.evaluate("""() => { pauza = true;
@@ -106,6 +109,20 @@ with sync_playwright() as p:
     s.wait_for_function("s.zapasnoy", timeout=20000, polling=10)
     vys = s.evaluate("s.raskrytVys")
     proverit(340 <= vys <= 350, f'без отцепки — прибор на {vys} м')
+    s.wait_for_function("s.faza === 'kupol'", timeout=10000)
+    dva, tekst = s.evaluate("[s.dvaKupola, document.getElementById('soobshenie').innerText]")
+    proverit(dva is True and 'ДВА КУПОЛА' in tekst, f'два купола: «{tekst[:60]}»')
+    s.evaluate("s.h = 250; s.x = 0; s.y = 0; s.trevogaBylo.k1 = s.trevogaBylo.k2 = 1")
+    s.wait_for_timeout(2500)
+    v, vz = s.evaluate("[s.v, s.vzTek]")
+    s.screenshot(path=f'{kuda}/dva-kupola.png')
+    proverit(abs(v - 7.8) < 0.3 and abs(vz - 6.5) < 0.2, f'на двух куполах: {v:.1f} м/с вперёд, {vz:.1f} вниз')
+    s.evaluate("s.h = 35; s.trevogaBylo.k3 = s.trevogaBylo.k4 = 1")
+    s.wait_for_function("bokVid()", timeout=10000); s.wait_for_timeout(500)
+    s.screenshot(path=f'{kuda}/dva-kupola-sboku.png')
+    s.wait_for_selector('#e-itog.vidno', timeout=30000)
+    razbor = s.inner_text('#itog-razbor').replace('\n', ' ')
+    proverit('два купола' in razbor, f'разбор: {razbor[:110]}')
     b.close()
 print('ошибки:', oshibki or 'нет')
 sys.exit(1 if oshibki or provaly else 0)
