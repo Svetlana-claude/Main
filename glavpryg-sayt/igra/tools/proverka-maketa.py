@@ -56,7 +56,7 @@ with sync_playwright() as p:
         s.click(f'#urovni button >> nth={ur}'); s.click('#b-start'); s.wait_for_timeout(2000)
         s.screenshot(path=f'{kuda}/igra-{imya}-samolet.png')
         snyato = set(); t0 = time.time()
-        while time.time() - t0 < 240:                                   # прыжок — 1–2 мин, с запасом
+        while time.time() - t0 < 600:                                   # прыжок — 1–2 мин, в нормальной скорости — до 5 мин
             sost = s.evaluate(AVTOPILOT)
             if sost == 'itog': print(f'{imya}: прыжок — {time.time() - t0:.0f} с по часам'); break
             f = (sost or '').split(' ')[0]

@@ -82,6 +82,8 @@ with sync_playwright() as p:
     s = c.new_page()
     s.on('pageerror', lambda e: oshibki.append(f'{imya}: {e}'))
     s.goto(adres, wait_until='networkidle')
+    # плашка cookie у нижнего края закрывает низ окна игры — сперва ответить на неё, как сделает человек
+    if s.locator('[data-cookie="net"]').is_visible(): s.tap('[data-cookie="net"]')
     s.tap('#igra-start'); s.wait_for_timeout(500)
     ok = s.locator('#igra-okno').bounding_box()
     proverit(s.evaluate("document.getElementById('igra-okno').classList.contains('psevdo')")

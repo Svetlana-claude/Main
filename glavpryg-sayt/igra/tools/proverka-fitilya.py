@@ -11,6 +11,7 @@
 3) Фитиль (?fitil=1): купол начал наполняться — снижение падает, затем фитилит и снова разгоняется до 35 м/с,
    строка «ФИТИЛЬ!»; пробел — отцепка и запасной,
    в разборе «Фитиль — запасной».
+2а) Скорость игры (?skorost=): нормальная — без перемотки, ×1 — 6 / 2,5 / 1, ×2 — 12 / 5 / 1.
 4) Фитиль без отцепки: прибор раскрывает запасной на 350 м — два купола: строка «ДВА КУПОЛА!»,
    ≈ 6,5 м/с вперёд и 6,5 вниз, на экране два купола (сверху и сбоку), в разборе «два купола».
 """
@@ -87,6 +88,18 @@ with sync_playwright() as p:
     proverit(turb and all(abs(v - 5) < 0.1 for v in vzs),
              f'турбулентность {max(turb) if turb else 0:.2f}, снижение {min(vzs)}…{max(vzs)} м/с')
     s.context.close()
+
+    # ── 2а. скорость игры: перемотка под куполом выше 300 м, 300–50 м и ниже 50 м ──
+    for sk, zhdu in (('norma', [1, 1, 1]), ('x1', [6, 2.5, 1]), ('x2', [12, 5, 1])):
+        s = stranica(b, f'?fitil=0&skorost={sk}')
+        v_padenie(s, 1500)
+        s.evaluate("raskryt()"); s.wait_for_function("s.faza === 'kupol'", timeout=15000)
+        est = []
+        for h in (1000, 200, 40):
+            s.evaluate(f"s.h = {h}; Object.assign(s.trevogaBylo, {{ k1:1, k2:1, k3:1, k4:1 }})"); s.wait_for_timeout(300)
+            est.append(s.evaluate("s.usk"))
+        proverit(est == zhdu, f'скорость игры {sk}: перемотка {est}')
+        s.context.close()
 
     # ── 3. фитиль и отцепка ──
     s = stranica(b, '?fitil=1')

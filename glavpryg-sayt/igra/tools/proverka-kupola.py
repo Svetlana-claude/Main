@@ -54,7 +54,7 @@ with sync_playwright() as p:
     s.mouse.move(kn['x'] + kn['width'] / 2, kn['y'] + kn['height'] / 2); s.mouse.down()
     s.wait_for_function("s.dL >= 0.999", timeout=5000); s.wait_for_timeout(100)
     zap = s.evaluate("clearInterval(zapisId), zapis")
-    t0 = max(t for t, d in zap if d == 0); t1 = min(t for t, d in zap if d >= 0.999)
+    t0 = max((t for t, d in zap if d == 0), default=zap[0][0]); t1 = min((t for t, d in zap if d >= 0.999), default=zap[-1][0])
     proverit(t1 - t0 >= 0.5, f'клеванты затягиваются не мгновенно (полный ход за {t1 - t0:.2f} с игрового времени)')
     s.wait_for_function("s.svalT > 0", timeout=8000)
     s.screenshot(path=f'{kuda}/kupol-svalivanie.png')

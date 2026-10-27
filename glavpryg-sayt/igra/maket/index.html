@@ -209,6 +209,9 @@
     <p class="stat" id="vremya-opis"></p>
     <div class="razdel" id="razdel-urovni">Уровень — ветер у земли</div>
     <div class="urovni" id="urovni" role="group" aria-label="Уровень сложности"></div>
+    <div class="razdel">Скорость игры</div>
+    <div class="urovni pogoda" id="skorosti" role="group" aria-label="Скорость игры"></div>
+    <p class="pogoda-opis" id="skorost-opis" aria-live="polite"></p>
     <button class="glavnaya" id="b-start">Прыгать!</button>
     <button class="vtorostep" id="b-upr">Управление</button>
     <p class="stat" id="stat-start"></p>
@@ -310,7 +313,7 @@ const F = {
   fitilVert:35, fitilShans:0.5, fitilOt:1.4,   // фитилить купол начинает через fitilOt с после начала раскрытия
   // игровое время: свободное падение и раскрытие — настоящие; спуск под куполом — с перемоткой
   // (выше nizkoOt м — ×6, ниже — ×2,5), чтобы прыжок укладывался в 1–2 минуты. Скорости на
-  // приборах и в физике — настоящие, на экране горит «⏩ ×N»
+  // приборах и в физике — настоящие, на экране горит «⏩ ×N». Перемотку задаёт скорость игры (SKOROSTI)
   uskFF:1, uskKupol:6, uskNizko:2.5, nizkoOt:300,
   // посадка: ниже bokOt м — вид сбоку и настоящее время, чтобы подушку можно было сделать «на раз-два»
   bokOt:50, uskBok:1,
@@ -332,6 +335,13 @@ const ROZA = { x:360, y:-318, r:42 };
 // ci перистая пелена (высоко, только рассеянный свет); niz/verh — основание и вершины, м; pokr — доля неба.
 // Сплошной слой (pokr ≥ 0,8) ниже 4300 м опускает выброску под себя; сквозь кучевые падают —
 // внутри облака ничего не видно. «Облачность выше высоты раскрытия» (AFF, с. 44): ниже 900 м — прыжков нет.
+// скорость игры — выбор на старте: перемотка спуска под куполом (свободное падение и посадка — всегда настоящие);
+// mnozh — во сколько раз ускорить F.uskKupol и F.uskNizko, 0 — без перемотки
+const SKOROSTI = [
+  { id:'norma', imya:'Нормальная', kratko:'как в жизни', mnozh:0, opis:'Всё в настоящем времени: спуск под куполом длится столько же, сколько в жизни. Прыжок — около четырёх минут.' },
+  { id:'x1', imya:'Ускоренная ×1', kratko:'≈ 2 мин', mnozh:1, opis:'Спуск под куполом показан быстрее: выше 300 м — ×6, ниже — ×2,5. Прыжок — около двух минут.' },
+  { id:'x2', imya:'Ускоренная ×2', kratko:'≈ 1,5 мин', mnozh:2, opis:'Спуск под куполом вдвое быстрее, чем в «×1»: выше 300 м — ×12, ниже — ×5.' },
+];
 const POGODA = [
   { id:'segodnya', ikonka:'📍', imya:'Сегодня в Грызлово', kratko:'загрузка…', segodnya:true,
     opis:'Погода на аэродроме сегодня по прогнозу Open-Meteo: ветер по высотам, порывы, облака.', sloi:[] },
@@ -863,7 +873,7 @@ function shag(dtReal) {
   if (!s) return;
   s.vremya += dtReal;
   if (s.faza !== 'itog') {                                     // тени облаков плывут по ветру на высоте кромки
-    const [wx, wy] = veterNa(1000), usk0 = s.faza === 'samolet' ? 1 : s.faza === 'padenie' ? F.uskFF : F.uskKupol;
+    const [wx, wy] = veterNa(1000), usk0 = s.faza === 'samolet' ? 1 : s.usk || 1;
     s.tuchiSdvig[0] += wx * 1.3 * dtReal * usk0; s.tuchiSdvig[1] += wy * 1.3 * dtReal * usk0;
   }
   if (s.soobT > 0 && (s.soobT -= dtReal) <= 0) skrytSoob();
@@ -891,7 +901,8 @@ function shag(dtReal) {
   }
   if (s.faza === 'itog') return;
   oblakaShag(dtReal);
-  const usk = s.usk = s.faza !== 'kupol' ? F.uskFF : s.h < F.bokOt ? F.uskBok : s.h < F.nizkoOt ? F.uskNizko : F.uskKupol;
+  const m = SKOROSTI[vybranaSkorost].mnozh;
+  const usk = s.usk = s.faza !== 'kupol' ? F.uskFF : s.h < F.bokOt || !m ? F.uskBok : (s.h < F.nizkoOt ? F.uskNizko : F.uskKupol) * m;
   const dt = dtReal * usk;
   const L = nazh.levo, P = nazh.pravo, oba = (L && P) || nazh.vniz;
 
@@ -1863,6 +1874,21 @@ function spisokUrovney() {
     : 'Первый прыжок — уровень 1, штиль и подсказка захода.';
 }
 spisokUrovney();
+// скорость игры — запоминается в браузере; ?skorost=norma|x1|x2 — для проверок
+const elSkorosti = document.getElementById('skorosti');
+let vybranaSkorost = Math.max(0, SKOROSTI.findIndex(k => k.id === (new URLSearchParams(location.search).get('skorost') || hran.skorost || 'x1')));
+function spisokSkorostey() {
+  elSkorosti.innerHTML = '';
+  SKOROSTI.forEach((k, i) => {
+    const b = document.createElement('button');
+    b.innerHTML = `${k.imya}<small>${k.kratko}</small>`;
+    b.setAttribute('aria-pressed', i === vybranaSkorost); b.setAttribute('aria-label', `Скорость игры: ${k.imya}. ${k.opis}`);
+    b.onclick = () => { vybranaSkorost = i; hran.skorost = k.id; sohranit(); spisokSkorostey(); };
+    elSkorosti.appendChild(b);
+  });
+  document.getElementById('skorost-opis').textContent = SKOROSTI[vybranaSkorost].opis;
+}
+spisokSkorostey();
 function start(nomer) {
   zagruzka.then(() => {
     document.querySelectorAll('.ekran').forEach(e => e.id !== 'povorot' && e.classList.remove('vidno'));
