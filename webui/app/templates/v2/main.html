@@ -1,0 +1,73 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>{{ current.title if current else 'Рабочее место' }}</title>
+<link rel="stylesheet" href="{{ url_for('static', path='/v2/v2.css') }}">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'><circle cx='8' cy='8' r='7' fill='%232f6fdb'/></svg>">
+</head>
+<body>
+<div class="app" id="app">
+
+  <aside class="side" id="side" aria-label="Разговоры">
+    <form method="post" action="{{ url_for('v2_new') }}">
+      <button class="side-new" type="submit">Новый чат</button>
+    </form>
+    <nav class="side-list">
+      {% for it in items %}
+        <a class="side-item{% if current and it.id == current.id %} is-current{% endif %}"
+           href="{{ url_for('v2_conversation', conv_id=it.id) }}"
+           {% if current and it.id == current.id %}aria-current="page"{% endif %}>
+          <span class="side-title">{{ it.title }}</span>
+          {% if it.project %}<span class="side-project">{{ it.project }}</span>{% endif %}
+        </a>
+      {% endfor %}
+    </nav>
+    <details class="side-menu">
+      <summary>Ещё</summary>
+      <a href="{{ root_path }}/projects">Проекты</a>
+      <a href="{{ root_path }}/search">Поиск</a>
+      <a href="{{ root_path }}/pictures">Картинки</a>
+      <a href="{{ root_path }}/journal">Журнал</a>
+      <a href="{{ root_path }}/sec">Безопасность</a>
+      <a href="{{ root_path }}/vpn">VPN</a>
+      <a href="{{ root_path }}/settings">Настройки</a>
+      <form method="post" action="{{ url_for('logout') }}"><button type="submit">Выход</button></form>
+    </details>
+  </aside>
+
+  <main class="main">
+    <header class="head">
+      <button class="head-menu" type="button" id="side-toggle" aria-controls="side"
+              aria-expanded="false" aria-label="Разговоры">☰</button>
+      <h1 class="head-title">{{ current.title if current else 'Разговоров пока нет' }}</h1>
+      {% if current and current.kind == 'topic' %}
+        <a class="head-files" href="{{ root_path }}/projects?id={{ current.project_id }}"
+           target="_blank" rel="noopener">Файлы проекта</a>
+      {% endif %}
+    </header>
+    {% if claude_auth_problem %}<p class="alert" role="alert">{{ claude_auth_problem }}</p>{% endif %}
+
+    <section class="feed" id="feed" aria-live="polite">
+      {% for m in messages %}
+        <div class="msg msg-{{ m.role }}"><div class="md">{{ m.content }}</div></div>
+      {% endfor %}
+    </section>
+
+    {% if current %}
+    <form class="composer" id="composer" data-send="{{ send_url }}" data-stream="{{ stream_url }}"
+          data-stop="{{ url_for('v2_stop', conv_id=current.id) }}"
+          data-running="{{ 1 if running else 0 }}">
+      <label class="sr-only" for="text">Сообщение</label>
+      <textarea id="text" name="text" rows="1" placeholder="Сообщение…" autofocus></textarea>
+      <button class="send" type="submit" id="send" aria-label="Отправить">↑</button>
+      <button class="stop" type="button" id="stop" hidden>Стоп</button>
+    </form>
+    {% endif %}
+  </main>
+
+</div>
+<script src="{{ url_for('static', path='/v2/v2.js') }}"></script>
+</body>
+</html>
