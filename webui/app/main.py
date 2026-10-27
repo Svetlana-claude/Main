@@ -8,7 +8,7 @@ from fastapi.staticfiles import StaticFiles
 
 from . import config, db
 from .routers import (
-    auth, chats, claude_login, dashboard, pictures, projects, security, settings, totp, v2, vpn,
+    auth, chats, claude_login, dashboard, pictures, projects, security, settings, totp, vpn,
 )
 
 
@@ -70,7 +70,6 @@ app.include_router(security.router)
 app.include_router(settings.router)
 app.include_router(totp.router)
 app.include_router(claude_login.router)
-app.include_router(v2.router)
 
 
 @app.get("/healthz", include_in_schema=False)
