@@ -207,7 +207,8 @@ if (form) {
           addMessage('error', ev.message);
           break;
         case 'title':
-          document.querySelector('.head-title').textContent = ev.title;
+          document.getElementById('head-name').textContent = ev.title;
+          document.querySelectorAll('.side-item[aria-current]').forEach(a => { a.textContent = ev.title; });
           document.title = ev.title;
           break;
         case 'done': finish(); break;

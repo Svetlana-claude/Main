@@ -11,34 +11,36 @@
 <div class="app" id="app">
 
   <aside class="side" id="side" aria-label="Разговоры">
-    <form method="post" action="{{ url_for('v2_new') }}">
-      <button class="side-new" type="submit">Новый чат</button>
-    </form>
-    {% if projects %}
-    <details class="side-topic">
-      <summary>Новая тема</summary>
-      <form method="post" action="{{ url_for('v2_topic_new') }}">
-        <label class="sr-only" for="topic-project">Проект</label>
-        <select id="topic-project" name="project_id">
-          {% for p in projects %}
-            <option value="{{ p.id }}" {% if current and current.project_id == p.id %}selected{% endif %}>{{ p.name }}</option>
-          {% endfor %}
-        </select>
-        <label class="sr-only" for="topic-title">Название темы</label>
-        <input id="topic-title" name="title" placeholder="Название темы">
-        <button type="submit">Создать</button>
-      </form>
-    </details>
-    {% endif %}
+    {% macro item(it) %}
+      <a class="side-item{% if current and it.id == current.id %} is-current{% endif %}"
+         href="{{ url_for('v2_conversation', conv_id=it.id) }}"
+         {% if current and it.id == current.id %}aria-current="page"{% endif %}>{{ it.title }}</a>
+    {% endmacro %}
     <nav class="side-list">
-      {% for it in items %}
-        <a class="side-item{% if current and it.id == current.id %} is-current{% endif %}"
-           href="{{ url_for('v2_conversation', conv_id=it.id) }}"
-           {% if current and it.id == current.id %}aria-current="page"{% endif %}>
-          <span class="side-title">{{ it.title }}</span>
-          {% if it.project %}<span class="side-project">{{ it.project }}</span>{% endif %}
-        </a>
+      <h2 class="side-group">Проекты</h2>
+      {% for p in projects %}
+        <details class="side-project" data-project="{{ p.id }}"
+                 {% if current and current.project_id == p.id %}open{% endif %}>
+          <summary>{{ p.name }}</summary>
+          <div class="side-topics">
+            {% for t in p.topics %}{{ item(t) }}{% endfor %}
+            <form class="side-add" method="post" action="{{ url_for('v2_topic_new') }}">
+              <input type="hidden" name="project_id" value="{{ p.id }}">
+              <label class="sr-only" for="topic-title-{{ p.id }}">Новая тема в «{{ p.name }}»</label>
+              <input id="topic-title-{{ p.id }}" name="title" placeholder="+ Новая тема" required>
+            </form>
+          </div>
+        </details>
+      {% else %}
+        <p class="side-empty">Проектов пока нет</p>
       {% endfor %}
+
+      <h2 class="side-group">Чатики
+        <form method="post" action="{{ url_for('v2_new') }}">
+          <button class="side-plus" type="submit" aria-label="Новый чат" title="Новый чат">+</button>
+        </form>
+      </h2>
+      {% for c in chats %}{{ item(c) }}{% endfor %}
     </nav>
     <details class="side-menu">
       <summary>Ещё</summary>
@@ -57,7 +59,10 @@
     <header class="head">
       <button class="head-menu" type="button" id="side-toggle" aria-controls="side"
               aria-expanded="false" aria-label="Разговоры">☰</button>
-      <h1 class="head-title">{{ current.title if current else 'Разговоров пока нет' }}</h1>
+      <h1 class="head-title">
+        {% if current and current.project %}<span class="head-project">{{ current.project }} ›</span>{% endif %}
+        <span id="head-name">{{ current.title if current else 'Разговоров пока нет' }}</span>
+      </h1>
       {% if current and current.kind == 'topic' %}
         <button class="head-files" type="button" id="files-open"
                 data-tree="{{ url_for('project_tree', project_id=current.project_id) }}"

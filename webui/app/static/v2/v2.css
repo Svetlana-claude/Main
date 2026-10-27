@@ -30,32 +30,42 @@ a { color: var(--accent); }
   transform: translateX(-100%); transition: transform .2s;
 }
 .app.side-open .side { transform: none; box-shadow: 0 0 0 100vmax rgba(0, 0, 0, .25); }
-.side-new {
-  width: 100%; padding: 10px; font: inherit; cursor: pointer;
-  border: 1px solid var(--line); border-radius: var(--radius); background: var(--bg);
-}
 .side-list { flex: 1; overflow-y: auto; display: flex; flex-direction: column; }
+.side-group {
+  display: flex; align-items: center; justify-content: space-between;
+  margin: 12px 0 4px; padding: 0 10px;
+  font-size: 12px; font-weight: 600; letter-spacing: .04em; text-transform: uppercase; color: var(--muted);
+}
+.side-group:first-child { margin-top: 0; }
+.side-plus {
+  width: 28px; height: 28px; font: inherit; font-size: 18px; line-height: 1; cursor: pointer;
+  color: var(--text); border: 1px solid var(--line); border-radius: 8px; background: var(--bg);
+}
 .side-item {
-  display: flex; flex-direction: column; padding: 8px 10px;
-  border-radius: 8px; color: var(--text); text-decoration: none;
+  display: block; padding: 7px 10px; border-radius: 8px;
+  color: var(--text); text-decoration: none;
+  overflow: hidden; white-space: nowrap; text-overflow: ellipsis;
 }
 .side-item:hover { background: var(--line); }
 .side-item.is-current { background: var(--bg); box-shadow: inset 0 0 0 1px var(--line); }
-.side-title { overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
-.side-project { font-size: 13px; color: var(--muted); }
+.side-project > summary {
+  padding: 7px 10px; border-radius: 8px; cursor: pointer; font-weight: 600;
+  overflow: hidden; white-space: nowrap; text-overflow: ellipsis;
+}
+.side-project > summary:hover { background: var(--line); }
+.side-topics { margin-left: 14px; padding-left: 4px; border-left: 1px solid var(--line); }
+.side-add input {
+  width: 100%; margin: 2px 0 6px; padding: 6px 10px; font: inherit; font-size: 14px;
+  border: 1px dashed var(--line); border-radius: 8px; background: transparent;
+}
+.side-add input:focus { border-style: solid; background: var(--bg); }
+.side-empty { padding: 0 10px; color: var(--muted); }
 .side-menu summary { padding: 8px 10px; cursor: pointer; color: var(--muted); }
 .side-menu a, .side-menu button {
   display: block; width: 100%; padding: 6px 10px; text-align: left;
   font: inherit; color: var(--text); text-decoration: none;
   border: 0; background: none; cursor: pointer;
 }
-
-.side-topic summary { padding: 8px 10px; cursor: pointer; color: var(--muted); }
-.side-topic form { display: flex; flex-direction: column; gap: 6px; padding: 4px 0 8px; }
-.side-topic select, .side-topic input, .side-topic button {
-  font: inherit; padding: 8px 10px; border: 1px solid var(--line); border-radius: 8px; background: var(--bg);
-}
-.side-topic button { cursor: pointer; }
 
 /* Окно «Файлы проекта» */
 .files {
@@ -88,6 +98,7 @@ a { color: var(--accent); }
   flex: 1; margin: 0; font-size: 16px; font-weight: 600;
   overflow: hidden; white-space: nowrap; text-overflow: ellipsis;
 }
+.head-project { font-weight: 400; color: var(--muted); }
 .head-files {
   font: inherit; font-size: 14px; white-space: nowrap; color: var(--accent);
   padding: 6px 10px; border: 1px solid var(--line); border-radius: 8px; background: var(--bg); cursor: pointer;

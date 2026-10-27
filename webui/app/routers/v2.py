@@ -23,20 +23,29 @@ def _guard(request: Request):
     return user, None
 
 
-def _conversations() -> list[dict]:
-    """Чатики и темы одним списком, свежие сверху."""
-    return db.query(
-        """
-        SELECT c.id, c.kind, c.title, c.updated_at, p.name AS project
-        FROM conversations c LEFT JOIN projects p ON p.id = c.project_id
-        ORDER BY c.updated_at DESC
-        LIMIT 200
-        """
+def _tree() -> tuple[list[dict], list[dict]]:
+    """Боковой список: проекты с темами (проект → тема) и отдельно чатики.
+
+    Проекты и темы внутри — по свежести последнего разговора.
+    """
+    projects = db.query("SELECT id, name FROM projects")
+    by_id = {p["id"]: {**p, "topics": [], "fresh": None} for p in projects}
+    for t in db.query(
+        "SELECT id, project_id, title, updated_at FROM conversations "
+        "WHERE kind = 'topic' ORDER BY updated_at DESC"
+    ):
+        p = by_id.get(t["project_id"])
+        if p:
+            p["topics"].append(t)
+            p["fresh"] = p["fresh"] or t["updated_at"]
+    ordered = sorted(by_id.values(),
+                     key=lambda p: (p["fresh"] is not None, p["fresh"] or 0, p["name"]),
+                     reverse=True)
+    chats = db.query(
+        "SELECT id, title FROM conversations WHERE kind = 'chat' "
+        "ORDER BY updated_at DESC LIMIT 100"
     )
-
-
-def _projects() -> list[dict]:
-    return db.query("SELECT id, name FROM projects ORDER BY name")
+    return ordered, chats
 
 
 @router.get("", name="v2_home")
@@ -47,9 +56,10 @@ def v2_home(request: Request):
         return redirect
     last = db.query_one("SELECT id FROM conversations ORDER BY updated_at DESC LIMIT 1")
     if not last:
-        return render(request, "v2/main.html", {"user": user, "items": [], "current": None,
-                                               "messages": [], "running": False,
-                                               "projects": _projects()})
+        projects, chats = _tree()
+        return render(request, "v2/main.html", {"user": user, "projects": projects,
+                                               "chats": chats, "current": None,
+                                               "messages": [], "running": False})
     return RedirectResponse(request.url_for("v2_conversation", conv_id=last["id"]),
                             status_code=303)
 
@@ -79,18 +89,19 @@ def v2_conversation(request: Request, conv_id: int):
     else:
         send_url = request.url_for("topic_send", topic_id=conv_id)
         stream_url = request.url_for("topic_stream", topic_id=conv_id)
+    projects, chats = _tree()
     return render(
         request,
         "v2/main.html",
         {
             "user": user,
-            "items": _conversations(),
+            "projects": projects,
+            "chats": chats,
             "current": current,
             "messages": messages,
             "send_url": send_url,
             "stream_url": stream_url,
             "running": runs.active(current["kind"], conv_id),
-            "projects": _projects(),
         },
     )
 

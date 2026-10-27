@@ -81,8 +81,9 @@ with sync_playwright() as p:
     check(page.locator(".feed .msg-assistant strong").inner_text() == "жирный", "ответ нарисован Markdown'ом")
     check(page.locator(".feed .msg-user").last.inner_text() == "привет", "вопрос в ленте")
     check("sekret-hoda" not in page.locator("body").inner_text(), "ход работы не показан")
-    page.wait_for_function("document.querySelector('.head-title').textContent === 'Заголовок проверки'", timeout=15000)
-    check(True, "название пришло по первой реплике")
+    page.wait_for_function("document.getElementById('head-name').textContent === 'Заголовок проверки'", timeout=15000)
+    check(page.locator(".side-item[aria-current]").inner_text() == "Заголовок проверки",
+          "название пришло по первой реплике — и в шапку, и в список")
     page.wait_for_function("!document.getElementById('send').disabled", timeout=10000)
     page.screenshot(path=f"{shots}/v2-desktop.png")
 
@@ -97,12 +98,21 @@ with sync_playwright() as p:
     check("Остановлено" in page.locator(".feed").inner_text(), "после перезагрузки в ленте «Остановлено»")
     check(page.locator("#files-open").count() == 0, "у чатика нет кнопки «Файлы проекта»")
 
-    page.click(".side-topic summary")
-    page.select_option("#topic-project", project_id)
-    page.fill("#topic-title", "тема проверки")
-    page.click(".side-topic button[type=submit]")
+    proj = f".side-project[data-project='{project_id}']"
+    check(page.locator(proj).get_attribute("open") is None, "у чатика проекты свёрнуты")
+    page.click(f"{proj} > summary")
+    page.fill(f"#topic-title-{project_id}", "тема проверки")
+    page.press(f"#topic-title-{project_id}", "Enter")
     page.wait_for_load_state()
-    check(page.locator(".head-title").inner_text() == "тема проверки", "«Новая тема» создала и открыла тему")
+    check(page.locator("#head-name").inner_text() == "тема проверки", "«+ Новая тема» в проекте создала и открыла тему")
+    check(page.locator(".head-project").inner_text() == "Проверка v2 ›", "в шапке путь: проект › тема")
+    check(page.locator(proj).get_attribute("open") is not None, "проект текущей темы раскрыт")
+    check(page.locator(f"{proj} .side-item[aria-current]").inner_text() == "тема проверки",
+          "тема стоит внутри своего проекта и отмечена текущей")
+    page.click(f"{proj} .side-add input[name=title]")
+    page.press(f"{proj} .side-add input[name=title]", "Enter")
+    check(page.locator("#head-name").inner_text() == "тема проверки", "пустое название темы не отправляется")
+    page.screenshot(path=f"{shots}/v2-tree.png")
     page.click("#files-open")
     page.wait_for_selector("#files-list a", timeout=10000)
     check(page.locator("#files").is_visible(), "окно «Файлы проекта» открыто")
