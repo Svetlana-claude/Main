@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="robots" content="noindex, nofollow">
   <title>{% block title %}{{ title or "Claude" }}{% endblock %} — Claude</title>
-  <link rel="stylesheet" href="{{ root }}/static/site.css?v=1">
+  <link rel="stylesheet" href="{{ root }}/static/site.css?v=2">
 </head>
 <body class="{% block body_class %}{% endblock %}">
 {% block body %}
@@ -37,7 +37,8 @@
   {% block content %}{% endblock %}
 </main>
 <script>window.SITE = {root: {{ root|tojson }}, csrf: {{ sess.csrf|tojson }}};</script>
-<script src="{{ root }}/static/site.js?v=1"></script>
+<script src="{{ root }}/static/site.js?v=2"></script>
+{% block scripts %}{% endblock %}
 {% endblock %}
 </body>
 </html>

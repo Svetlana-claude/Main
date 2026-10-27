@@ -1,0 +1,22 @@
+{% if more %}
+<p class="more"><a href="?n={{ count + 40 }}" id="more-link">Показать раньше</a></p>
+{% endif %}
+{% for m in messages %}
+<article class="msg msg-{{ m.role }}" id="m{{ m.id }}">
+  {% if m.role == "assistant" %}<div class="md">{{ m.html }}</div>
+  {% else %}<p class="plain">{{ m.text }}</p>{% endif %}
+  <time datetime="{{ m.created_at }}" title="{{ local_time(m.created_at) }}">{{ short_time(m.created_at) }}</time>
+</article>
+{% endfor %}
+{% if running %}
+<article class="msg msg-assistant live" id="live">
+  <p class="plain" id="live-text">{{ live_text }}</p>
+  <p class="status" id="live-status">Claude пишет…</p>
+</article>
+{% for p in pending %}
+<article class="msg msg-user pending"><p class="plain">{{ p }}</p><span class="status">дописка</span></article>
+{% endfor %}
+{% endif %}
+{% if not messages and not running %}
+<p class="muted empty-feed">Напиши первое сообщение.</p>
+{% endif %}

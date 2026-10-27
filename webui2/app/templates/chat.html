@@ -1,0 +1,73 @@
+{% extends "base.html" %}
+{% block body_class %}chat-page{% if conv %} has-conv{% endif %}{% endblock %}
+{% block content %}
+<div class="chat">
+  <aside class="convs" id="convs" aria-label="Разговоры">
+    <form method="post" action="{{ root }}/chat/new">
+      <input type="hidden" name="csrf" value="{{ sess.csrf }}">
+      <button type="submit" class="primary wide-btn">Новый разговор</button>
+    </form>
+    <form method="get" action="{{ root }}/search" class="search" role="search">
+      <input type="search" name="q" placeholder="Поиск по разговорам" aria-label="Поиск по разговорам">
+    </form>
+    <nav>
+      <ul class="conv-list">
+        {% for c in convs %}
+        <li><a href="{{ root }}/chat/{{ c.id }}" {% if conv and c.id == conv.id %}aria-current="page"{% endif %}>
+          {{ c.title or "Новый разговор" }}</a></li>
+        {% else %}
+        <li class="muted">Разговоров пока нет</li>
+        {% endfor %}
+      </ul>
+    </nav>
+  </aside>
+
+  {% if conv %}
+  <section class="talk" aria-label="Разговор">
+    <header class="talk-head">
+      <button type="button" class="link to-list" id="to-list">‹ Разговоры</button>
+      <h1 id="talk-title">{{ conv.title or "Новый разговор" }}</h1>
+      <button type="button" class="icon" id="rename-btn" title="Переименовать" aria-label="Переименовать">✎</button>
+      <form method="post" action="{{ root }}/chat/{{ conv.id }}/delete" data-confirm="Удалить?">
+        <input type="hidden" name="csrf" value="{{ sess.csrf }}">
+        <button type="submit" class="icon" title="Удалить" aria-label="Удалить разговор">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 7h16M10 11v6M14 11v6M6 7l1 13h10l1-13M9 7V4h6v3"/></svg>
+        </button>
+      </form>
+      <form method="post" action="{{ root }}/chat/{{ conv.id }}/model" class="model" id="model-form">
+        <input type="hidden" name="csrf" value="{{ sess.csrf }}">
+        <label class="sr-only" for="model">Модель</label>
+        <select name="model" id="model">
+          {% for key, name in models.items() %}
+          <option value="{{ key }}" {% if key == conv.model %}selected{% endif %}>{{ name }}</option>
+          {% endfor %}
+        </select>
+      </form>
+      <span class="weight" title="Сколько беседа занимает в памяти Claude">вес: <span id="weight">{{ weight }}</span></span>
+    </header>
+    <form method="post" action="{{ root }}/chat/{{ conv.id }}/rename" class="rename" id="rename-form" hidden>
+      <input type="hidden" name="csrf" value="{{ sess.csrf }}">
+      <label class="sr-only" for="rename-input">Название</label>
+      <input name="title" id="rename-input" value="{{ conv.title }}" maxlength="120" required>
+      <button type="submit" class="primary">Сохранить</button>
+      <button type="button" class="link" id="rename-cancel">Отмена</button>
+    </form>
+
+    <div class="feed" id="feed" aria-live="polite">{% include "_feed.html" %}</div>
+
+    <form class="composer" id="composer" data-conv="{{ conv.id }}" data-count="{{ count }}">
+      {% if suggest_new %}<p class="hint">Беседа большая и давно молчит — дешевле начать новый разговор.</p>{% endif %}
+      <label class="sr-only" for="text">Сообщение</label>
+      <textarea id="text" name="text" rows="2" placeholder="Сообщение" title="Enter — отправить, Shift+Enter — новая строка"></textarea>
+      <button type="submit" class="primary" id="send-btn">{{ "Дописать" if running else "Отправить" }}</button>
+      <p class="error" id="send-error" role="alert" hidden></p>
+    </form>
+  </section>
+  {% else %}
+  <section class="talk empty">
+    <p class="muted">Начни новый разговор кнопкой «Новый разговор».</p>
+  </section>
+  {% endif %}
+</div>
+{% endblock %}
+{% block scripts %}<script src="{{ root }}/static/chat.js?v=2"></script>{% endblock %}

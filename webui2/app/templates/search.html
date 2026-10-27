@@ -1,0 +1,28 @@
+{% extends "base.html" %}
+{% block content %}
+<section class="panel">
+  <h1>Поиск</h1>
+  <form method="get" action="{{ root }}/search" class="search-row" role="search">
+    <label class="sr-only" for="q">Что найти</label>
+    <input type="search" id="q" name="q" value="{{ q }}" autofocus>
+    <button type="submit" class="primary">Найти</button>
+  </form>
+  {% if searched %}
+    {% if results %}
+    <p class="muted">Найдено: {{ results|length }}{% if results|length == 100 %} (показаны первые 100){% endif %}</p>
+    <ul class="results">
+      {% for r in results %}
+      <li>
+        <a href="{{ root }}/chat/{{ r.conv_id }}?n=10000#m{{ r.id }}">{{ r.title or "Новый разговор" }}</a>
+        <span class="muted"> · {{ "ты" if r.role == "user" else "Claude" }} · {{ local_time(r.created_at) }}</span>
+        <p>{{ r.snippet }}</p>
+      </li>
+      {% endfor %}
+    </ul>
+    {% else %}
+    <p class="muted">Ничего не нашлось.</p>
+    {% endif %}
+  {% endif %}
+  <p><a href="{{ root }}/chat">← К разговорам</a></p>
+</section>
+{% endblock %}

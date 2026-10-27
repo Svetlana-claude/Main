@@ -41,5 +41,14 @@ FAIL_WINDOW_MIN = 15                  # …за столько минут
 # Без https кука Secure не уходит — для проверок на 127.0.0.1 отключается
 COOKIE_SECURE = os.environ.get("WEBUI2_INSECURE_COOKIE") != "1"
 
+# Чат: Claude без инструментов, в пустой папке вне проекта
+CLAUDE_BIN = _env.get("CLAUDE_BIN", str(Path.home() / ".local/bin/claude"))
+CHAT_DIR = Path(_env.get("CHAT_DIR", DB_PATH.parent / "chat-room"))
+MODELS = {"opus": "Opus", "sonnet": "Sonnet", "haiku": "Haiku"}
+DEFAULT_MODEL = "sonnet"
+PAGE_MESSAGES = 40                    # сообщений на странице разговора
+BIG_CONTEXT = 150_000                 # с какого веса беседа считается большой…
+QUIET_HOURS = 6                       # …и через сколько часов молчания советовать новую
+
 TEMPLATES_DIR = APP_DIR / "templates"
 STATIC_DIR = APP_DIR / "static"

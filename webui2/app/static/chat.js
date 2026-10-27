@@ -1,0 +1,134 @@
+// Чат: отправка, дописка, ответ потоком, переименование, удаление
+(function () {
+  "use strict";
+  var site = window.SITE || {};
+  var body = document.body;
+
+  // Подтверждение для форм с вопросом (удаление)
+  document.querySelectorAll("form[data-confirm]").forEach(function (form) {
+    form.addEventListener("submit", function (e) {
+      if (!confirm(form.dataset.confirm)) e.preventDefault();
+    });
+  });
+
+  // Телефон: из разговора — к списку
+  var toList = document.getElementById("to-list");
+  if (toList) toList.addEventListener("click", function () { body.classList.toggle("show-list"); });
+
+  // Модель меняется сразу при выборе
+  var model = document.getElementById("model");
+  if (model) model.addEventListener("change", function () { model.form.submit(); });
+
+  // Переименование: карандаш открывает поле
+  var renameBtn = document.getElementById("rename-btn");
+  var renameForm = document.getElementById("rename-form");
+  if (renameBtn && renameForm) {
+    renameBtn.addEventListener("click", function () {
+      renameForm.hidden = !renameForm.hidden;
+      if (!renameForm.hidden) document.getElementById("rename-input").select();
+    });
+    document.getElementById("rename-cancel").addEventListener("click", function () {
+      renameForm.hidden = true;
+      renameBtn.focus();
+    });
+  }
+
+  var composer = document.getElementById("composer");
+  if (!composer) return;
+  var conv = composer.dataset.conv;
+  var count = composer.dataset.count;
+  var feed = document.getElementById("feed");
+  var text = document.getElementById("text");
+  var sendBtn = document.getElementById("send-btn");
+  var errorBox = document.getElementById("send-error");
+  var base = site.root + "/chat/" + conv;
+  var source = null;
+
+  function nearBottom() {
+    return feed.scrollHeight - feed.scrollTop - feed.clientHeight < 120;
+  }
+  function toBottom() { feed.scrollTop = feed.scrollHeight; }
+
+  function setRunning(on) { sendBtn.textContent = on ? "Дописать" : "Отправить"; }
+
+  function showError(msg) {
+    errorBox.textContent = msg || "";
+    errorBox.hidden = !msg;
+  }
+
+  function refresh() {
+    var stick = nearBottom();
+    return fetch(base + "/feed?n=" + count, {credentials: "same-origin", cache: "no-store"})
+      .then(function (r) {
+        if (!r.ok) { location.reload(); throw new Error("нет доступа"); }
+        return r.json();
+      })
+      .then(function (data) {
+        feed.innerHTML = data.html;
+        document.getElementById("weight").textContent = data.weight;
+        document.getElementById("talk-title").textContent = data.title;
+        setRunning(data.running);
+        if (stick) toBottom();
+        return data;
+      });
+  }
+
+  function listen() {
+    if (source) return;
+    source = new EventSource(base + "/stream");
+    source.onmessage = function (e) {
+      var ev = JSON.parse(e.data);
+      var live = document.getElementById("live-text");
+      if (ev.t === "snapshot" && live) {
+        live.textContent = ev.x;
+      } else if (ev.t === "delta") {
+        var stick = nearBottom();
+        if (live) live.textContent += ev.x;
+        if (stick) toBottom();
+      } else if (ev.t === "added" || ev.t === "saved") {
+        refresh();
+      } else if (ev.t === "done") {
+        source.close();
+        source = null;
+        refresh();
+      }
+    };
+    source.onerror = function () {
+      // Связь прервалась: закрываем и сверяемся с сервером
+      if (source) source.close();
+      source = null;
+      setTimeout(function () {
+        refresh().then(function (data) { if (data.running) listen(); }).catch(function () {});
+      }, 2000);
+    };
+  }
+
+  function send() {
+    var value = text.value.trim();
+    if (!value) return;
+    sendBtn.disabled = true;
+    showError("");
+    var form = new URLSearchParams();
+    form.set("text", value);
+    form.set("csrf", site.csrf);
+    fetch(base + "/send", {method: "POST", credentials: "same-origin", body: form})
+      .then(function (r) { return r.json().then(function (data) { return {ok: r.ok, data: data}; }); })
+      .then(function (res) {
+        if (!res.ok) { showError(res.data.error || "Не отправилось"); return; }
+        text.value = "";
+        toBottom();
+        return refresh().then(function () { toBottom(); listen(); });
+      })
+      .catch(function () { showError("Не отправилось — проверь связь и попробуй ещё раз"); })
+      .then(function () { sendBtn.disabled = false; text.focus(); });
+  }
+
+  composer.addEventListener("submit", function (e) { e.preventDefault(); send(); });
+  text.addEventListener("keydown", function (e) {
+    // На телефоне Enter — новая строка, отправка — кнопкой
+    if (e.key === "Enter" && !e.shiftKey && !e.isComposing && !matchMedia("(pointer: coarse)").matches) { e.preventDefault(); send(); }
+  });
+
+  if (!location.hash) toBottom();
+  if (document.getElementById("live")) listen();
+})();

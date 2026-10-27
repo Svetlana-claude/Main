@@ -55,7 +55,8 @@ def free_port() -> int:
 def start_site() -> tuple[subprocess.Popen, str]:
     tmp = Path(tempfile.mkdtemp(prefix="webui2-browser-"))
     env_file = tmp / "site.env"
-    env_file.write_text(f"SECRET_KEY=browser-test\nDB_PATH={tmp / 'site.db'}\nLOGIN=Svetlana\n")
+    env_file.write_text(f"SECRET_KEY=browser-test\nDB_PATH={tmp / 'site.db'}\nLOGIN=Svetlana\n"
+                        f"CLAUDE_BIN={SITE / 'tests/fake_claude.py'}\nCHAT_DIR={tmp / 'room'}\n")
     env = {**os.environ, "WEBUI2_ENV": str(env_file), "ROOT_PATH": "", "WEBUI2_INSECURE_COOKIE": "1"}
     seed = ("from app import db; db.init(); "
             f"db.run(\"INSERT INTO setup (key, value) VALUES ('totp_secret', '{SECRET}')\")")
@@ -86,6 +87,79 @@ def watch(page, errors: list) -> None:
 def no_side_scroll(page, label: str) -> None:
     width = page.evaluate("document.documentElement.scrollWidth - window.innerWidth")
     assert width <= 0, f"{label}: страница едет вбок на {width}px"
+
+
+def open_list(page, mobile: bool) -> None:
+    """На телефоне список разговоров спрятан за кнопкой «‹ Разговоры»."""
+    if mobile and page.locator("#to-list").is_visible():
+        page.click("#to-list")
+
+
+def ask(page, text: str) -> None:
+    page.fill("#text", text)
+    page.click("#send-btn")
+
+
+def chat_flow(page, name: str, mobile: bool, viewport: dict, first: bool) -> None:
+    tabs = page.locator("nav.tabs").bounding_box()
+    if mobile:
+        assert tabs["y"] > viewport["height"] - 80, "на телефоне вкладки не внизу"
+    else:
+        assert tabs["y"] < 60, "на компьютере вкладки не в шапке"
+    if first:
+        expect(page.locator(".conv-list")).to_contain_text("Разговоров пока нет")
+        page.screenshot(path=SHOTS / f"{name}-4-chat-pusto.png")
+    open_list(page, mobile)
+    page.click("text=Новый разговор")
+    expect(page.locator("#talk-title")).to_have_text("Новый разговор")
+
+    # Ответ идёт потоком; пока идёт — дописка
+    ask(page, "медленно расскажи про кота")
+    expect(page.locator("#live")).to_be_visible()
+    expect(page.locator("#send-btn")).to_have_text("Дописать")
+    ask(page, "и про чай")
+    expect(page.locator(".pending")).to_contain_text("и про чай")
+    page.screenshot(path=SHOTS / f"{name}-5-chat-otvet-idet.png")
+    expect(page.locator(".msg-assistant:not(.live)")).to_have_count(2, timeout=60000)
+    expect(page.locator("#send-btn")).to_have_text("Отправить")
+    expect(page.locator(".md table").first).to_be_visible()
+    expect(page.locator("#talk-title")).to_have_text("медленно расскажи про кота")
+    no_side_scroll(page, "разговор")
+    page.screenshot(path=SHOTS / f"{name}-6-chat.png")
+
+    # Уход со страницы во время ответа: ответ не обрывается
+    ask(page, "медленно ещё раз")
+    expect(page.locator("#live")).to_be_visible()
+    page.click("[aria-label=Настройки]")
+    page.go_back()
+    expect(page.locator(".msg-assistant:not(.live)")).to_have_count(3, timeout=60000)
+
+    # Модель, переименование
+    page.select_option("#model", "opus")
+    page.wait_for_load_state()
+    expect(page.locator("#model")).to_have_value("opus")
+    page.click("#rename-btn")
+    page.fill("#rename-input", "Про кота и чай")
+    page.click("#rename-form button[type=submit]")
+    expect(page.locator("#talk-title")).to_have_text("Про кота и чай")
+
+    # Поиск
+    open_list(page, mobile)
+    page.fill(".search input", "КОТА")
+    page.press(".search input", "Enter")
+    expect(page.locator(".results li").first).to_be_visible()
+    page.screenshot(path=SHOTS / f"{name}-7-poisk.png", full_page=True)
+    page.click(".results li a >> nth=0")
+    expect(page.locator("#talk-title")).to_have_text("Про кота и чай")
+
+    # Второй разговор и его удаление с вопросом
+    open_list(page, mobile)
+    page.click("text=Новый разговор")
+    ask(page, "привет")
+    expect(page.locator(".msg-assistant:not(.live)")).to_have_count(1, timeout=30000)
+    page.once("dialog", lambda d: d.accept() if d.message == "Удалить?" else d.dismiss())
+    page.click("[aria-label='Удалить разговор']")
+    expect(page.locator("#talk-title")).to_have_text("Про кота и чай")
 
 
 def run(pw, base: str, name: str, viewport: dict, mobile: bool, first: bool) -> list:
@@ -122,15 +196,7 @@ def run(pw, base: str, name: str, viewport: dict, mobile: bool, first: bool) -> 
     page.fill("input[name=code]", totp())
     page.click("button[type=submit]")
 
-    expect(page.locator(".panel h1")).to_have_text("Чат")
-    no_side_scroll(page, "чат")
-    tabs = page.locator("nav.tabs")
-    box = tabs.bounding_box()
-    if mobile:
-        assert box["y"] > viewport["height"] - 80, "на телефоне вкладки не внизу"
-    else:
-        assert box["y"] < 60, "на компьютере вкладки не в шапке"
-    page.screenshot(path=SHOTS / f"{name}-4-chat.png", full_page=True)
+    chat_flow(page, name, mobile, viewport, first)
 
     page.click("nav.tabs >> text=Проекты")
     expect(page.locator(".panel h1")).to_have_text("Проекты")
