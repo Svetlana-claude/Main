@@ -1,0 +1,108 @@
+/* Светлая тема. Без сборки. */
+:root {
+  --bg: #f6f6f3;
+  --panel: #ffffff;
+  --text: #1f2328;
+  --muted: #5d6470;
+  --line: #dfe1e4;
+  --accent: #2f5fb3;
+  --accent-text: #ffffff;
+  --error: #b42318;
+  --ok: #1d7a3a;
+  --focus: #1a56c4;
+  --radius: 10px;
+  --tabbar: 56px;
+}
+
+* { box-sizing: border-box; }
+html { -webkit-text-size-adjust: 100%; }
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--text);
+  font: 16px/1.5 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  overflow-x: hidden;
+}
+h1 { font-size: 1.4rem; margin: 0 0 .75rem; }
+h2 { font-size: 1.1rem; margin: 1.25rem 0 .5rem; }
+a { color: var(--accent); }
+:focus-visible { outline: 3px solid var(--focus); outline-offset: 2px; }
+pre, table { display: block; max-width: 100%; overflow-x: auto; }
+
+/* Шапка */
+.top {
+  position: sticky; top: 0; z-index: 10;
+  display: flex; align-items: center; gap: 1rem;
+  height: 56px; padding: 0 1rem;
+  background: var(--panel); border-bottom: 1px solid var(--line);
+}
+.brand { font-weight: 600; color: var(--text); text-decoration: none; }
+.tabs { display: flex; gap: .25rem; }
+.tabs a {
+  padding: .4rem .9rem; border-radius: 8px;
+  color: var(--muted); text-decoration: none;
+}
+.tabs a[aria-current="page"] { background: #e8eefa; color: var(--accent); font-weight: 600; }
+.tools { margin-left: auto; display: flex; align-items: center; gap: .25rem; }
+.icon {
+  display: inline-flex; align-items: center; justify-content: center;
+  width: 40px; height: 40px; border: 0; border-radius: 8px;
+  background: none; color: var(--muted); cursor: pointer;
+}
+.icon:hover, .icon[aria-current="page"] { background: #eef0f3; color: var(--text); }
+.icon svg { width: 22px; height: 22px; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
+.logout { margin: 0; }
+
+/* Содержимое */
+.content { max-width: 1100px; margin: 0 auto; padding: 1.25rem 1rem; }
+.panel {
+  background: var(--panel); border: 1px solid var(--line);
+  border-radius: var(--radius); padding: 1.25rem;
+}
+.muted { color: var(--muted); }
+.error { color: var(--error); }
+.ok { color: var(--ok); }
+
+/* Формы */
+.stack { display: flex; flex-direction: column; gap: .9rem; }
+.narrow { max-width: 360px; }
+label { display: flex; flex-direction: column; gap: .3rem; font-size: .95rem; }
+input {
+  font: inherit; padding: .6rem .7rem;
+  border: 1px solid #c6cad1; border-radius: 8px; background: #fff; color: var(--text);
+}
+input:focus { border-color: var(--focus); }
+button { font: inherit; cursor: pointer; }
+.primary {
+  padding: .65rem 1rem; border: 0; border-radius: 8px;
+  background: var(--accent); color: var(--accent-text); font-weight: 600;
+}
+.primary:hover { background: #264f97; }
+.link { border: 0; background: none; color: var(--accent); padding: .4rem .5rem; text-decoration: underline; }
+
+/* Вход и шторка */
+.door { min-height: 100vh; display: flex; align-items: center; justify-content: center; padding: 1rem; }
+.card {
+  width: 100%; max-width: 380px;
+  background: var(--panel); border: 1px solid var(--line);
+  border-radius: var(--radius); padding: 1.5rem;
+  box-shadow: 0 2px 12px rgba(0, 0, 0, .05);
+}
+.card .stack + .stack { margin-top: .75rem; }
+.curtain { background: #e9ebef; }
+
+/* Телефон: вкладки — в нижнюю панель */
+@media (max-width: 700px) {
+  .top { gap: .5rem; padding: 0 .5rem; }
+  .tabs {
+    position: fixed; left: 0; right: 0; bottom: 0; z-index: 10;
+    height: var(--tabbar); gap: 0;
+    background: var(--panel); border-top: 1px solid var(--line);
+    padding-bottom: env(safe-area-inset-bottom);
+  }
+  .tabs a {
+    flex: 1; display: flex; align-items: center; justify-content: center;
+    border-radius: 0; font-size: 1rem;
+  }
+  .content { padding: 1rem .75rem calc(var(--tabbar) + 1rem); }
+}

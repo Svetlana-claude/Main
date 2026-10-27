@@ -1,0 +1,15 @@
+{% extends "door.html" %}
+{% set title = "Код с телефона" %}
+{% block heading %}Код с телефона{% endblock %}
+{% block form %}
+<form method="post" action="{{ root }}/login/code" class="stack">
+  <input type="hidden" name="pre" value="{{ pre }}">
+  <input type="hidden" name="pass_token" value="{{ pass_token }}">
+  <label>Шесть цифр из приложения
+    <input name="code" inputmode="numeric" pattern="[0-9 ]{6,7}" maxlength="7"
+           autocomplete="one-time-code" required autofocus>
+  </label>
+  <button type="submit" class="primary">Войти</button>
+  <a class="muted" href="{{ root }}/login">Начать заново</a>
+</form>
+{% endblock %}

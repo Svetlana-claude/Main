@@ -1,0 +1,43 @@
+<!doctype html>
+<html lang="ru">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="robots" content="noindex, nofollow">
+  <title>{% block title %}{{ title or "Claude" }}{% endblock %} — Claude</title>
+  <link rel="stylesheet" href="{{ root }}/static/site.css?v=1">
+</head>
+<body class="{% block body_class %}{% endblock %}">
+{% block body %}
+<header class="top">
+  <a class="brand" href="{{ root }}/chat">Claude</a>
+  <nav class="tabs" aria-label="Разделы">
+    <a href="{{ root }}/chat" {% if active == "chat" %}aria-current="page"{% endif %}>Чат</a>
+    <a href="{{ root }}/projects" {% if active == "projects" %}aria-current="page"{% endif %}>Проекты</a>
+  </nav>
+  <div class="tools">
+    <a class="icon" href="{{ root }}/permissions" title="Разрешения" aria-label="Разрешения"
+       {% if active == "permissions" %}aria-current="page"{% endif %}>
+      <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3l7 3v5c0 4.5-3 8.5-7 10-4-1.5-7-5.5-7-10V6z"/></svg>
+    </a>
+    <a class="icon" href="{{ root }}/settings" title="Настройки" aria-label="Настройки"
+       {% if active == "settings" %}aria-current="page"{% endif %}>
+      <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="3"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3M4.9 4.9l2.1 2.1M17 17l2.1 2.1M4.9 19.1L7 17M17 7l2.1-2.1"/></svg>
+    </a>
+    <button class="icon" type="button" id="lock-btn" title="Замок" aria-label="Закрыть замок">
+      <svg viewBox="0 0 24 24" aria-hidden="true"><rect x="5" y="11" width="14" height="10" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/></svg>
+    </button>
+    <form method="post" action="{{ root }}/logout" class="logout">
+      <input type="hidden" name="csrf" value="{{ sess.csrf }}">
+      <button type="submit" class="link">Выйти</button>
+    </form>
+  </div>
+</header>
+<main class="content" id="main">
+  {% block content %}{% endblock %}
+</main>
+<script>window.SITE = {root: {{ root|tojson }}, csrf: {{ sess.csrf|tojson }}};</script>
+<script src="{{ root }}/static/site.js?v=1"></script>
+{% endblock %}
+</body>
+</html>

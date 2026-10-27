@@ -1,0 +1,20 @@
+{% extends "door.html" %}
+{% set title = "Замок" %}
+{% block body_class %}door curtain{% endblock %}
+{% block heading %}Закрыто замком{% endblock %}
+{% block form %}
+<form method="post" action="{{ root }}/unlock" class="stack">
+  <input type="hidden" name="csrf" value="{{ sess.csrf }}">
+  <input type="hidden" name="back" value="{{ back }}">
+  <label>Код замка
+    <input name="code" type="password" inputmode="numeric" autocomplete="off" required autofocus>
+  </label>
+  <button type="submit" class="primary">Открыть</button>
+</form>
+<form method="post" action="{{ root }}/logout" class="stack">
+  <input type="hidden" name="csrf" value="{{ sess.csrf }}">
+  <button type="submit" class="link">Выйти</button>
+</form>
+<script>window.SITE = {root: {{ root|tojson }}, locked: true};</script>
+<script src="{{ root }}/static/site.js?v=1"></script>
+{% endblock %}

@@ -1,0 +1,22 @@
+[Unit]
+Description=Новый сайт для общения с Claude (/Claude/v2)
+After=network.target
+
+[Service]
+Type=simple
+User=mokeeva
+Group=mokeeva
+WorkingDirectory=/home/mokeeva/main/webui2
+ExecStart=/home/mokeeva/main/webui2/.venv/bin/uvicorn app.main:app \
+    --host 127.0.0.1 --port 8002 --root-path /Claude/v2 \
+    --proxy-headers --forwarded-allow-ips 127.0.0.1
+Environment=HOME=/home/mokeeva
+# База и её служебные файлы — только для владельца
+UMask=0077
+Restart=on-failure
+RestartSec=3
+StandardOutput=journal
+StandardError=journal
+
+[Install]
+WantedBy=multi-user.target

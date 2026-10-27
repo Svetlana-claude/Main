@@ -1,0 +1,15 @@
+{% extends "door.html" %}
+{% set title = "Вход" %}
+{% block heading %}Вход{% endblock %}
+{% block form %}
+<form method="post" action="{{ root }}/login" class="stack">
+  <input type="hidden" name="pre" value="{{ pre }}">
+  <label>Логин
+    <input name="login" autocomplete="username" required autofocus>
+  </label>
+  <label>Пароль
+    <input name="password" type="password" autocomplete="current-password" required>
+  </label>
+  <button type="submit" class="primary">Войти</button>
+</form>
+{% endblock %}

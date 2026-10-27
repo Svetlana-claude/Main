@@ -1,0 +1,31 @@
+{% extends "door.html" %}
+{% set title = "Первая настройка" %}
+{% block heading %}Первая настройка{% endblock %}
+{% block form %}
+{% if not ready %}
+<p>Настройка ещё не подготовлена на сервере.</p>
+{% else %}
+<p class="muted">Логин — <b>{{ login }}</b>. Придумай пароль и код замка.
+  Подтверди кодом из приложения на телефоне — тем же, что для старого сайта.</p>
+<form method="post" action="{{ root }}/setup" class="stack">
+  <input type="hidden" name="pre" value="{{ pre }}">
+  <input type="text" name="username" value="{{ login }}" autocomplete="username" hidden>
+  <label>Пароль, не короче 10 знаков
+    <input name="password" type="password" minlength="10" autocomplete="new-password" required autofocus>
+  </label>
+  <label>Пароль ещё раз
+    <input name="password2" type="password" minlength="10" autocomplete="new-password" required>
+  </label>
+  <label>Код замка, от 4 до 8 цифр
+    <input name="lock" type="password" inputmode="numeric" pattern="[0-9]{4,8}" autocomplete="off" required>
+  </label>
+  <label>Код замка ещё раз
+    <input name="lock2" type="password" inputmode="numeric" pattern="[0-9]{4,8}" autocomplete="off" required>
+  </label>
+  <label>Код с телефона
+    <input name="code" inputmode="numeric" pattern="[0-9 ]{6,7}" maxlength="7" autocomplete="one-time-code" required>
+  </label>
+  <button type="submit" class="primary">Сохранить</button>
+</form>
+{% endif %}
+{% endblock %}

@@ -1,0 +1,10 @@
+{% extends "base.html" %}
+{# Страницы до входа: без шапки, одна карточка по центру #}
+{% block body_class %}door{% endblock %}
+{% block body %}
+<main class="card" id="main">
+  <h1>{% block heading %}{% endblock %}</h1>
+  {% if error %}<p class="error" role="alert">{{ error }}</p>{% endif %}
+  {% block form %}{% endblock %}
+</main>
+{% endblock %}
