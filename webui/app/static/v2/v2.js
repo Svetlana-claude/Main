@@ -102,6 +102,43 @@ app.addEventListener('click', e => {
   }
 });
 
+// ---------- Окно «Файлы проекта» ----------
+
+const filesBtn = document.getElementById('files-open');
+if (filesBtn) {
+  const dialog = document.getElementById('files');
+  const list = document.getElementById('files-list');
+  const size = n => n < 1024 ? n + ' Б' : n < 1048576 ? Math.round(n / 1024) + ' КБ' : (n / 1048576).toFixed(1) + ' МБ';
+  const note = text => { list.innerHTML = ''; const li = document.createElement('li'); li.className = 'files-note'; li.textContent = text; list.appendChild(li); };
+
+  filesBtn.addEventListener('click', async () => {
+    note('Загружаю…');
+    dialog.showModal();
+    const data = await fetch(filesBtn.dataset.tree).then(r => r.json()).catch(() => ({ error: 'нет связи' }));
+    if (data.error) { note('Не удалось: ' + data.error); return; }
+    if (!data.files.length) { note('Файлов пока нет'); return; }
+    list.innerHTML = '';
+    for (const f of data.files) {
+      const li = document.createElement('li');
+      const a = document.createElement('a');
+      a.href = filesBtn.dataset.file + '?path=' + encodeURIComponent(f.path);
+      a.textContent = f.path;
+      const meta = document.createElement('small');
+      meta.textContent = size(f.size) + ' · ' + new Date(f.mtime).toLocaleDateString('ru-RU');
+      li.append(a, meta);
+      list.appendChild(li);
+    }
+    if (data.truncated) {
+      const li = document.createElement('li');
+      li.className = 'files-note';
+      li.textContent = `Показаны первые ${data.limit} файлов`;
+      list.appendChild(li);
+    }
+  });
+  document.getElementById('files-close').addEventListener('click', () => dialog.close());
+  dialog.addEventListener('click', e => { if (e.target === dialog) dialog.close(); });
+}
+
 // ---------- Отправка и поток ----------
 
 if (form) {

@@ -57,7 +57,7 @@ BROWSER = r'''
 import sys
 from playwright.sync_api import sync_playwright
 
-base, cookie, chat_id, shots = sys.argv[1:5]
+base, cookie, chat_id, shots, project_id = sys.argv[1:6]
 fails = []
 def check(ok, what):
     print(("OK   " if ok else "FAIL ") + what, flush=True)
@@ -95,6 +95,25 @@ with sync_playwright() as p:
     check(page.locator("#send").is_enabled(), "после «Стоп» можно писать снова")
     page.reload()
     check("Остановлено" in page.locator(".feed").inner_text(), "после перезагрузки в ленте «Остановлено»")
+    check(page.locator("#files-open").count() == 0, "у чатика нет кнопки «Файлы проекта»")
+
+    page.click(".side-topic summary")
+    page.select_option("#topic-project", project_id)
+    page.fill("#topic-title", "тема проверки")
+    page.click(".side-topic button[type=submit]")
+    page.wait_for_load_state()
+    check(page.locator(".head-title").inner_text() == "тема проверки", "«Новая тема» создала и открыла тему")
+    page.click("#files-open")
+    page.wait_for_selector("#files-list a", timeout=10000)
+    check(page.locator("#files").is_visible(), "окно «Файлы проекта» открыто")
+    names = page.locator("#files-list a").all_inner_texts()
+    check(names == ["papka/otchet.pdf"], f"в окне файлы папки выдачи ({names})")
+    href = page.locator("#files-list a").first.get_attribute("href")
+    body = page.evaluate("u => fetch(u).then(r => r.text())", href)
+    check(body == "PDF-проверки", "файл скачивается по ссылке")
+    page.screenshot(path=f"{shots}/v2-files.png")
+    page.click("#files-close")
+    check(not page.locator("#files").is_visible(), "✕ закрывает окно")
 
     phone = b.new_context(viewport={"width": 390, "height": 844}, has_touch=True, is_mobile=True)
     phone.add_cookies([{"name": "webui_session", "value": cookie, "url": base}])
@@ -151,6 +170,15 @@ def main() -> int:
         "VALUES ('chat', 'Новый чат', now() + interval '1 day') RETURNING id"
     )
 
+    workdir = tmp / "project"
+    (workdir / "downloads/papka").mkdir(parents=True)
+    (workdir / "downloads/papka/otchet.pdf").write_text("PDF-проверки", encoding="utf-8")
+    (workdir / "downloads/.env").write_text("SEKRET=1", encoding="utf-8")   # не должен показаться
+    project = db.query_one(
+        "INSERT INTO projects (name, slug, workdir) VALUES (%s, %s, %s) RETURNING id",
+        ("Проверка v2", f"check-v2-{os.getpid()}", str(workdir)),
+    )
+
     port = free_port()
     proc = subprocess.Popen(
         [str(PROJECT_DIR / ".venv/bin/python"), "-m", "uvicorn", "app.main:app",
@@ -167,7 +195,8 @@ def main() -> int:
         script.write_text(BROWSER, encoding="utf-8")
         res = subprocess.run(
             [str(PW_PYTHON), str(script), f"http://127.0.0.1:{port}",
-             security.sign_session_id(session_id), str(chat["id"]), str(SHOTS)],
+             security.sign_session_id(session_id), str(chat["id"]), str(SHOTS),
+             str(project["id"])],
             capture_output=True, text=True, timeout=240,
         )
         print(res.stdout.rstrip())
@@ -186,6 +215,7 @@ def main() -> int:
         except subprocess.TimeoutExpired:
             proc.kill()
         db.execute("DELETE FROM conversations WHERE id = %s", (chat["id"],))
+        db.execute("DELETE FROM projects WHERE id = %s", (project["id"],))
         db.execute("DELETE FROM sessions WHERE id = %s", (session_id,))
         shutil.rmtree(tmp, ignore_errors=True)
 

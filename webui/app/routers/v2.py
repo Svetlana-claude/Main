@@ -4,7 +4,7 @@
 ответа — прежние адреса (`chat_send`/`topic_send`, `chat_stream`/`topic_stream`),
 здесь только страница, переходы и остановка ответа.
 """
-from fastapi import APIRouter, Request
+from fastapi import APIRouter, Form, Request
 from fastapi.responses import JSONResponse, RedirectResponse
 
 from .. import db
@@ -35,6 +35,10 @@ def _conversations() -> list[dict]:
     )
 
 
+def _projects() -> list[dict]:
+    return db.query("SELECT id, name FROM projects ORDER BY name")
+
+
 @router.get("", name="v2_home")
 def v2_home(request: Request):
     """Главная — последний разговор."""
@@ -44,7 +48,8 @@ def v2_home(request: Request):
     last = db.query_one("SELECT id FROM conversations ORDER BY updated_at DESC LIMIT 1")
     if not last:
         return render(request, "v2/main.html", {"user": user, "items": [], "current": None,
-                                               "messages": [], "running": False})
+                                               "messages": [], "running": False,
+                                               "projects": _projects()})
     return RedirectResponse(request.url_for("v2_conversation", conv_id=last["id"]),
                             status_code=303)
 
@@ -85,6 +90,7 @@ def v2_conversation(request: Request, conv_id: int):
             "send_url": send_url,
             "stream_url": stream_url,
             "running": runs.active(current["kind"], conv_id),
+            "projects": _projects(),
         },
     )
 
@@ -97,6 +103,24 @@ def v2_new(request: Request):
         return redirect
     row = db.query_one(
         "INSERT INTO conversations (kind, title) VALUES ('chat', 'Новый чат') RETURNING id"
+    )
+    return RedirectResponse(request.url_for("v2_conversation", conv_id=row["id"]),
+                            status_code=303)
+
+
+@router.post("/topic", name="v2_topic_new")
+def v2_topic_new(request: Request, project_id: int = Form(...), title: str = Form("")):
+    """Новая тема в проекте — сразу открывается в v2."""
+    user, redirect = _guard(request)
+    if redirect:
+        return redirect
+    if not db.query_one("SELECT 1 AS ok FROM projects WHERE id = %s", (project_id,)):
+        return RedirectResponse(request.url_for("v2_home"), status_code=303)
+    clean = " ".join(title.split())[:120] or "Новая тема"
+    row = db.query_one(
+        "INSERT INTO conversations (kind, project_id, title) "
+        "VALUES ('topic', %s, %s) RETURNING id",
+        (project_id, clean),
     )
     return RedirectResponse(request.url_for("v2_conversation", conv_id=row["id"]),
                             status_code=303)

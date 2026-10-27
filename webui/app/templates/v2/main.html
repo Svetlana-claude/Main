@@ -14,6 +14,22 @@
     <form method="post" action="{{ url_for('v2_new') }}">
       <button class="side-new" type="submit">Новый чат</button>
     </form>
+    {% if projects %}
+    <details class="side-topic">
+      <summary>Новая тема</summary>
+      <form method="post" action="{{ url_for('v2_topic_new') }}">
+        <label class="sr-only" for="topic-project">Проект</label>
+        <select id="topic-project" name="project_id">
+          {% for p in projects %}
+            <option value="{{ p.id }}" {% if current and current.project_id == p.id %}selected{% endif %}>{{ p.name }}</option>
+          {% endfor %}
+        </select>
+        <label class="sr-only" for="topic-title">Название темы</label>
+        <input id="topic-title" name="title" placeholder="Название темы">
+        <button type="submit">Создать</button>
+      </form>
+    </details>
+    {% endif %}
     <nav class="side-list">
       {% for it in items %}
         <a class="side-item{% if current and it.id == current.id %} is-current{% endif %}"
@@ -43,8 +59,9 @@
               aria-expanded="false" aria-label="Разговоры">☰</button>
       <h1 class="head-title">{{ current.title if current else 'Разговоров пока нет' }}</h1>
       {% if current and current.kind == 'topic' %}
-        <a class="head-files" href="{{ root_path }}/projects?id={{ current.project_id }}"
-           target="_blank" rel="noopener">Файлы проекта</a>
+        <button class="head-files" type="button" id="files-open"
+                data-tree="{{ url_for('project_tree', project_id=current.project_id) }}"
+                data-file="{{ url_for('project_tree_download', project_id=current.project_id) }}">Файлы проекта</button>
       {% endif %}
     </header>
     {% if claude_auth_problem %}<p class="alert" role="alert">{{ claude_auth_problem }}</p>{% endif %}
@@ -68,6 +85,15 @@
   </main>
 
 </div>
+{% if current and current.kind == 'topic' %}
+<dialog class="files" id="files" aria-labelledby="files-title">
+  <header class="files-head">
+    <h2 id="files-title">Файлы проекта · {{ current.project }}</h2>
+    <button type="button" id="files-close" aria-label="Закрыть">✕</button>
+  </header>
+  <ul class="files-list" id="files-list"></ul>
+</dialog>
+{% endif %}
 <script src="{{ url_for('static', path='/v2/v2.js') }}"></script>
 </body>
 </html>
