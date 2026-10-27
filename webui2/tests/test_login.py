@@ -71,6 +71,12 @@ def test_pages_closed_without_login(client):
     assert client.get("/login", follow_redirects=False).headers["location"].endswith("/setup")
 
 
+def test_unknown_address_leads_home(client):
+    r = client.get("/c/290", follow_redirects=False)
+    assert r.status_code == 303 and r.headers["location"].endswith("/")
+    assert client.get("/static/nety.css").status_code == 404
+
+
 def test_setup_needs_phone_code(client):
     r = do_setup(client, code="000000")
     assert r.status_code == 400 and "Код с телефона не подошёл" in r.text

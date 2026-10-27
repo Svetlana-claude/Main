@@ -351,4 +351,8 @@ def healthz():
 
 @app.exception_handler(404)
 def not_found(request: Request, exc):
+    # Незнакомый адрес страницы (например, закладка со старого черновика) —
+    # на начало сайта; файлам оформления — честное «нет»
+    if request.method == "GET" and "/static/" not in request.url.path:
+        return to(request, "home")
     return HTMLResponse("<p>Такой страницы нет</p>", status_code=404)
