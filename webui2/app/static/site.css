@@ -195,6 +195,23 @@ textarea {
 .composer .hint, .composer .error { grid-column: 1 / -1; margin: 0; font-size: .9rem; }
 .composer .hint { color: #8a5a00; }
 
+/* Проект: шапка списка тем, галочки, удаление */
+.back-link { font-size: .95rem; }
+.proj-head { display: flex; align-items: center; gap: .3rem; }
+.proj-head h2 { margin: 0; flex: 1; font-size: 1.1rem; overflow-wrap: anywhere; }
+.proj-head form { margin: 0; }
+.folder { margin: -.4rem 0 0; font-size: .85rem; overflow-wrap: anywhere; }
+.access { display: flex; flex-direction: column; gap: .2rem; margin: 0; }
+.check { flex-direction: row; align-items: center; gap: .5rem; cursor: pointer; }
+.check input { width: 1.1rem; height: 1.1rem; padding: 0; }
+.small { font-size: .85rem; margin: .2rem 0 0; }
+.actions { display: flex; gap: .75rem; align-items: center; flex-wrap: wrap; margin-top: 1rem; }
+.actions form { margin: 0; }
+.danger { background: var(--error); }
+.danger:hover { background: #8f1c13; }
+.status-line { color: var(--muted); }
+.report { background: #f8f9fa; border: 1px solid var(--line); border-radius: 8px; padding: .7rem .9rem; overflow-wrap: anywhere; }
+
 /* Поиск */
 .search-row { display: flex; gap: .5rem; margin-bottom: 1rem; }
 .search-row input { flex: 1; min-width: 0; }

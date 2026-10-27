@@ -1,4 +1,5 @@
-// Чат: отправка, дописка, ответ потоком, переименование, удаление
+// Чат и темы проектов: отправка, дописка, ответ потоком, что Claude делает,
+// переименование, удаление, галочки проекта
 (function () {
   "use strict";
   var site = window.SITE || {};
@@ -15,9 +16,11 @@
   var toList = document.getElementById("to-list");
   if (toList) toList.addEventListener("click", function () { body.classList.toggle("show-list"); });
 
-  // Модель меняется сразу при выборе
+  // Модель и галочки проекта меняются сразу при выборе
   var model = document.getElementById("model");
   if (model) model.addEventListener("change", function () { model.form.submit(); });
+  var access = document.getElementById("access-form");
+  if (access) access.addEventListener("change", function () { access.submit(); });
 
   // Переименование: карандаш открывает поле
   var renameBtn = document.getElementById("rename-btn");
@@ -67,6 +70,8 @@
         feed.innerHTML = data.html;
         document.getElementById("weight").textContent = data.weight;
         document.getElementById("talk-title").textContent = data.title;
+        var item = document.querySelector(".conv-list a[aria-current=page]");
+        if (item) item.textContent = data.title;
         setRunning(data.running);
         if (stick) toBottom();
         return data;
@@ -79,8 +84,14 @@
     source.onmessage = function (e) {
       var ev = JSON.parse(e.data);
       var live = document.getElementById("live-text");
+      var status = document.getElementById("live-status");
       if (ev.t === "snapshot" && live) {
         live.textContent = ev.x;
+        if (status && ev.s) status.textContent = ev.s;
+      } else if (ev.t === "status") {
+        if (status) status.textContent = ev.x;
+      } else if (ev.t === "start") {
+        if (live) live.textContent = "";
       } else if (ev.t === "delta") {
         var stick = nearBottom();
         if (live) live.textContent += ev.x;

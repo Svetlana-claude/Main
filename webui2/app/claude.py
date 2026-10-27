@@ -1,13 +1,15 @@
-"""Запуск Claude для чата и разбор его потока.
+"""Запуск Claude и разбор его потока.
 
-Claude запускается в неинтерактивном режиме без инструментов, без CLAUDE.md,
-без памяти и настроек, в пустой папке. Сообщения подаются через stdin потоком
-JSON: так дописку можно отдать в уже идущий запуск, она станет следующим ходом
-того же ответа, а не новым запуском.
+В чате Claude запускается без инструментов, без CLAUDE.md, без памяти и
+настроек, в пустой папке. В теме проекта — полноценно, в папке проекта, с её
+CLAUDE.md и памятью; что можно, решают галочки проекта. Сообщения подаются
+через stdin потоком JSON: так дописку можно отдать в уже идущий запуск, она
+станет следующим ходом того же ответа, а не новым запуском.
 """
 import asyncio
 import json
 import os
+from pathlib import Path
 from typing import AsyncIterator
 
 from . import config
@@ -38,13 +40,51 @@ def child_env() -> dict[str, str]:
     return {k: v for k, v in os.environ.items() if not k.startswith(_SITE_ENV)}
 
 
-def argv(model: str, session_id: str | None) -> list[str]:
-    cmd = [
+def _base(model: str) -> list[str]:
+    return [
         config.CLAUDE_BIN, "-p",
         "--input-format", "stream-json",
         "--output-format", "stream-json",
         "--verbose", "--include-partial-messages",
         "--model", model,
+    ]
+
+
+# Ключ и база сайта закрыты в любом режиме: для файловых инструментов — по
+# папке (абсолютный путь в правиле пишется с двумя косыми), для команд — по
+# упоминанию папки или файла в строке команды.
+def secret_deny() -> list[str]:
+    dirs = sorted({str(config.ENV_FILE.parent), str(config.DB_PATH.parent)})
+    rules = [f"{tool}(/{d}/**)" for d in dirs for tool in ("Read", "Edit", "Write")]
+    names = sorted({config.ENV_FILE.name, config.DB_PATH.name})
+    rules += [f"Bash(*{d.removeprefix(str(Path.home()))}*)" for d in dirs]
+    rules += [f"Bash(*{name}*)" for name in names]
+    return rules
+
+
+BASH_FAMILY = ["Bash", "BashOutput", "KillShell"]
+
+
+def project_argv(model: str, session_id: str | None, project: dict) -> list[str]:
+    """Тема проекта. Без галочек — чтение и правка файлов в папке проекта
+    (за её пределы — отказ: спросить пока некого); «Запускать команды» —
+    ещё и команды; «Полный доступ» — всё без вопросов."""
+    cmd = _base(model)
+    if project["full_access"]:
+        cmd += ["--permission-mode", "bypassPermissions", "--disallowed-tools", *secret_deny()]
+    else:
+        cmd += ["--permission-mode", "acceptEdits", "--permission-prompts", "none"]
+        if project["allow_commands"]:
+            cmd += ["--allowed-tools", *BASH_FAMILY, "--disallowed-tools", *secret_deny()]
+        else:
+            cmd += ["--disallowed-tools", *BASH_FAMILY, *secret_deny()]
+    if session_id:
+        cmd += ["--resume", session_id]
+    return cmd
+
+
+def argv(model: str, session_id: str | None) -> list[str]:
+    cmd = _base(model) + [
         "--tools", "",
         "--setting-sources", "",
         "--disable-slash-commands",
@@ -62,13 +102,45 @@ def user_line(text: str) -> bytes:
     return (json.dumps(msg, ensure_ascii=False) + "\n").encode()
 
 
-async def start(model: str, session_id: str | None) -> asyncio.subprocess.Process:
-    config.CHAT_DIR.mkdir(parents=True, exist_ok=True, mode=0o700)
+async def start(model: str, session_id: str | None,
+                project: dict | None = None) -> asyncio.subprocess.Process:
+    if project:
+        cmd, cwd = project_argv(model, session_id, project), project["path"]
+    else:
+        config.CHAT_DIR.mkdir(parents=True, exist_ok=True, mode=0o700)
+        cmd, cwd = argv(model, session_id), str(config.CHAT_DIR)
     return await asyncio.create_subprocess_exec(
-        *argv(model, session_id),
-        stdin=asyncio.subprocess.PIPE, stdout=asyncio.subprocess.PIPE,
-        stderr=asyncio.subprocess.PIPE, cwd=str(config.CHAT_DIR), env=child_env(),
+        *cmd, stdin=asyncio.subprocess.PIPE, stdout=asyncio.subprocess.PIPE,
+        stderr=asyncio.subprocess.PIPE, cwd=cwd, env=child_env(),
+        limit=1024 * 1024,
     )
+
+
+def _short(path: str) -> str:
+    return path.rstrip("/").rsplit("/", 1)[-1] if path else ""
+
+
+def tool_status(name: str, data: dict) -> str:
+    """Что Claude делает сейчас — одной строкой по-русски."""
+    data = data or {}
+    if name in ("Read", "NotebookRead"):
+        return f"Читаю {_short(data.get('file_path', ''))}…"
+    if name in ("Edit", "MultiEdit", "Write", "NotebookEdit"):
+        return f"Правлю {_short(data.get('file_path', '') or data.get('notebook_path', ''))}…"
+    if name in ("Bash", "BashOutput"):
+        what = data.get("description") or " ".join(str(data.get("command", "")).split())
+        return f"Выполняю: {what[:80]}"
+    if name in ("Glob", "Grep"):
+        return "Ищу в файлах…"
+    if name == "WebSearch":
+        return "Ищу в интернете…"
+    if name == "WebFetch":
+        return "Открываю страницу…"
+    if name in ("Task", "Agent"):
+        return "Поручаю часть работы помощнику…"
+    if name == "TodoWrite":
+        return "Составляю план…"
+    return "Работаю…"
 
 
 async def _lines(stream: asyncio.StreamReader) -> AsyncIterator[bytes]:
@@ -93,8 +165,10 @@ def _context(usage: dict) -> int:
 
 
 async def events(proc: asyncio.subprocess.Process) -> AsyncIterator[dict]:
-    """События запуска: init (номер беседы), delta (кусок текста), turn (ход
-    закончен: весь текст, вес беседы, ошибка ли)."""
+    """События запуска: init (номер беседы), start (новое сообщение Claude —
+    прежний черновой текст сбрасывается), delta (кусок текста), status (что
+    делает), turn (ход закончен: весь текст, вес беседы, ошибка ли).
+    События помощников (parent_tool_use_id) не показываются."""
     context = 0
     async for raw in _lines(proc.stdout):
         try:
@@ -104,6 +178,8 @@ async def events(proc: asyncio.subprocess.Process) -> AsyncIterator[dict]:
         kind = event.get("type")
         if kind == "system" and event.get("subtype") == "init":
             yield {"type": "init", "session_id": event.get("session_id")}
+        elif event.get("parent_tool_use_id"):
+            continue
         elif kind == "stream_event":
             ev = event.get("event") or {}
             if ev.get("type") == "content_block_delta":
@@ -112,6 +188,11 @@ async def events(proc: asyncio.subprocess.Process) -> AsyncIterator[dict]:
                     yield {"type": "delta", "text": delta["text"]}
             elif ev.get("type") == "message_start":
                 context = _context(((ev.get("message") or {}).get("usage")) or {}) or context
+                yield {"type": "start"}
+        elif kind == "assistant":
+            for block in (event.get("message") or {}).get("content") or []:
+                if isinstance(block, dict) and block.get("type") == "tool_use":
+                    yield {"type": "status", "text": tool_status(block.get("name", ""), block.get("input"))}
         elif kind == "result":
             usage = event.get("usage") or {}
             yield {
@@ -121,3 +202,62 @@ async def events(proc: asyncio.subprocess.Process) -> AsyncIterator[dict]:
                 "session_id": event.get("session_id"),
                 "context": context or _context(usage),
             }
+
+
+# ── Разовые запуски: проверка и удаление проекта ─────────────────────────
+
+ONCE_SEC = 1200
+
+LOOK_PROMPT = """Проект в этой папке ({path}) собираются удалить. Ничего не меняй и
+не удаляй — только посмотри, что проект завёл на сервере ВНЕ своей папки: службы
+и таймеры (systemctl и systemctl --user), задания cron, настройки nginx и других
+программ, которые ссылаются на эту папку, контейнеры, запущенные процессы из
+этой папки, файлы и папки вне неё, созданные для проекта. Смотри по истории git,
+по CLAUDE.md и файлам проекта, по самим службам и настройкам.
+
+Папку самого сайта ({site}) и всё, что относится к сайту, в список не включай.
+
+Ответь по-русски, коротко, для человека без технических знаний: список того,
+что нужно убрать, по пункту на строку, с путём или названием. Если вне папки
+ничего нет — так и напиши одной фразой: «Вне папки проекта ничего нет»."""
+
+REMOVE_PROMPT = """Проект в этой папке ({path}) удаляется, хозяйка согласилась.
+Убери то, что проект завёл на сервере вне своей папки, — ровно по этому списку
+и ничего больше:
+
+{report}
+
+Службы сначала останови и выключи. Саму папку проекта НЕ удаляй — её удалит
+сайт после тебя. Папку сайта ({site}) не трогай. Если что-то убрать не вышло
+(например, нужны права, которых нет), так и напиши. Ответь по-русски коротко:
+что убрано и что не вышло."""
+
+
+def once_argv(model: str, remove: bool) -> list[str]:
+    cmd = [config.CLAUDE_BIN, "-p", "--output-format", "json", "--model", model,
+           "--no-session-persistence"]
+    if remove:
+        return cmd + ["--permission-mode", "bypassPermissions", "--disallowed-tools", *secret_deny()]
+    return cmd + ["--permission-mode", "default", "--permission-prompts", "none",
+                  "--allowed-tools", "Bash", "Read", "Glob", "Grep",
+                  "--disallowed-tools", "Edit", "Write", "NotebookEdit", *secret_deny()]
+
+
+async def once(prompt: str, cwd: str, remove: bool) -> tuple[bool, str]:
+    """Разовый запуск без продолжения беседы. Вопрос — через stdin, чтобы его
+    не съел список правил. Возвращает (удалось ли, текст ответа)."""
+    proc = await asyncio.create_subprocess_exec(
+        *once_argv(config.TOPIC_MODEL, remove), stdin=asyncio.subprocess.PIPE,
+        stdout=asyncio.subprocess.PIPE, stderr=asyncio.subprocess.PIPE,
+        cwd=cwd, env=child_env())
+    try:
+        out, err = await asyncio.wait_for(proc.communicate(prompt.encode()), timeout=ONCE_SEC)
+    except asyncio.TimeoutError:
+        proc.kill()
+        return False, "Claude не ответил за 20 минут"
+    try:
+        data = json.loads(out)
+    except ValueError:
+        tail = err.decode("utf-8", "replace").strip().splitlines()[-1:] or ["нет ответа"]
+        return False, tail[0]
+    return not data.get("is_error"), str(data.get("result") or "")

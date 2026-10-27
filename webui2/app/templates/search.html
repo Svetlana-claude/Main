@@ -13,8 +13,8 @@
     <ul class="results">
       {% for r in results %}
       <li>
-        <a href="{{ root }}/chat/{{ r.conv_id }}?n=10000#m{{ r.id }}">{{ r.title or "Новый разговор" }}</a>
-        <span class="muted"> · {{ "ты" if r.role == "user" else "Claude" }} · {{ local_time(r.created_at) }}</span>
+        <a href="{{ root }}{{ r.href }}?n=10000#m{{ r.id }}">{{ r.title or "Новый разговор" }}</a>
+        <span class="muted">{% if r.project %} · проект «{{ r.project }}»{% endif %} · {{ "ты" if r.role == "user" else "Claude" }} · {{ local_time(r.created_at) }}</span>
         <p>{{ r.snippet }}</p>
       </li>
       {% endfor %}

@@ -47,6 +47,23 @@ CREATE TABLE IF NOT EXISTS messages (
     created_at TEXT NOT NULL
 );
 CREATE INDEX IF NOT EXISTS messages_conv ON messages (conv_id, id);
+-- Проекты: папка на сервере и галочки. Темы — разговоры с project_id
+-- (колонка добавляется в init, чтобы старые базы тоже получили её).
+-- delete_state: '' | checking (Claude смотрит, что убрать) | ready (список
+-- готов, ждёт «да») | removing (удаляется) | unclear (не вышло — в
+-- delete_report почему; можно проверить снова или отменить)
+CREATE TABLE IF NOT EXISTS projects (
+    id             INTEGER PRIMARY KEY,
+    name           TEXT NOT NULL,
+    slug           TEXT NOT NULL UNIQUE,
+    path           TEXT NOT NULL,
+    allow_commands INTEGER NOT NULL DEFAULT 0,
+    full_access    INTEGER NOT NULL DEFAULT 0,
+    delete_state   TEXT NOT NULL DEFAULT '',
+    delete_report  TEXT NOT NULL DEFAULT '',
+    created_at     TEXT NOT NULL,
+    updated_at     TEXT NOT NULL
+);
 -- Секрет второго шага, который ждёт первой настройки (до заведения хозяйки)
 CREATE TABLE IF NOT EXISTS setup (
     key   TEXT PRIMARY KEY,
@@ -81,6 +98,15 @@ def init() -> None:
     with tx() as con:
         con.executescript(SCHEMA)
         con.execute("PRAGMA journal_mode = WAL")
+        columns = {row["name"] for row in con.execute("PRAGMA table_info(conversations)")}
+        if "project_id" not in columns:
+            con.execute("ALTER TABLE conversations ADD COLUMN project_id INTEGER "
+                        "REFERENCES projects(id) ON DELETE CASCADE")
+        con.execute("CREATE INDEX IF NOT EXISTS conversations_project ON conversations (project_id, updated_at)")
+        # Проверка или удаление проекта, прерванные перезапуском сайта
+        con.execute("UPDATE projects SET delete_state = '' WHERE delete_state = 'checking'")
+        con.execute("UPDATE projects SET delete_state = 'unclear', delete_report = "
+                    "'Удаление прервал перезапуск сайта. Папка могла остаться.' WHERE delete_state = 'removing'")
     config.DB_PATH.chmod(0o600)
     config.CHAT_DIR.mkdir(parents=True, exist_ok=True, mode=0o700)
 

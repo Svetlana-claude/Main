@@ -1,7 +1,7 @@
 """Проверка в настоящем браузере: компьютер и телефон, с нажатием кнопок.
 
 Поднимает второй экземпляр сайта на временной базе и свободном порту, проходит
-первую настройку, вход, вкладки, замок (и в соседней вкладке), смену пароля,
+первую настройку, вход, чат, проекты с темой, галочками и удалением, вкладки, замок (и в соседней вкладке), смену пароля,
 выход. Снимки — в webui2/tests/shots/.
 
     exchange/pwenv/bin/python webui2/tests/check_browser.py [адрес живого сайта]
@@ -56,7 +56,8 @@ def start_site() -> tuple[subprocess.Popen, str]:
     tmp = Path(tempfile.mkdtemp(prefix="webui2-browser-"))
     env_file = tmp / "site.env"
     env_file.write_text(f"SECRET_KEY=browser-test\nDB_PATH={tmp / 'site.db'}\nLOGIN=Svetlana\n"
-                        f"CLAUDE_BIN={SITE / 'tests/fake_claude.py'}\nCHAT_DIR={tmp / 'room'}\n")
+                        f"CLAUDE_BIN={SITE / 'tests/fake_claude.py'}\nCHAT_DIR={tmp / 'room'}\n"
+                        f"PROJECTS_DIR={tmp / 'projects'}\n")
     env = {**os.environ, "WEBUI2_ENV": str(env_file), "ROOT_PATH": "", "WEBUI2_INSECURE_COOKIE": "1"}
     seed = ("from app import db; db.init(); "
             f"db.run(\"INSERT INTO setup (key, value) VALUES ('totp_secret', '{SECRET}')\")")
@@ -162,6 +163,55 @@ def chat_flow(page, name: str, mobile: bool, viewport: dict, first: bool) -> Non
     expect(page.locator("#talk-title")).to_have_text("Про кота и чай")
 
 
+def project_flow(page, name: str, mobile: bool) -> None:
+    page.click("nav.tabs >> text=Проекты")
+    expect(page.locator(".panel h1")).to_have_text("Проекты")
+    title = f"Сайт про кота ({name})"
+    page.fill("#project-name-input", title)
+    page.click("#new-project button")
+    expect(page.locator("#project-name")).to_have_text(title)
+    expect(page.locator(".conv-list")).to_contain_text("Тем пока нет")
+    no_side_scroll(page, "пустой проект")
+    page.screenshot(path=SHOTS / f"{name}-p1-proekt.png")
+    page.click("text=Новая тема")
+    expect(page.locator("#talk-title")).to_have_text("Новая тема")
+    expect(page.locator("#model")).to_have_value("opus")
+
+    # Строка «что делает» под ответом
+    ask(page, "медленно глянь файлы")
+    expect(page.locator("#live-status")).to_have_text("Читаю CLAUDE.md…")
+    page.screenshot(path=SHOTS / f"{name}-p2-tema-chitaet.png")
+    expect(page.locator(".msg-assistant:not(.live)")).to_have_count(1, timeout=60000)
+    expect(page.locator("#talk-title")).to_have_text("медленно глянь файлы")
+    no_side_scroll(page, "тема")
+
+    # Галочка «Запускать команды»
+    open_list(page, mobile)
+    with page.expect_navigation():
+        page.check("text=Запускать команды")
+    open_list(page, mobile)
+    expect(page.locator("input[name=commands]")).to_be_checked()
+    expect(page.locator(".access .small")).to_contain_text("запускает команды")
+    page.screenshot(path=SHOTS / f"{name}-p3-galochki.png")
+
+    # Удаление: список, «Отмена», снова — «Да, удалить»
+    page.once("dialog", lambda d: d.accept())
+    page.click("[aria-label='Удалить проект']")
+    expect(page.locator("h1")).to_contain_text("Удаление проекта")
+    expect(page.locator("#delete-report")).to_contain_text("fake-test.service", timeout=20000)
+    no_side_scroll(page, "удаление проекта")
+    page.screenshot(path=SHOTS / f"{name}-p4-udalenie.png", full_page=True)
+    page.click("#delete-no")
+    expect(page.locator("#talk-title")).to_have_text("медленно глянь файлы")
+    open_list(page, mobile)
+    page.once("dialog", lambda d: d.accept())
+    page.click("[aria-label='Удалить проект']")
+    expect(page.locator("#delete-yes")).to_be_visible(timeout=20000)
+    page.click("#delete-yes")
+    expect(page.locator(".panel h1")).to_have_text("Проекты", timeout=20000)
+    expect(page.locator(".projects")).to_have_count(0)
+
+
 def run(pw, base: str, name: str, viewport: dict, mobile: bool, first: bool) -> list:
     errors: list = []
     browser = pw.chromium.launch()
@@ -197,6 +247,7 @@ def run(pw, base: str, name: str, viewport: dict, mobile: bool, first: bool) -> 
     page.click("button[type=submit]")
 
     chat_flow(page, name, mobile, viewport, first)
+    project_flow(page, name, mobile)
 
     page.click("nav.tabs >> text=Проекты")
     expect(page.locator(".panel h1")).to_have_text("Проекты")

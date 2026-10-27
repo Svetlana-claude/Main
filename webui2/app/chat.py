@@ -1,4 +1,7 @@
-"""Вкладка «Чат»: разговоры, ответ потоком в фоне, дописка, поиск."""
+"""Вкладка «Чат»: разговоры, ответ потоком в фоне, дописка, поиск.
+
+Темы проектов — те же разговоры (с project_id): запуск, лента, дописка,
+модель, название и удаление у них общие с чатом, страницы — в projects.py."""
 import asyncio
 import json
 from datetime import datetime, timedelta, timezone
@@ -7,7 +10,7 @@ from fastapi import APIRouter, Form, Request
 from fastapi.responses import JSONResponse, RedirectResponse, StreamingResponse
 
 from . import claude, config, db, markup
-from .web import csrf_ok, current, guarded, page, to
+from .web import csrf_ok, current, guarded, page, templates, to
 
 router = APIRouter()
 
@@ -23,7 +26,8 @@ class Run:
     def __init__(self, conv_id: int):
         self.conv_id = conv_id
         self.proc: asyncio.subprocess.Process | None = None
-        self.text = ""                 # текст текущего хода, пока он пишется
+        self.text = ""                 # текст текущего сообщения Claude, пока он пишется
+        self.status = WAITING          # что Claude делает сейчас, одной строкой
         self.pending: list[str] = []   # дописки: в базу — после ответа, к которому пришли
         self.sent = 0                  # сколько сообщений отдано запуску
         self.turns = 0                 # сколько ходов закончено
@@ -36,8 +40,14 @@ class Run:
         for queue in list(self.listeners):
             queue.put_nowait(event)
 
-    async def begin(self, text: str, model: str, session_id: str | None) -> None:
-        self.proc = await claude.start(model, session_id)
+    def set_status(self, status: str) -> None:
+        if status != self.status:
+            self.status = status
+            self.tell({"t": "status", "x": status})
+
+    async def begin(self, text: str, model: str, session_id: str | None,
+                    project: dict | None = None) -> None:
+        self.proc = await claude.start(model, session_id, project)
         self.proc.stdin.write(claude.user_line(text))
         await self.proc.stdin.drain()
         self.sent = 1
@@ -73,8 +83,17 @@ class Run:
                 if ev["type"] == "init" and ev["session_id"]:
                     db.run("UPDATE conversations SET session_id = ? WHERE id = ?",
                            (ev["session_id"], self.conv_id))
+                elif ev["type"] == "start":
+                    # Новое сообщение внутри хода (после работы с файлами):
+                    # на странице — только оно, в базу идёт последнее
+                    if self.text:
+                        self.text = ""
+                        self.tell({"t": "start"})
+                elif ev["type"] == "status":
+                    self.set_status(ev["text"])
                 elif ev["type"] == "delta":
                     self.text += ev["text"]
+                    self.set_status(WRITING)
                     self.tell({"t": "delta", "x": ev["text"]})
                 elif ev["type"] == "turn":
                     async with self.lock:
@@ -88,6 +107,7 @@ class Run:
                                (ev["context"], ev["session_id"], self.conv_id))
                         self._flush_pending()
                         self.text = ""
+                        self.status = WAITING
                         self.turns += 1
                         if self.turns >= self.sent:
                             self.open = False
@@ -113,6 +133,8 @@ class Run:
             self.tell({"t": "done"})
 
 
+WAITING = "Думаю…"
+WRITING = "Пишу ответ…"
 RUNS: dict[int, Run] = {}
 
 
@@ -139,8 +161,20 @@ def make_title(text: str) -> str:
     return cut.rstrip(" ,.;:—-") + "…"
 
 
-def conversations() -> list[dict]:
-    return db.rows("SELECT id, title, updated_at FROM conversations ORDER BY updated_at DESC, id DESC")
+def conversations(project_id: int | None = None) -> list[dict]:
+    """Разговоры чата или темы одного проекта, свежие сверху."""
+    return db.rows("SELECT id, title, project_id, updated_at FROM conversations "
+                   "WHERE project_id IS ? ORDER BY updated_at DESC, id DESC", (project_id,))
+
+
+def conv_path(conv: dict) -> str:
+    """Адрес разговора (без корня сайта): у темы — внутри проекта."""
+    if conv.get("project_id"):
+        return f"/projects/{conv['project_id']}/t/{conv['id']}"
+    return f"/chat/{conv['id']}"
+
+
+templates.env.globals["conv_path"] = conv_path
 
 
 def conversation(conv_id: int) -> dict | None:
@@ -176,6 +210,7 @@ def feed_ctx(conv: dict, count: int) -> dict:
     run = RUNS.get(conv["id"])
     return {"conv": conv, "messages": messages, "more": more, "count": count,
             "running": bool(run), "live_text": run.text if run else "",
+            "live_status": run.status if run else WAITING,
             "pending": list(run.pending) if run else []}
 
 
@@ -193,15 +228,25 @@ def chat_home(request: Request):
     """Открывается последний разговор; разговоров нет — пустой экран."""
     sess = current(request)
     if sess and not sess["locked"]:
-        last = db.one("SELECT id FROM conversations ORDER BY updated_at DESC, id DESC LIMIT 1")
+        last = db.one("SELECT id, project_id FROM conversations WHERE project_id IS NULL "
+                      "ORDER BY updated_at DESC, id DESC LIMIT 1")
         if last:
-            return to_conv(request, last["id"])
+            return to_conv(last)
     return guarded(request, "chat.html", "chat", {"title": "Чат", "convs": conversations(),
                                                   "conv": None, "models": config.MODELS})
 
 
-def to_conv(request: Request, conv_id: int):
-    return RedirectResponse(str(request.url_for("conv", conv_id=conv_id)), status_code=303)
+def to_conv(conv: dict, query: str = ""):
+    return RedirectResponse(config.ROOT_PATH + conv_path(conv) + query, status_code=303)
+
+
+def talk_ctx(conv: dict, n: str | None) -> dict:
+    """Всё для страницы разговора или темы."""
+    ctx = feed_ctx(conv, _count(n))
+    ctx.update(title=conv["title"] or "Новый разговор", convs=conversations(conv["project_id"]),
+               models=config.MODELS, weight=weight(conv["context_tokens"]),
+               suggest_new=suggest_new(conv))
+    return ctx
 
 
 @router.get("/chat/{conv_id}", name="conv")
@@ -209,10 +254,9 @@ def conv_page(request: Request, conv_id: int, n: str | None = None):
     conv = conversation(conv_id)
     if not conv:
         return to(request, "chat")
-    ctx = feed_ctx(conv, _count(n))
-    ctx.update(title=conv["title"] or "Новый разговор", convs=conversations(), models=config.MODELS,
-               weight=weight(conv["context_tokens"]), suggest_new=suggest_new(conv))
-    return guarded(request, "chat.html", "chat", ctx)
+    if conv["project_id"]:
+        return to_conv(conv, f"?n={n}" if n else "")
+    return guarded(request, "chat.html", "chat", talk_ctx(conv, n))
 
 
 @router.get("/chat/{conv_id}/feed", name="conv_feed")
@@ -241,13 +285,18 @@ def _allowed(request: Request, csrf: str) -> dict | None:
 def chat_new(request: Request, csrf: str = Form("")):
     if not _allowed(request, csrf):
         return to(request, "chat")
-    # Пустые разговоры не копятся: прежний пустой заменяется новым
-    db.run("DELETE FROM conversations WHERE NOT EXISTS "
-           "(SELECT 1 FROM messages m WHERE m.conv_id = conversations.id)")
+    return to_conv(new_conversation(None, config.DEFAULT_MODEL))
+
+
+def new_conversation(project_id: int | None, model: str) -> dict:
+    """Новый разговор или тема. Пустые не копятся: прежний пустой там же
+    заменяется новым."""
+    db.run("DELETE FROM conversations WHERE project_id IS ? AND NOT EXISTS "
+           "(SELECT 1 FROM messages m WHERE m.conv_id = conversations.id)", (project_id,))
     stamp = db.now()
-    conv_id = db.insert("INSERT INTO conversations (model, created_at, updated_at) VALUES (?, ?, ?)",
-                        (config.DEFAULT_MODEL, stamp, stamp))
-    return to_conv(request, conv_id)
+    conv_id = db.insert("INSERT INTO conversations (model, project_id, created_at, updated_at) "
+                        "VALUES (?, ?, ?, ?)", (model, project_id, stamp, stamp))
+    return {"id": conv_id, "project_id": project_id}
 
 
 @router.post("/chat/{conv_id}/send", name="conv_send")
@@ -256,8 +305,11 @@ async def conv_send(request: Request, conv_id: int, text: str = Form(""), csrf: 
         return JSONResponse({"error": "Нет доступа — обнови страницу"}, status_code=403)
     conv = conversation(conv_id)
     text = text.strip()
+    project = db.one("SELECT * FROM projects WHERE id = ?", (conv["project_id"],)) if conv else None
     if not conv:
         return JSONResponse({"error": "Разговор не найден"}, status_code=404)
+    if project and project["delete_state"] == "removing":
+        return JSONResponse({"error": "Проект удаляется"}, status_code=409)
     if not text:
         return JSONResponse({"error": "Пустое сообщение"}, status_code=400)
     run = RUNS.get(conv_id)
@@ -275,7 +327,7 @@ async def conv_send(request: Request, conv_id: int, text: str = Form(""), csrf: 
     run = Run(conv_id)
     RUNS[conv_id] = run
     try:
-        await run.begin(text, conv["model"], conv["session_id"])
+        await run.begin(text, conv["model"], conv["session_id"], project)
     except Exception:                                  # noqa: BLE001
         RUNS.pop(conv_id, None)
         save_message(conv_id, "error", "Не получилось запустить Claude")
@@ -297,7 +349,7 @@ async def conv_stream(request: Request, conv_id: int):
         queue: asyncio.Queue = asyncio.Queue()
         run.listeners.add(queue)
         try:
-            yield _sse({"t": "snapshot", "x": run.text})
+            yield _sse({"t": "snapshot", "x": run.text, "s": run.status})
             while True:
                 try:
                     ev = await asyncio.wait_for(queue.get(), timeout=15)
@@ -322,7 +374,12 @@ def _sse(event: dict) -> str:
 def conv_model(request: Request, conv_id: int, model: str = Form(""), csrf: str = Form("")):
     if _allowed(request, csrf) and model in config.MODELS:
         db.run("UPDATE conversations SET model = ? WHERE id = ?", (model, conv_id))
-    return to_conv(request, conv_id)
+    return _back(request, conv_id)
+
+
+def _back(request: Request, conv_id: int):
+    conv = conversation(conv_id)
+    return to_conv(conv) if conv else to(request, "chat")
 
 
 @router.post("/chat/{conv_id}/rename", name="conv_rename")
@@ -330,17 +387,25 @@ def conv_rename(request: Request, conv_id: int, title: str = Form(""), csrf: str
     title = " ".join(title.split())[:120]
     if _allowed(request, csrf) and title:
         db.run("UPDATE conversations SET title = ? WHERE id = ?", (title, conv_id))
-    return to_conv(request, conv_id)
+    return _back(request, conv_id)
 
 
 @router.post("/chat/{conv_id}/delete", name="conv_delete")
 def conv_delete(request: Request, conv_id: int, csrf: str = Form("")):
-    if _allowed(request, csrf):
-        run = RUNS.pop(conv_id, None)
-        if run and run.proc and run.proc.returncode is None:
-            run.proc.kill()
+    conv = conversation(conv_id)
+    if conv and _allowed(request, csrf):
+        stop(conv_id)
         db.run("DELETE FROM conversations WHERE id = ?", (conv_id,))
+    if conv and conv["project_id"]:
+        return RedirectResponse(f"{config.ROOT_PATH}/projects/{conv['project_id']}", status_code=303)
     return to(request, "chat")
+
+
+def stop(conv_id: int) -> None:
+    """Погасить идущий ответ (разговор удаляют)."""
+    run = RUNS.pop(conv_id, None)
+    if run and run.proc and run.proc.returncode is None:
+        run.proc.kill()
 
 
 # ── Поиск ────────────────────────────────────────────────────────────────
@@ -352,11 +417,14 @@ def search(request: Request, q: str = ""):
     if words:
         where = " AND ".join("instr(m.norm, ?) > 0" for _ in words)
         results = db.rows(
-            "SELECT m.id, m.conv_id, m.role, m.text, m.created_at, c.title "
-            f"FROM messages m JOIN conversations c ON c.id = m.conv_id WHERE {where} "
+            "SELECT m.id, m.conv_id AS id_conv, m.role, m.text, m.created_at, c.title, "
+            "c.project_id, p.name AS project "
+            "FROM messages m JOIN conversations c ON c.id = m.conv_id "
+            f"LEFT JOIN projects p ON p.id = c.project_id WHERE {where} "
             "ORDER BY m.id DESC LIMIT 100", tuple(words))
         for row in results:
             row["snippet"] = snippet(row["text"], words)
+            row["href"] = conv_path({"id": row["id_conv"], "project_id": row["project_id"]})
     return guarded(request, "search.html", "chat", {"title": "Поиск", "q": q, "results": results,
                                                     "searched": bool(words)})
 

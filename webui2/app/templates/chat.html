@@ -2,35 +2,66 @@
 {% block body_class %}chat-page{% if conv %} has-conv{% endif %}{% endblock %}
 {% block content %}
 <div class="chat">
-  <aside class="convs" id="convs" aria-label="Разговоры">
+  <aside class="convs" id="convs" aria-label="{{ 'Темы проекта' if project else 'Разговоры' }}">
+    {% if project %}
+    <a href="{{ root }}/projects" class="back-link">‹ Все проекты</a>
+    <div class="proj-head">
+      <h2 id="project-name">{{ project.name }}</h2>
+      <form method="post" action="{{ root }}/projects/{{ project.id }}/delete"
+            data-confirm="Удалить проект? Сначала Claude посмотрит, что проект завёл на сервере, и покажет список.">
+        <input type="hidden" name="csrf" value="{{ sess.csrf }}">
+        <button type="submit" class="icon" title="Удалить проект" aria-label="Удалить проект">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 7h16M10 11v6M14 11v6M6 7l1 13h10l1-13M9 7V4h6v3"/></svg>
+        </button>
+      </form>
+    </div>
+    <p class="muted folder" title="Папка проекта на сервере">{{ folder }}</p>
+    <form method="post" action="{{ root }}/projects/{{ project.id }}/access" class="access" id="access-form">
+      <input type="hidden" name="csrf" value="{{ sess.csrf }}">
+      <input type="hidden" name="back" value="{{ conv.id if conv else '' }}">
+      <label class="check"><input type="checkbox" name="commands" value="1"
+        {% if project.allow_commands or project.full_access %}checked{% endif %}
+        {% if project.full_access %}disabled{% endif %}> Запускать команды</label>
+      <label class="check"><input type="checkbox" name="full" value="1"
+        {% if project.full_access %}checked{% endif %}> Полный доступ</label>
+      <p class="muted small">{% if project.full_access %}Claude может всё, без вопросов.{% elif project.allow_commands %}Claude читает и правит файлы проекта и запускает команды.{% else %}Claude только читает и правит файлы в папке проекта.{% endif %}
+        Меняется со следующего сообщения.</p>
+      <noscript><button type="submit" class="link">Сохранить</button></noscript>
+    </form>
+    <form method="post" action="{{ root }}/projects/{{ project.id }}/topic/new">
+      <input type="hidden" name="csrf" value="{{ sess.csrf }}">
+      <button type="submit" class="primary wide-btn">Новая тема</button>
+    </form>
+    {% else %}
     <form method="post" action="{{ root }}/chat/new">
       <input type="hidden" name="csrf" value="{{ sess.csrf }}">
       <button type="submit" class="primary wide-btn">Новый разговор</button>
     </form>
+    {% endif %}
     <form method="get" action="{{ root }}/search" class="search" role="search">
-      <input type="search" name="q" placeholder="Поиск по разговорам" aria-label="Поиск по разговорам">
+      <input type="search" name="q" placeholder="Поиск" aria-label="Поиск по разговорам и темам">
     </form>
     <nav>
       <ul class="conv-list">
         {% for c in convs %}
-        <li><a href="{{ root }}/chat/{{ c.id }}" {% if conv and c.id == conv.id %}aria-current="page"{% endif %}>
-          {{ c.title or "Новый разговор" }}</a></li>
+        <li><a href="{{ root }}{{ conv_path(c) }}" {% if conv and c.id == conv.id %}aria-current="page"{% endif %}>
+          {{ c.title or ("Новая тема" if project else "Новый разговор") }}</a></li>
         {% else %}
-        <li class="muted">Разговоров пока нет</li>
+        <li class="muted">{{ "Тем пока нет" if project else "Разговоров пока нет" }}</li>
         {% endfor %}
       </ul>
     </nav>
   </aside>
 
   {% if conv %}
-  <section class="talk" aria-label="Разговор">
+  <section class="talk" aria-label="{{ 'Тема' if project else 'Разговор' }}">
     <header class="talk-head">
-      <button type="button" class="link to-list" id="to-list">‹ Разговоры</button>
-      <h1 id="talk-title">{{ conv.title or "Новый разговор" }}</h1>
+      <button type="button" class="link to-list" id="to-list">‹ {{ "Темы" if project else "Разговоры" }}</button>
+      <h1 id="talk-title">{{ conv.title or ("Новая тема" if project else "Новый разговор") }}</h1>
       <button type="button" class="icon" id="rename-btn" title="Переименовать" aria-label="Переименовать">✎</button>
       <form method="post" action="{{ root }}/chat/{{ conv.id }}/delete" data-confirm="Удалить?">
         <input type="hidden" name="csrf" value="{{ sess.csrf }}">
-        <button type="submit" class="icon" title="Удалить" aria-label="Удалить разговор">
+        <button type="submit" class="icon" title="Удалить" aria-label="Удалить {{ 'тему' if project else 'разговор' }}">
           <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 7h16M10 11v6M14 11v6M6 7l1 13h10l1-13M9 7V4h6v3"/></svg>
         </button>
       </form>
@@ -56,7 +87,7 @@
     <div class="feed" id="feed" aria-live="polite">{% include "_feed.html" %}</div>
 
     <form class="composer" id="composer" data-conv="{{ conv.id }}" data-count="{{ count }}">
-      {% if suggest_new %}<p class="hint">Беседа большая и давно молчит — дешевле начать новый разговор.</p>{% endif %}
+      {% if suggest_new %}<p class="hint">Беседа большая и давно молчит — дешевле начать {{ "новую тему" if project else "новый разговор" }}.</p>{% endif %}
       <label class="sr-only" for="text">Сообщение</label>
       <textarea id="text" name="text" rows="2" placeholder="Сообщение" title="Enter — отправить, Shift+Enter — новая строка"></textarea>
       <button type="submit" class="primary" id="send-btn">{{ "Дописать" if running else "Отправить" }}</button>
@@ -65,9 +96,9 @@
   </section>
   {% else %}
   <section class="talk empty">
-    <p class="muted">Начни новый разговор кнопкой «Новый разговор».</p>
+    <p class="muted">{% if project %}Начни тему кнопкой «Новая тема».{% else %}Начни новый разговор кнопкой «Новый разговор».{% endif %}</p>
   </section>
   {% endif %}
 </div>
 {% endblock %}
-{% block scripts %}<script src="{{ root }}/static/chat.js?v=2"></script>{% endblock %}
+{% block scripts %}<script src="{{ root }}/static/chat.js?v=4"></script>{% endblock %}

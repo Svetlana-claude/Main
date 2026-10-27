@@ -1,0 +1,41 @@
+{% extends "base.html" %}
+{% block head %}{% if project.delete_state in ("checking", "removing") %}<meta http-equiv="refresh" content="3">{% endif %}{% endblock %}
+{% block content %}
+<section class="panel">
+  <h1>Удаление проекта «{{ project.name }}»</h1>
+  <p class="muted">Папка: {{ folder }}</p>
+  {% set state = project.delete_state %}
+  {% if state == "checking" %}
+  <p class="status-line" id="delete-status">Claude смотрит, что проект завёл на сервере вне своей папки… Это может занять пару минут, страница обновится сама.</p>
+  {% elif state == "removing" %}
+  <p class="status-line" id="delete-status">Удаляю… Страница обновится сама.</p>
+  {% else %}
+  {% if state == "ready" %}
+  <h2>Что будет удалено</h2>
+  {% else %}
+  <h2>Не получилось</h2>
+  {% endif %}
+  <div class="md report" id="delete-report">{{ report }}</div>
+  {% if state == "ready" %}
+  <p>И последней — сама папка проекта со всеми файлами и темами. Вернуть не получится.</p>
+  {% endif %}
+  <div class="actions">
+    {% if state == "ready" %}
+    <form method="post" action="{{ root }}/projects/{{ project.id }}/delete/yes">
+      <input type="hidden" name="csrf" value="{{ sess.csrf }}">
+      <button type="submit" class="primary danger" id="delete-yes">Да, удалить</button>
+    </form>
+    {% else %}
+    <form method="post" action="{{ root }}/projects/{{ project.id }}/delete">
+      <input type="hidden" name="csrf" value="{{ sess.csrf }}">
+      <button type="submit" class="primary">Проверить снова</button>
+    </form>
+    {% endif %}
+    <form method="post" action="{{ root }}/projects/{{ project.id }}/delete/no">
+      <input type="hidden" name="csrf" value="{{ sess.csrf }}">
+      <button type="submit" class="link" id="delete-no">Отмена</button>
+    </form>
+  </div>
+  {% endif %}
+</section>
+{% endblock %}

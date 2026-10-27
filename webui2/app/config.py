@@ -50,5 +50,14 @@ PAGE_MESSAGES = 40                    # сообщений на странице
 BIG_CONTEXT = 150_000                 # с какого веса беседа считается большой…
 QUIET_HOURS = 6                       # …и через сколько часов молчания советовать новую
 
+# Проекты: папки с темами. Claude в теме работает полноценно, в папке проекта
+PROJECTS_DIR = Path(_env.get("PROJECTS_DIR", Path.home() / "projects"))
+TOPIC_MODEL = "opus"
+# Подпись сохранений в новых проектах; не задана — берётся из git самого сайта
+GIT_NAME = _env.get("GIT_NAME", "")
+GIT_EMAIL = _env.get("GIT_EMAIL", "")
+# Папка сайта и хранилище, где она лежит: удаление проекта их не тронет
+SITE_DIRS = (PROJECT_DIR, PROJECT_DIR.parent)
+
 TEMPLATES_DIR = APP_DIR / "templates"
 STATIC_DIR = APP_DIR / "static"

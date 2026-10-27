@@ -12,7 +12,8 @@ TMP = Path(tempfile.mkdtemp(prefix="webui2-test-"))
 FAKE = Path(__file__).resolve().parent / "fake_claude.py"
 CLAUDE_LOG = TMP / "claude.log"
 (TMP / "test.env").write_text(f"SECRET_KEY=test-key\nDB_PATH={TMP / 'site.db'}\nLOGIN=Svetlana\n"
-                              f"CLAUDE_BIN={FAKE}\nCHAT_DIR={TMP / 'room'}\n")
+                              f"CLAUDE_BIN={FAKE}\nCHAT_DIR={TMP / 'room'}\n"
+                              f"PROJECTS_DIR={TMP / 'projects'}\n")
 os.environ.update(WEBUI2_ENV=str(TMP / "test.env"), ROOT_PATH="", WEBUI2_INSECURE_COOKIE="1",
                   FAKE_CLAUDE_LOG=str(CLAUDE_LOG))
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
@@ -39,7 +40,7 @@ def hidden(html: str, name: str) -> str:
 def client():
     with TestClient(app, headers=ORIGIN) as c:
         with db.tx() as con:
-            for table in ("messages", "conversations", "sessions", "users", "login_fails", "setup"):
+            for table in ("messages", "conversations", "projects", "sessions", "users", "login_fails", "setup"):
                 con.execute(f"DELETE FROM {table}")
             con.execute("INSERT INTO setup (key, value) VALUES ('totp_secret', ?)", (SECRET,))
         yield c
@@ -62,8 +63,6 @@ def do_login(c, password=PASSWORD, code=None):
     return c.post("/login/code", data={"pre": hidden(r.text, "pre"),
                                        "pass_token": hidden(r.text, "pass_token"),
                                        "code": code or code_now()}, follow_redirects=False)
-
-
 
 
 @pytest.fixture()

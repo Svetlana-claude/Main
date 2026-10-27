@@ -1,0 +1,26 @@
+{% extends "base.html" %}
+{% block content %}
+<section class="panel">
+  <h1>Проекты</h1>
+  <form method="post" action="{{ root }}/projects/new" class="search-row" id="new-project">
+    <input type="hidden" name="csrf" value="{{ sess.csrf }}">
+    <label class="sr-only" for="project-name-input">Название нового проекта</label>
+    <input id="project-name-input" name="name" maxlength="80" placeholder="Название нового проекта" required>
+    <button type="submit" class="primary">Новый проект</button>
+  </form>
+  {% if error %}<p class="error" role="alert">{{ error }}</p>{% endif %}
+  {% if projects %}
+  <ul class="results projects">
+    {% for p in projects %}
+    <li>
+      <a href="{{ root }}/projects/{{ p.id }}">{{ p.name }}</a>
+      <span class="muted"> · {{ p.folder }} · тем: {{ p.topics }}{% if p.delete_state %} · удаляется{% endif %}</span>
+    </li>
+    {% endfor %}
+  </ul>
+  {% else %}
+  <p class="muted">Проектов пока нет. Проект — это папка на сервере, где Claude работает с файлами;
+    в нём темы — отдельные беседы.</p>
+  {% endif %}
+</section>
+{% endblock %}

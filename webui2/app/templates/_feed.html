@@ -11,7 +11,7 @@
 {% if running %}
 <article class="msg msg-assistant live" id="live">
   <p class="plain" id="live-text">{{ live_text }}</p>
-  <p class="status" id="live-status">Claude пишет…</p>
+  <p class="status" id="live-status">{{ live_status }}</p>
 </article>
 {% for p in pending %}
 <article class="msg msg-user pending"><p class="plain">{{ p }}</p><span class="status">дописка</span></article>
