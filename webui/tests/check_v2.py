@@ -57,7 +57,7 @@ BROWSER = r'''
 import sys
 from playwright.sync_api import sync_playwright
 
-base, cookie, chat_id, shots, project_id = sys.argv[1:6]
+base, cookie, chat_id, shots, project_id, old_id = sys.argv[1:7]
 fails = []
 def check(ok, what):
     print(("OK   " if ok else "FAIL ") + what, flush=True)
@@ -97,6 +97,16 @@ with sync_playwright() as p:
     page.reload()
     check("Остановлено" in page.locator(".feed").inner_text(), "после перезагрузки в ленте «Остановлено»")
     check(page.locator("#files-open").count() == 0, "у чатика нет кнопки «Файлы проекта»")
+
+    check(page.locator(f".side-project[data-project='{old_id}']").count() == 0,
+          "старого проекта в списке нет")
+    page.fill("#project-name", "проверка v2 новый")
+    page.press("#project-name", "Enter")
+    page.wait_for_load_state()
+    fresh = page.locator(".side-project[open] > summary")
+    check(fresh.count() == 1 and fresh.inner_text() == "проверка v2 новый",
+          "«+ Новый проект» создал проект и раскрыл его")
+    check(page.locator("#head-name").inner_text() == "Заголовок проверки", "после создания проекта остались в том же разговоре")
 
     proj = f".side-project[data-project='{project_id}']"
     check(page.locator(proj).get_attribute("open") is None, "у чатика проекты свёрнуты")
@@ -163,6 +173,7 @@ def main() -> int:
         print(f"FAIL нет Playwright: {PW_PYTHON}")
         return 1
     db.init_pool()
+    db.apply_schema()          # поле in_v2 нужно до того, как его заполнять
     user = db.query_one("SELECT id FROM users ORDER BY id LIMIT 1")
     tmp = Path(tempfile.mkdtemp(prefix="check-v2-"))
     engine = tmp / "fake-claude"
@@ -185,8 +196,17 @@ def main() -> int:
     (workdir / "downloads/papka/otchet.pdf").write_text("PDF-проверки", encoding="utf-8")
     (workdir / "downloads/.env").write_text("SEKRET=1", encoding="utf-8")   # не должен показаться
     project = db.query_one(
-        "INSERT INTO projects (name, slug, workdir) VALUES (%s, %s, %s) RETURNING id",
+        "INSERT INTO projects (name, slug, workdir, in_v2) VALUES (%s, %s, %s, true) RETURNING id",
         ("Проверка v2", f"check-v2-{os.getpid()}", str(workdir)),
+    )
+    # Старый проект со свежей темой: в v2 его не видно, и главная туда не ведёт
+    old = db.query_one(
+        "INSERT INTO projects (name, slug, workdir) VALUES (%s, %s, %s) RETURNING id",
+        ("Старый проверки", f"check-v2-old-{os.getpid()}", str(workdir)),
+    )
+    db.execute(
+        "INSERT INTO conversations (kind, project_id, title, updated_at) "
+        "VALUES ('topic', %s, 'старая тема', now() + interval '2 days')", (old["id"],),
     )
 
     port = free_port()
@@ -206,7 +226,7 @@ def main() -> int:
         res = subprocess.run(
             [str(PW_PYTHON), str(script), f"http://127.0.0.1:{port}",
              security.sign_session_id(session_id), str(chat["id"]), str(SHOTS),
-             str(project["id"])],
+             str(project["id"]), str(old["id"])],
             capture_output=True, text=True, timeout=240,
         )
         print(res.stdout.rstrip())
@@ -225,7 +245,12 @@ def main() -> int:
         except subprocess.TimeoutExpired:
             proc.kill()
         db.execute("DELETE FROM conversations WHERE id = %s", (chat["id"],))
-        db.execute("DELETE FROM projects WHERE id = %s", (project["id"],))
+        db.execute("DELETE FROM projects WHERE id = ANY(%s)", ([project["id"], old["id"]],))
+        made = db.query_one("SELECT id, workdir FROM projects WHERE name = 'проверка v2 новый'")
+        check(bool(made), "новый проект записан в базу")
+        if made:
+            db.execute("DELETE FROM projects WHERE id = %s", (made["id"],))
+            shutil.rmtree(made["workdir"], ignore_errors=True)
         db.execute("DELETE FROM sessions WHERE id = %s", (session_id,))
         shutil.rmtree(tmp, ignore_errors=True)
 

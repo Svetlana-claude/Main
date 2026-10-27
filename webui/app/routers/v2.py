@@ -10,6 +10,7 @@ from fastapi.responses import JSONResponse, RedirectResponse
 from .. import db
 from ..deps import current_user, render
 from ..services import runs
+from . import projects as projects_router
 
 router = APIRouter(prefix="/v2")
 
@@ -26,9 +27,10 @@ def _guard(request: Request):
 def _tree() -> tuple[list[dict], list[dict]]:
     """Боковой список: проекты с темами (проект → тема) и отдельно чатики.
 
-    Проекты и темы внутри — по свежести последнего разговора.
+    Проекты и темы внутри — по свежести последнего разговора. Только проекты
+    v2 (`in_v2`): старые переносятся сюда поэтапно.
     """
-    projects = db.query("SELECT id, name FROM projects")
+    projects = db.query("SELECT id, name FROM projects WHERE in_v2")
     by_id = {p["id"]: {**p, "topics": [], "fresh": None} for p in projects}
     for t in db.query(
         "SELECT id, project_id, title, updated_at FROM conversations "
@@ -54,12 +56,19 @@ def v2_home(request: Request):
     user, redirect = _guard(request)
     if redirect:
         return redirect
-    last = db.query_one("SELECT id FROM conversations ORDER BY updated_at DESC LIMIT 1")
+    last = db.query_one(
+        """
+        SELECT c.id FROM conversations c LEFT JOIN projects p ON p.id = c.project_id
+        WHERE c.kind = 'chat' OR p.in_v2
+        ORDER BY c.updated_at DESC LIMIT 1
+        """
+    )
     if not last:
         projects, chats = _tree()
         return render(request, "v2/main.html", {"user": user, "projects": projects,
                                                "chats": chats, "current": None,
-                                               "messages": [], "running": False})
+                                               "messages": [], "running": False,
+                                               "open_project": request.query_params.get("p")})
     return RedirectResponse(request.url_for("v2_conversation", conv_id=last["id"]),
                             status_code=303)
 
@@ -102,6 +111,7 @@ def v2_conversation(request: Request, conv_id: int):
             "send_url": send_url,
             "stream_url": stream_url,
             "running": runs.active(current["kind"], conv_id),
+            "open_project": request.query_params.get("p"),
         },
     )
 
@@ -119,13 +129,43 @@ def v2_new(request: Request):
                             status_code=303)
 
 
+@router.post("/project", name="v2_project_new")
+def v2_project_new(request: Request, name: str = Form(""), back: str = Form("")):
+    """Новый проект v2: каталог в репозитории и папка выдачи — как в старом
+    интерфейсе. После создания возвращаемся туда же, проект раскрыт."""
+    user, redirect = _guard(request)
+    if redirect:
+        return redirect
+    clean = " ".join(name.split())[:120]
+    if not clean:
+        return RedirectResponse(request.url_for("v2_home"), status_code=303)
+    slug = base_slug = projects_router._slugify(clean)
+    suffix = 1
+    while db.query_one("SELECT 1 AS ok FROM projects WHERE slug = %s", (slug,)):
+        suffix += 1
+        slug = f"{base_slug}-{suffix}"
+    try:
+        workdir = projects_router._safe_workdir(slug)
+    except ValueError:
+        return RedirectResponse(request.url_for("v2_home"), status_code=303)
+    workdir.mkdir(parents=True, exist_ok=True)
+    projects_router._downloads_dir(workdir)
+    row = db.query_one(
+        "INSERT INTO projects (name, slug, workdir, in_v2) VALUES (%s, %s, %s, true) RETURNING id",
+        (clean, slug, str(workdir)),
+    )
+    # Возврат только на свои же страницы v2 — адрес приходит из формы
+    target = back if back.startswith(str(request.url_for("v2_home"))) else str(request.url_for("v2_home"))
+    return RedirectResponse(f"{target.split('?')[0]}?p={row['id']}", status_code=303)
+
+
 @router.post("/topic", name="v2_topic_new")
 def v2_topic_new(request: Request, project_id: int = Form(...), title: str = Form("")):
     """Новая тема в проекте — сразу открывается в v2."""
     user, redirect = _guard(request)
     if redirect:
         return redirect
-    if not db.query_one("SELECT 1 AS ok FROM projects WHERE id = %s", (project_id,)):
+    if not db.query_one("SELECT 1 AS ok FROM projects WHERE id = %s AND in_v2", (project_id,)):
         return RedirectResponse(request.url_for("v2_home"), status_code=303)
     clean = " ".join(title.split())[:120] or "Новая тема"
     row = db.query_one(

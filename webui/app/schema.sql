@@ -44,6 +44,8 @@ CREATE TABLE IF NOT EXISTS projects (
     allow_bash  boolean NOT NULL DEFAULT false
 );
 ALTER TABLE projects ADD COLUMN IF NOT EXISTS allow_bash boolean NOT NULL DEFAULT false;
+-- Рабочее место v2 показывает только свои проекты: старые переносятся поэтапно
+ALTER TABLE projects ADD COLUMN IF NOT EXISTS in_v2 boolean NOT NULL DEFAULT false;
 
 -- Диалоги. Один тип записи и для чатиков, и для тем внутри проекта:
 -- kind='chat'  -> project_id IS NULL, инструменты выключены

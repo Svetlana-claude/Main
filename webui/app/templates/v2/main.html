@@ -18,9 +18,14 @@
     {% endmacro %}
     <nav class="side-list">
       <h2 class="side-group">Проекты</h2>
+      <form class="side-add side-add-project" method="post" action="{{ url_for('v2_project_new') }}">
+        <input type="hidden" name="back" value="{{ request.url }}">
+        <label class="sr-only" for="project-name">Новый проект</label>
+        <input id="project-name" name="name" placeholder="+ Новый проект" required>
+      </form>
       {% for p in projects %}
         <details class="side-project" data-project="{{ p.id }}"
-                 {% if current and current.project_id == p.id %}open{% endif %}>
+                 {% if (current and current.project_id == p.id) or open_project == p.id|string %}open{% endif %}>
           <summary>{{ p.name }}</summary>
           <div class="side-topics">
             {% for t in p.topics %}{{ item(t) }}{% endfor %}
@@ -31,8 +36,6 @@
             </form>
           </div>
         </details>
-      {% else %}
-        <p class="side-empty">Проектов пока нет</p>
       {% endfor %}
 
       <h2 class="side-group">Чатики
