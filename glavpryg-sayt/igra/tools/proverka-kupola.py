@@ -48,10 +48,14 @@ with sync_playwright() as p:
     do_kupola(s, 600)
     proverit(s.inner_text('#k-raskryt') == 'ПОДУШКА', 'под куполом средняя кнопка — «ПОДУШКА»')
     kn = s.locator('#k-raskryt').bounding_box()
+    # ход клевант — в игровом времени (с перемоткой ×6 они и ходят вшестеро быстрее по часам):
+    # запись [s.t, s.dL] с самого нажатия; полный ход — не быстрее 0,5 с игрового времени
+    s.evaluate("window.zapis = []; window.zapisId = setInterval(() => zapis.push([s.t, s.dL]), 2)")
     s.mouse.move(kn['x'] + kn['width'] / 2, kn['y'] + kn['height'] / 2); s.mouse.down()
-    s.wait_for_timeout(300)
-    d = s.evaluate("s.dL")
-    proverit(0.2 < d < 0.8, f'клеванты затягиваются не мгновенно (через 0,3 с ход {d:.2f})')
+    s.wait_for_function("s.dL >= 0.999", timeout=5000); s.wait_for_timeout(100)
+    zap = s.evaluate("clearInterval(zapisId), zapis")
+    t0 = max(t for t, d in zap if d == 0); t1 = min(t for t, d in zap if d >= 0.999)
+    proverit(t1 - t0 >= 0.5, f'клеванты затягиваются не мгновенно (полный ход за {t1 - t0:.2f} с игрового времени)')
     s.wait_for_function("s.svalT > 0", timeout=8000)
     s.screenshot(path=f'{kuda}/kupol-svalivanie.png')
     proverit('svalivanie' in s.get_attribute('#rezhim', 'class'), 'в сваливании на приборе — «СВАЛИВАНИЕ»')

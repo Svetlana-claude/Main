@@ -5,13 +5,14 @@
 
 0) Свободное падение — в настоящем времени, ≈ 50 м за секунду по часам; спуск под куполом выше 300 м —
    с перемоткой ×6 (30 м за секунду по часам), на экране «⏩ ×6».
-1) Полный режим: купол разгоняется до 12 м/с вперёд и 5 м/с вниз.
+1) Полный режим в штиль: 10 м/с вперёд и 5 м/с вниз; полный круг на одной клеванте — 8 с игрового времени
+   от её затягивания, и с перемоткой ×6, и без неё.
 2) За лесом при ветре 8 м/с турбулентность крутит купол, но снижение остаётся 5 м/с — ветер на него не влияет.
 3) Фитиль (?fitil=1): купол начал наполняться — снижение падает, затем фитилит и снова разгоняется до 35 м/с,
    строка «ФИТИЛЬ!»; пробел — отцепка и запасной,
    в разборе «Фитиль — запасной».
 4) Фитиль без отцепки: прибор раскрывает запасной на 350 м — два купола: строка «ДВА КУПОЛА!»,
-   ≈ 7,8 м/с вперёд и 6,5 вниз, на экране два купола (сверху и сбоку), в разборе «два купола».
+   ≈ 6,5 м/с вперёд и 6,5 вниз, на экране два купола (сверху и сбоку), в разборе «два купола».
 """
 import sys
 from playwright.sync_api import sync_playwright
@@ -58,7 +59,18 @@ with sync_playwright() as p:
     vch = s.evaluate(sek)
     per = s.evaluate("document.getElementById('peremotka')?.innerText ?? ''")
     proverit(27 < vch < 33 and per == '⏩ ×6', f'под куполом выше 300 м по часам: {vch:.1f} м/с вниз, на экране «{per}»')
-    proverit(abs(v - 12) < 0.3 and abs(vz - 5) < 0.1, f'полный режим: {v:.2f} м/с вперёд, {vz:.2f} вниз')
+    proverit(abs(v - 10) < 0.3 and abs(vz - 5) < 0.1, f'полный режим: {v:.2f} м/с вперёд, {vz:.2f} вниз')
+
+    # полный круг: штиль, правая клеванта до упора; время — игровое (s.t), курс — накопленный
+    krug = """h => new Promise(ok => { s.profil = [[10, 0, 0]]; s.poryv = 0; s.h = h; s.om = 0; s.omT = 0; s.dL = s.dP = 0;
+      s.v = F.kupolGor; s.vzK = F.kupolVert;
+      let k0 = s.kurs, ug = 0, t0 = s.t, pred = s.kurs; nazh.pravo = true;
+      const id = setInterval(() => { s.h = h; ug += s.kurs - pred; pred = s.kurs;
+        if (Math.abs(ug) >= 360) { clearInterval(id); nazh.pravo = false; ok([s.t - t0, s.usk]); } }, 5); })"""
+    for h in (1000, 45):
+        t, usk = s.evaluate(krug, h)
+        proverit(abs(t - 8) < 0.25, f'полный круг с {h} м (перемотка ×{usk:g}): {t:.2f} с')
+        s.evaluate("s.om = 0; s.dL = s.dP = 0; s.h = 1000"); s.wait_for_timeout(1500)
 
     r = s.evaluate("""() => { pauza = true;
       for (let y = -2000; y < 2500; y += 40) for (let x = -1900; x < 1900; x += 40) for (const k of [0, 90, 180, 270]) {
@@ -116,7 +128,7 @@ with sync_playwright() as p:
     s.wait_for_timeout(2500)
     v, vz = s.evaluate("[s.v, s.vzTek]")
     s.screenshot(path=f'{kuda}/dva-kupola.png')
-    proverit(abs(v - 7.8) < 0.3 and abs(vz - 6.5) < 0.2, f'на двух куполах: {v:.1f} м/с вперёд, {vz:.1f} вниз')
+    proverit(abs(v - 6.5) < 0.3 and abs(vz - 6.5) < 0.2, f'на двух куполах: {v:.1f} м/с вперёд, {vz:.1f} вниз')
     s.evaluate("s.h = 35; s.trevogaBylo.k3 = s.trevogaBylo.k4 = 1")
     s.wait_for_function("bokVid()", timeout=10000); s.wait_for_timeout(500)
     s.screenshot(path=f'{kuda}/dva-kupola-sboku.png')

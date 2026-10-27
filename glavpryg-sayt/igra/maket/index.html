@@ -285,7 +285,7 @@ const UROVNI = [
   { veter:15, razbros:400, podskazka:false },
 ];
 
-// Физика по учебнику AFF: свободное падение ≈50 м/с; купол — полный режим 12 м/с вперёд и 5 вниз (по заказчику; в AFF 9–10),
+// Физика по учебнику AFF: свободное падение ≈50 м/с; купол — полный режим 10 м/с вперёд и 5 вниз, круг за 8 с (по заказчику; в AFF 9–10),
 // средний 3–4 м/с; 360° — около 5 с с потерей 50–70 м.
 // Купол отвечает с запаздыванием: клеванты затягиваются руками не мгновенно
 // (klevantaVniz/Vverh — доля хода в секунду), разворот и скорость набираются плавно
@@ -296,8 +296,9 @@ const F = {
   padenie:50, povorotFF:55, tauFF:0.5,
   vperedFF:14, nazadFF:6, tauGorFF:1.4, spinaVert:56, figuryOt:2000,
   saltoDlit:3, bochkaDlit:2,
-  kupolGor:12, kupolVert:5, tormozGor:4, tormozVert:3, glubGor:1.5, glubVert:4,
-  povorot:42, povorotVert:3.5, tauPovorot:0.9, tauGor:1.0, tauVert:1.2, podemnaya:0.8,
+  // купол в штиль: 10 м/с вперёд, 5 м/с вниз; полный круг на одной клеванте — 8 с от её затягивания
+  kupolGor:10, kupolVert:5, tormozGor:4, tormozVert:3, glubGor:1.5, glubVert:4,
+  povorot:53, povorotVert:3.5, tauPovorot:0.9, tauGor:1.0, tauVert:1.2, podemnaya:0.8,
   klevantaVniz:1.5, klevantaVverh:1.8,
   // сваливание: глубокое торможение дольше glubDo с; резкий разворот ниже rezkoNizhe м дольше rezkoDo с
   glubDo:2.5, rezkoNizhe:40, rezkoDolya:0.6, rezkoDo:0.4, svalDlit:2.2, svalVert:13, zhestko:7, myagko:2.5,
@@ -951,7 +952,8 @@ function shag(dtReal) {
   } else if (s.faza === 'kupol') {
     // клеванты: куда тянет игрок — подушка до упора, обе кнопки — средний режим, одна — разворот
     const cel = nazh.podushka ? [1, 1] : oba ? [0.5, 0.5] : [L ? 1 : 0, P ? 1 : 0];
-    const hod = (d, c) => d + Math.max(-F.klevantaVverh * dtReal, Math.min(F.klevantaVniz * dtReal, c - d));
+    // клеванты ходят в игровом времени — круг за 8 с и с перемоткой остаётся кругом за 8 с
+    const hod = (d, c) => d + Math.max(-F.klevantaVverh * dt, Math.min(F.klevantaVniz * dt, c - d));
     s.dL = hod(s.dL, cel[0]); s.dP = hod(s.dP, cel[1]);
     const b = Math.min(s.dL, s.dP), tr = s.dP - s.dL;               // торможение и перекос клевант
     s.rezhim = b > 0.75 ? 2 : b > 0.25 ? 1 : 0;
