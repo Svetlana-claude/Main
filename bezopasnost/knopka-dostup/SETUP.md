@@ -142,10 +142,12 @@ ssh -J <вы>@<сервер> -p 2222 <учётка-Windows>@127.0.0.1
 
 ## Сборка
 
-На машине с .NET 9 SDK, в этой папке:
+На машине с .NET 9 SDK (годится и Linux-сервер), в этой папке:
 
 ```
-dotnet publish -c Release -r win-x64 --self-contained false
+dotnet publish -c Release -r win-x64 --self-contained true -p:PublishSingleFile=true -p:IncludeNativeLibrariesForSelfExtract=true -p:EnableWindowsTargeting=true
 ```
 
-Готовый `KnopkaDostup.exe` — в `bin\Release\net9.0-windows\win-x64\publish\`.
+Готовый `KnopkaDostup.exe` — в `bin\Release\net9.0-windows\win-x64\publish\`, копия — в
+«Файлах проекта» (`bezopasnost/downloads/`). Файл один, ≈ 130 МБ, .NET на ноуте ставить не
+нужно.
