@@ -136,8 +136,8 @@
 
   composer.addEventListener("submit", function (e) { e.preventDefault(); send(); });
   text.addEventListener("keydown", function (e) {
-    // На телефоне Enter — новая строка, отправка — кнопкой
-    if (e.key === "Enter" && !e.shiftKey && !e.isComposing && !matchMedia("(pointer: coarse)").matches) { e.preventDefault(); send(); }
+    // Shift+Enter — отправить, Enter — новая строка (на телефоне — кнопкой)
+    if (e.key === "Enter" && e.shiftKey && !e.isComposing) { e.preventDefault(); send(); }
   });
 
   if (!location.hash) toBottom();

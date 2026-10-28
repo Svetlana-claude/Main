@@ -89,7 +89,7 @@
     <form class="composer" id="composer" data-conv="{{ conv.id }}" data-count="{{ count }}">
       {% if suggest_new %}<p class="hint">Беседа большая и давно молчит — дешевле начать {{ "новую тему" if project else "новый разговор" }}.</p>{% endif %}
       <label class="sr-only" for="text">Сообщение</label>
-      <textarea id="text" name="text" rows="2" placeholder="Сообщение" title="Enter — отправить, Shift+Enter — новая строка"></textarea>
+      <textarea id="text" name="text" rows="2" placeholder="Сообщение" title="Shift+Enter — отправить, Enter — новая строка"></textarea>
       <button type="submit" class="primary" id="send-btn">{{ "Дописать" if running else "Отправить" }}</button>
       <p class="error" id="send-error" role="alert" hidden></p>
     </form>
@@ -101,4 +101,4 @@
   {% endif %}
 </div>
 {% endblock %}
-{% block scripts %}<script src="{{ root }}/static/chat.js?v=4"></script>{% endblock %}
+{% block scripts %}<script src="{{ root }}/static/chat.js?v=5"></script>{% endblock %}

@@ -96,9 +96,15 @@ def open_list(page, mobile: bool) -> None:
         page.click("#to-list")
 
 
-def ask(page, text: str) -> None:
+def ask(page, text: str, keys: bool = False) -> None:
     page.fill("#text", text)
-    page.click("#send-btn")
+    if keys:
+        # Enter — новая строка, Shift+Enter — отправка
+        page.press("#text", "Enter")
+        expect(page.locator("#text")).to_have_value(text + "\n")
+        page.press("#text", "Shift+Enter")
+    else:
+        page.click("#send-btn")
 
 
 def chat_flow(page, name: str, mobile: bool, viewport: dict, first: bool) -> None:
@@ -156,7 +162,7 @@ def chat_flow(page, name: str, mobile: bool, viewport: dict, first: bool) -> Non
     # Второй разговор и его удаление с вопросом
     open_list(page, mobile)
     page.click("text=Новый разговор")
-    ask(page, "привет")
+    ask(page, "привет", keys=not mobile)
     expect(page.locator(".msg-assistant:not(.live)")).to_have_count(1, timeout=30000)
     page.once("dialog", lambda d: d.accept() if d.message == "Удалить?" else d.dismiss())
     page.click("[aria-label='Удалить разговор']")
