@@ -7,7 +7,8 @@ namespace KnopkaDostup;
 /// <summary>
 /// Обратный туннель ноут → ваш сервер. Запускает встроенный <c>ssh.exe</c> с ключом <c>-R</c>:
 /// порт на 127.0.0.1 СЕРВЕРА пробрасывается на локальный sshd ноута (127.0.0.1:22). Держит
-/// соединение, пока включено, и переподключается при обрыве.
+/// соединение, пока включено, и переподключается при обрыве. ssh.exe лежит в «задании» Windows
+/// (<see cref="JobObject"/>) и гаснет вместе с программой, как бы она ни закрылась.
 ///
 /// Чего здесь намеренно НЕТ (в отличие от примера BackTunnel) и не будет:
 ///   • не кладёт ничьих ключей в sshd ноута — вход решает только то, что вы сами туда положили;
@@ -60,12 +61,15 @@ public sealed class TunnelClient
         {
             if (!_enabled) return;
             _enabled = false;
+            KillSsh();
         }
-        KillSsh();
         Connected = false;
         Log("Выключено: доступа к ноуту по туннелю больше нет");
         OnStateChanged?.Invoke();
     }
+
+    /// <summary>Сколько ждать подтверждения проброса от сервера, прежде чем начать заново.</summary>
+    private const int ConfirmTimeoutSec = 30;
 
     private void Loop()
     {
@@ -80,40 +84,74 @@ public sealed class TunnelClient
             };
             foreach (var a in BuildArgs(_cfg!)) psi.ArgumentList.Add(a);
 
-            try { _ssh = Process.Start(psi); }
-            catch (Exception e)
+            Process? ssh;
+            var confirmed = new ManualResetEventSlim(false);
+            lock (_lock)
             {
-                LastError = e.Message;
-                Log("Не удалось запустить ssh (стоит ли клиент OpenSSH?): " + e.Message);
-                OnStateChanged?.Invoke();
-                break;
-            }
-            if (_ssh == null) break;
-
-            _ssh.ErrorDataReceived += (_, e) =>
-            {
-                if (!string.IsNullOrWhiteSpace(e.Data)) { LastError = e.Data; Log("ssh: " + e.Data); }
-            };
-            _ssh.BeginErrorReadLine();
-
-            // С ExitOnForwardFailure ssh быстро выходит, если проброс не поднялся. Жив через 3 с — считаем, что встал.
-            if (_ssh.WaitForExit(3000))
-            {
+                // Под замком: «Закрыть доступ» не может проскочить между проверкой и запуском
+                // и оставить ssh, о котором никто не знает.
                 if (!_enabled) return;
-                Log($"Соединение не поднялось (код {_ssh.ExitCode}), повтор через 15 с");
-                OnStateChanged?.Invoke();
-                Sleep(15);
-                continue;
+                try { ssh = Process.Start(psi); }
+                catch (Exception e)
+                {
+                    LastError = e.Message;
+                    Log("Не удалось запустить ssh (стоит ли клиент OpenSSH?): " + e.Message);
+                    OnStateChanged?.Invoke();
+                    break;
+                }
+                if (ssh == null) break;
+                if (!JobObject.Add(ssh))
+                    Log("Внимание: ssh не привязан к программе — при сбое программы туннель может остаться");
+                _ssh = ssh;
             }
-            Connected = true;
-            LastError = null;
-            Log("Соединён — можно заходить на ноут через сервер, пока кнопка включена");
-            OnStateChanged?.Invoke();
 
-            _ssh.WaitForExit();
-            Connected = false;
+            ssh.ErrorDataReceived += (_, e) =>
+            {
+                if (string.IsNullOrWhiteSpace(e.Data)) return;
+                // ssh -v: подробности не пишем, кроме подтверждения сервера, что проброс поднят.
+                if (e.Data.StartsWith("debug", StringComparison.Ordinal))
+                {
+                    if (e.Data.Contains("remote forward success")) confirmed.Set();
+                    return;
+                }
+                if (e.Data.StartsWith("OpenSSH_", StringComparison.Ordinal) ||
+                    e.Data.StartsWith("Authenticated to", StringComparison.Ordinal)) return;   // не ошибки
+                LastError = e.Data;
+                Log("ssh: " + e.Data);
+            };
+            ssh.BeginErrorReadLine();
+
+            // Зелёный — только когда сервер подтвердил проброс, а не «ssh пока не упал».
+            var exited = new ManualResetEventSlim(false);
+            ssh.EnableRaisingEvents = true;
+            ssh.Exited += (_, _) => exited.Set();
+            if (ssh.HasExited) exited.Set();
+            var which = WaitHandle.WaitAny(new[] { confirmed.WaitHandle, exited.WaitHandle },
+                                           TimeSpan.FromSeconds(ConfirmTimeoutSec));
             if (!_enabled) return;
-            Log("Соединение оборвалось, переподключение через 15 с");
+
+            if (which == 0)
+            {
+                Connected = true;
+                LastError = null;
+                Log("Соединён — сервер подтвердил туннель, можно заходить на ноут, пока кнопка включена");
+                OnStateChanged?.Invoke();
+                exited.Wait();
+                Connected = false;
+                if (!_enabled) return;
+                Log("Соединение оборвалось, переподключение через 15 с");
+            }
+            else if (which == WaitHandle.WaitTimeout)
+            {
+                KillSsh();
+                LastError = "сервер не отвечает";
+                Log($"Сервер не подтвердил туннель за {ConfirmTimeoutSec} с — связь не доходит " +
+                    "(включён VPN или защита сети на ноуте?). Повтор через 15 с");
+            }
+            else
+            {
+                Log($"Соединение не поднялось (код {ssh.ExitCode}), повтор через 15 с");
+            }
             OnStateChanged?.Invoke();
             Sleep(15);
         }
@@ -122,6 +160,7 @@ public sealed class TunnelClient
     /// <summary>Аргументы ssh. Только проброс (-N -R), без удалённой команды.</summary>
     private static IEnumerable<string> BuildArgs(Config c)
     {
+        yield return "-v";                              // подробный вывод: по нему видно, что сервер принял проброс
         yield return "-N";                              // не выполнять команд на сервере — только проброс
         yield return "-T";                              // без псевдотерминала
         yield return "-i"; yield return c.KeyPath;
