@@ -31,8 +31,9 @@ $ServerPort = 22
 $ServerUser = 'mokeeva'
 $ForwardPort = 2222
 
-# Ключ, которым Светлана входит на сервер, — им же она будет входить на ноут (открытая часть).
-$VhodKey = 'ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIHJR4R62QUUhpAWhIXyPZbd4oTDkNXmGFXhJ5KtwCOT3 mokeeva-workstation-20260912'
+# Единственный ключ входа на ноут — ключ Claude на сервере (открытая часть; закрытая — только
+# на сервере). from= — ноут принимает его только изнутри, то есть через туннель.
+$VhodKey = 'from="127.0.0.1,::1" ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIElojmljM7sWow+m/hJMA7IWtNqkvhxQ3XEdKNCDskn3 claude-server-na-nout'
 
 # Ключ туннеля, уже прописанный на сервере (открытая часть) — с ним сверяем ключ на ноуте.
 $TunnelKeyBody = 'AAAAC3NzaC1lZDI1NTE5AAAAIPyqrqakew3JnETrh4JIm2FercXnRhBzTIsODtvt7Ywi'
@@ -107,17 +108,16 @@ function Invoke-AdminPart([string]$userProfile, [bool]$userIsAdmin) {
             New-Item -ItemType Directory -Force -Path $dir | Out-Null
             $ak = Join-Path $dir 'authorized_keys'
         }
-        $old = if (Test-Path $ak) { [IO.File]::ReadAllText($ak) } else { '' }
-        $body = ($VhodKey -split ' ')[1]
-        if ($old -notmatch [regex]::Escape($body)) {
-            if ($old -and -not $old.EndsWith("`n")) { $old += "`r`n" }
-            [IO.File]::WriteAllText($ak, $old + $VhodKey + "`r`n", [Text.Encoding]::ASCII)
-        }
+        # Файл переписывается целиком: остаётся только ключ Claude, все прежние ключи убираются.
+        $was = if (Test-Path $ak) {
+            @([IO.File]::ReadAllLines($ak) | Where-Object { $_.Trim() -and -not $_.Trim().StartsWith('#') }).Count
+        } else { 0 }
+        [IO.File]::WriteAllText($ak, $VhodKey + "`r`n", [Text.Encoding]::ASCII)
         if ($userIsAdmin) {
             # Без этих прав Windows молча игнорирует файл.
             & icacls $ak /inheritance:r /grant '*S-1-5-32-544:F' /grant '*S-1-5-18:F' | Out-Null
         }
-        Good "ключ входа положен ($ak)"
+        Good "войти на ноут можно только ключом Claude с сервера (прежних ключей было: $was, убраны)"
     } catch { Fail "не удалось положить ключ входа: $($_.Exception.Message)" }
 
     # 4. Брандмауэр: входящий 22 снаружи не нужен — только через туннель.
