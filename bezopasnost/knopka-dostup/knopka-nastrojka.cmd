@@ -212,11 +212,18 @@ $resultDir = Join-Path $(if ($env:KN_USERPROFILE) { $env:KN_USERPROFILE } else {
 $resultFile = Join-Path $resultDir 'nastrojka-admin.txt'
 
 if ($env:KN_MODE -eq 'admin') {
-    # Окно администратора: настраивает и пишет итог для основного окна.
-    Invoke-AdminPart $env:KN_USERPROFILE ($env:KN_ISADMIN -eq '1')
+    # Окно администратора: настраивает и пишет итог для основного окна; всё, что видно на
+    # экране, дублируется в журнал — на случай, если окно закроется само.
     New-Item -ItemType Directory -Force -Path $resultDir | Out-Null
+    try { Start-Transcript -Path (Join-Path $resultDir 'nastrojka-admin.log') -Force | Out-Null } catch { }
+    try {
+        Invoke-AdminPart $env:KN_USERPROFILE ($env:KN_ISADMIN -eq '1')
+    } catch {
+        Fail "сбой: $($_.Exception.Message) (строка $($_.InvocationInfo.ScriptLineNumber))"
+    }
     $lines = @($script:Ok | ForEach-Object { "OK`t$_" }) + @($script:Bad | ForEach-Object { "BAD`t$_" })
     [IO.File]::WriteAllLines($resultFile, [string[]]$lines, [Text.Encoding]::UTF8)
+    try { Stop-Transcript | Out-Null } catch { }
     if ($script:Bad.Count) { Read-Host 'Есть ошибки (см. выше). Нажми Enter' | Out-Null }
 } else {
 
@@ -225,10 +232,16 @@ Write-Host 'Сейчас Windows спросит разрешение на изм
 Remove-Item $resultFile -ErrorAction SilentlyContinue
 
 $isAdminGroup = if (Test-InAdminGroup) { '1' } else { '0' }
+# Окно администратора — сразу PowerShell, без повторного запуска cmd: так пути с пробелами и
+# кавычки не ломаются. Данные передаются внутри закодированной команды.
+function Q([string]$v) { "'" + $v.Replace("'", "''") + "'" }
+$adminCmd = "`$env:KN_SELF=$(Q $env:KN_SELF); `$env:KN_MODE='admin'; " +
+    "`$env:KN_USERPROFILE=$(Q $env:USERPROFILE); `$env:KN_ISADMIN='$isAdminGroup'; " +
+    "iex ([IO.File]::ReadAllText(`$env:KN_SELF, [Text.Encoding]::UTF8))"
+$encoded = [Convert]::ToBase64String([Text.Encoding]::Unicode.GetBytes($adminCmd))
 try {
-    Start-Process -FilePath $env:KN_SELF `
-        -ArgumentList @('admin', "`"$env:USERPROFILE`"", $isAdminGroup) `
-        -Verb RunAs -Wait
+    Start-Process -FilePath 'powershell.exe' -Verb RunAs -Wait `
+        -ArgumentList @('-NoProfile', '-ExecutionPolicy', 'Bypass', '-EncodedCommand', $encoded)
 } catch {
     Fail 'разрешение администратора не дано — вход на ноут не настроен'
 }
@@ -241,7 +254,7 @@ if (Test-Path $resultFile) {
         if ($kind -eq 'OK') { Good $text } else { Fail $text }
     }
 } elseif (-not $script:Bad.Count) {
-    Fail 'окно администратора закрылось без итога — вход на ноут, скорее всего, не настроен'
+    Fail "окно администратора закрылось без итога — вход на ноут, скорее всего, не настроен. Журнал: $(Join-Path $resultDir 'nastrojka-admin.log')"
 }
 
 Invoke-UserPart
