@@ -1,0 +1,15 @@
+{% extends "base.html" %}
+{% block content %}
+<section class="panel">
+  <p><a href="{{ root }}/projects/{{ project.id }}">‹ {{ project.name }}</a> ·
+     <a href="{{ root }}/projects/{{ project.id }}/files">Файлы проекта</a></p>
+  <div class="view-head">
+    <h1 class="fname-big">{{ name }}</h1>
+    <a href="{{ root }}/projects/{{ project.id }}/files/get/{{ fname_url(name) }}" class="primary btn-link" download>Скачать</a>
+  </div>
+  {% if html is not none %}<div class="md file-md">{{ html }}</div>
+  {% elif text is not none %}<pre class="file-text">{{ text }}</pre>
+  {% elif too_big %}<p class="muted">Файл большой — открыть на сайте не получится, его можно скачать.</p>
+  {% else %}<p class="muted">Это не текст — его можно скачать.</p>{% endif %}
+</section>
+{% endblock %}

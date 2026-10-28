@@ -36,6 +36,51 @@
     });
   }
 
+  // Файлы проекта: загрузка с ходом в процентах, список обновляется сам
+  var filesBox = document.getElementById("files");
+  var filesBase = filesBox ? site.root + "/projects/" + filesBox.dataset.project + "/files" : "";
+
+  function refreshFiles() {
+    if (!filesBox) return Promise.resolve();
+    return fetch(filesBase + "/list", {credentials: "same-origin", cache: "no-store"})
+      .then(function (r) { return r.ok ? r.json() : null; })
+      .then(function (data) { if (data) filesBox.innerHTML = data.html; })
+      .catch(function () {});
+  }
+
+  function uploadMsg(text, ok) {
+    var msg = document.getElementById("upload-msg");
+    if (!msg) return;
+    msg.textContent = text;
+    msg.className = "small " + (ok ? "ok" : "error");
+    msg.hidden = !text;
+  }
+
+  if (filesBox) {
+    filesBox.addEventListener("change", function (e) {
+      if (e.target.id !== "upload-input" || !e.target.files.length) return;
+      var form = e.target.form;
+      form.elements.back.value = location.pathname;
+      var xhr = new XMLHttpRequest();
+      xhr.open("POST", form.action);
+      xhr.setRequestHeader("X-Upload", "1");
+      xhr.upload.onprogress = function (ev) {
+        if (ev.lengthComputable) uploadMsg("Загружаю… " + Math.floor(ev.loaded * 100 / ev.total) + "%", true);
+      };
+      xhr.onload = function () {
+        var data = {};
+        try { data = JSON.parse(xhr.responseText); } catch (err) {}
+        refreshFiles().then(function () {
+          uploadMsg(data.message || (xhr.status === 403 ? "Нет доступа — обнови страницу" : "Не загрузилось"),
+                    xhr.status === 200);
+        });
+      };
+      xhr.onerror = function () { uploadMsg("Не загрузилось — проверь связь и попробуй ещё раз", false); };
+      uploadMsg("Загружаю…", true);
+      xhr.send(new FormData(form));
+    });
+  }
+
   var composer = document.getElementById("composer");
   if (!composer) return;
   var conv = composer.dataset.conv;
@@ -98,10 +143,12 @@
         if (stick) toBottom();
       } else if (ev.t === "added" || ev.t === "saved") {
         refresh();
+        refreshFiles();
       } else if (ev.t === "done") {
         source.close();
         source = null;
         refresh();
+        refreshFiles();
       }
     };
     source.onerror = function () {

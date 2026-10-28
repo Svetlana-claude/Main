@@ -195,8 +195,9 @@ def to_project(pid: int, tail: str = "") -> RedirectResponse:
     return RedirectResponse(f"{config.ROOT_PATH}/projects/{pid}{tail}", status_code=303)
 
 
-def _ctx(proj: dict) -> dict:
-    return {"project": proj, "folder": short_path(proj["path"])}
+def _ctx(proj: dict, request: Request) -> dict:
+    from .files import files_ctx                       # files.py сам опирается на этот модуль
+    return {"folder": short_path(proj["path"]), **files_ctx(proj, request)}
 
 
 @router.get("/projects", name="projects")
@@ -239,7 +240,7 @@ def project_page(request: Request, pid: int):
         if last:
             return chat.to_conv(last[0])
     return guarded(request, "chat.html", "projects",
-                   {"title": proj["name"], "convs": [], "conv": None, **_ctx(proj)})
+                   {"title": proj["name"], "convs": [], "conv": None, **_ctx(proj, request)})
 
 
 @router.get("/projects/{pid}/t/{conv_id}", name="topic")
@@ -254,7 +255,7 @@ def topic_page(request: Request, pid: int, conv_id: int, n: str | None = None):
         return to_project(pid)
     if proj["delete_state"]:
         return to_project(pid, "/delete")
-    return guarded(request, "chat.html", "projects", {**chat.talk_ctx(conv, n), **_ctx(proj)})
+    return guarded(request, "chat.html", "projects", {**chat.talk_ctx(conv, n), **_ctx(proj, request)})
 
 
 @router.post("/projects/{pid}/topic/new", name="topic_new")
@@ -294,7 +295,7 @@ def project_delete_page(request: Request, pid: int):
         return to_project(pid)
     return guarded(request, "project_delete.html", "projects",
                    {"title": "Удаление проекта", "report": markup.render(proj["delete_report"]),
-                    **_ctx(proj)})
+                    **_ctx(proj, request)})
 
 
 @router.post("/projects/{pid}/delete/yes", name="project_delete_yes")

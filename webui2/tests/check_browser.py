@@ -191,6 +191,30 @@ def project_flow(page, name: str, mobile: bool) -> None:
     expect(page.locator("#talk-title")).to_have_text("медленно глянь файлы")
     no_side_scroll(page, "тема")
 
+    # Файлы: Claude кладёт файл в загрузки — список обновляется сам;
+    # загрузка своего файла; просмотр .md
+    sample = SHOTS / "план поездки.md"
+    sample.write_text("# План\n\n- **лодка**\n- вёсла\n", encoding="utf-8")
+    if mobile:
+        open_list(page, mobile)
+        page.click("text=Файлы проекта")
+        expect(page.locator(".files-title")).to_be_visible()
+    else:
+        expect(page.locator(".files-col")).to_be_visible()
+        ask(page, "положи в загрузки")
+        expect(page.locator(".file-list")).to_contain_text("ответ.md", timeout=30000)
+    page.set_input_files("#upload-input", str(sample))
+    expect(page.locator("#upload-msg")).to_have_text("Загружено", timeout=30000)
+    expect(page.locator(".file-list li").first).to_contain_text("план поездки.md")
+    no_side_scroll(page, "файлы")
+    page.screenshot(path=SHOTS / f"{name}-p3a-faily.png")
+    page.click(".file-list >> text=план поездки.md")
+    expect(page.locator(".file-md strong")).to_have_text("лодка")
+    page.screenshot(path=SHOTS / f"{name}-p3b-fayl.png", full_page=True)
+    page.click(f"text=‹ {title}")
+    expect(page.locator("#talk-title")).to_have_text("медленно глянь файлы")
+    sample.unlink()
+
     # Галочка «Запускать команды»
     open_list(page, mobile)
     with page.expect_navigation():

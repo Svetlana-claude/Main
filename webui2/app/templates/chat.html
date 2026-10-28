@@ -1,7 +1,7 @@
 {% extends "base.html" %}
 {% block body_class %}chat-page{% if conv %} has-conv{% endif %}{% endblock %}
 {% block content %}
-<div class="chat">
+<div class="chat{% if project %} with-files{% endif %}">
   <aside class="convs" id="convs" aria-label="{{ 'Темы проекта' if project else 'Разговоры' }}">
     {% if project %}
     <a href="{{ root }}/projects" class="back-link">‹ Все проекты</a>
@@ -16,6 +16,7 @@
       </form>
     </div>
     <p class="muted folder" title="Папка проекта на сервере">{{ folder }}</p>
+    <a href="{{ root }}/projects/{{ project.id }}/files" class="files-link">Файлы проекта</a>
     <form method="post" action="{{ root }}/projects/{{ project.id }}/access" class="access" id="access-form">
       <input type="hidden" name="csrf" value="{{ sess.csrf }}">
       <input type="hidden" name="back" value="{{ conv.id if conv else '' }}">
@@ -99,6 +100,9 @@
     <p class="muted">{% if project %}Начни тему кнопкой «Новая тема».{% else %}Начни новый разговор кнопкой «Новый разговор».{% endif %}</p>
   </section>
   {% endif %}
+  {% if project %}
+  <aside class="files-col" id="files" data-project="{{ project.id }}" aria-label="Файлы проекта">{% include "_files.html" %}</aside>
+  {% endif %}
 </div>
 {% endblock %}
-{% block scripts %}<script src="{{ root }}/static/chat.js?v=5"></script>{% endblock %}
+{% block scripts %}<script src="{{ root }}/static/chat.js?v=6"></script>{% endblock %}

@@ -6,7 +6,7 @@ from fastapi import FastAPI, Form, Request
 from fastapi.responses import HTMLResponse, JSONResponse, RedirectResponse
 from fastapi.staticfiles import StaticFiles
 
-from . import chat, config, db, projects, security
+from . import chat, config, db, files, projects, security  # noqa: F401 (files — свои адреса в projects.router)
 from .web import client_ip, csrf_ok, current, guarded, page, same_origin, set_cookie, to
 
 

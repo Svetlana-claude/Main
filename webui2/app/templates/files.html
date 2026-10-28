@@ -1,0 +1,8 @@
+{% extends "base.html" %}
+{% block content %}
+<section class="panel files-page">
+  <p><a href="{{ root }}/projects/{{ project.id }}">‹ {{ project.name }}</a></p>
+  <div class="files-box" id="files" data-project="{{ project.id }}">{% include "_files.html" %}</div>
+</section>
+{% endblock %}
+{% block scripts %}<script src="{{ root }}/static/chat.js?v=6"></script>{% endblock %}

@@ -61,6 +61,9 @@ for line in sys.stdin:
         out({"type": "assistant", "message": {"content": [{"type": "tool_use", "name": "Read",
              "input": {"file_path": os.path.join(os.getcwd(), "CLAUDE.md")}}]}})
         time.sleep(1.5 if slow else 0.01)
+        if "загрузки" in text:
+            with open(os.path.join("downloads", "ответ.md"), "w", encoding="utf-8") as fh:
+                fh.write("# Ответ\n\n**Готово**")
         if "создай" in text:
             with open("made-by-claude.txt", "w", encoding="utf-8") as fh:
                 fh.write(text)

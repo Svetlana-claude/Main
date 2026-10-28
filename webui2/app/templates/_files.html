@@ -1,0 +1,26 @@
+<h2 class="files-title">Файлы проекта</h2>
+<form method="post" action="{{ root }}/projects/{{ project.id }}/files/upload" enctype="multipart/form-data"
+      class="upload" id="upload-form">
+  <input type="hidden" name="csrf" value="{{ sess.csrf }}">
+  <input type="hidden" name="back" value="">
+  <label class="upload-btn">
+    <span>Загрузить файлы</span>
+    <input type="file" name="files" id="upload-input" multiple>
+  </label>
+  <noscript><button type="submit" class="link">Отправить</button></noscript>
+  <p class="small {{ 'ok' if files_ok else 'error' }}" id="upload-msg" role="status" {% if not files_msg %}hidden{% endif %}>{{ files_msg }}</p>
+</form>
+<ul class="file-list">
+  {% for f in files %}
+  <li>
+    {% if f.text %}<a href="{{ root }}/projects/{{ project.id }}/files/view/{{ fname_url(f.name) }}" class="fname">{{ f.name }}</a>
+    {% else %}<a href="{{ root }}/projects/{{ project.id }}/files/get/{{ fname_url(f.name) }}" class="fname" download>{{ f.name }}</a>{% endif %}
+    <span class="muted small">{{ f.size }} · {{ f.time }}</span>
+    <a href="{{ root }}/projects/{{ project.id }}/files/get/{{ fname_url(f.name) }}" class="icon dl" download
+       title="Скачать" aria-label="Скачать {{ f.name }}">
+      <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 4v11M7 10l5 5 5-5M5 20h14"/></svg></a>
+  </li>
+  {% else %}
+  <li class="muted small">Файлов пока нет. Сюда попадает папка downloads проекта: то, что загрузишь ты, и то, что положит Claude.</li>
+  {% endfor %}
+</ul>
