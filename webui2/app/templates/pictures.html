@@ -1,0 +1,53 @@
+{% extends "base.html" %}
+{% block body_class %}pics-page{% endblock %}
+{% block content %}
+<div class="pics" id="pics">
+  <aside class="pics-side" id="pics-side">
+    <input type="search" id="pic-search" placeholder="Поиск по имени" aria-label="Поиск картинки по имени">
+    <nav class="pic-tree" id="pic-tree" aria-label="Проекты и папки"><p class="muted">Загрузка…</p></nav>
+  </aside>
+
+  <section class="pics-main">
+    <div class="pics-head">
+      <button type="button" class="pics-toggle" id="pic-toggle" aria-controls="pics-side" aria-expanded="false">Проекты и папки ▾</button>
+      <h1 id="pic-title">Все картинки</h1>
+      <span class="muted" id="pic-count"></span>
+      <span class="pics-tools">
+        <select id="pic-sort" aria-label="Порядок картинок">
+          <option value="new">сначала новые</option>
+          <option value="old">сначала старые</option>
+          <option value="name">по имени</option>
+          <option value="big">сначала крупные</option>
+        </select>
+        <label class="pic-size">размер
+          <input type="range" id="pic-size" min="0" max="3" step="1" value="1" aria-label="Размер картинок в сетке">
+        </label>
+      </span>
+    </div>
+    <p class="error" id="pic-note" role="status" hidden></p>
+    <div class="pic-grid size-1" id="pic-grid"></div>
+  </section>
+</div>
+
+<dialog class="viewer" id="pic-viewer" aria-label="Просмотр картинки">
+  <div class="viewer-bar">
+    <span class="viewer-name"><b id="v-name"></b> <span class="muted small" id="v-where"></span></span>
+    <span class="viewer-btns">
+      <button type="button" id="v-out" title="Уменьшить (−)" aria-label="Уменьшить">−</button>
+      <span id="v-zoom" class="small">вписано</span>
+      <button type="button" id="v-in" title="Увеличить (+)" aria-label="Увеличить">+</button>
+      <button type="button" id="v-fit" title="Вписать в окно (0)">Вписать</button>
+      <a id="v-download" href="#" download>Скачать</a>
+      <button type="button" id="v-full" title="Во весь экран (F)">Экран</button>
+      <button type="button" id="v-close" title="Закрыть (Esc)" aria-label="Закрыть">✕</button>
+    </span>
+  </div>
+  <div class="viewer-stage" id="v-stage" tabindex="-1" autofocus>
+    <img id="v-img" alt="">
+    <button type="button" class="viewer-nav prev" id="v-prev" aria-label="Предыдущая картинка">‹</button>
+    <button type="button" class="viewer-nav next" id="v-next" aria-label="Следующая картинка">›</button>
+  </div>
+  <p class="viewer-pos small" id="v-pos"></p>
+</dialog>
+{% endblock %}
+{% block scripts %}<script src="{{ root }}/static/pictures.js?v=4"></script>{% endblock %}

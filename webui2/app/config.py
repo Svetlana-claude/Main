@@ -60,6 +60,8 @@ COOKIE_SECURE = os.environ.get("WEBUI2_INSECURE_COOKIE") != "1"
 # Чат: Claude без инструментов, в пустой папке вне проекта
 CLAUDE_BIN = _env.get("CLAUDE_BIN", str(Path.home() / ".local/bin/claude"))
 CHAT_DIR = Path(_env.get("CHAT_DIR", DB_PATH.parent / "chat-room"))
+# Картинки: уменьшенные копии для сетки — вне папок проектов
+THUMB_DIR = Path(_env.get("THUMB_DIR", Path.home() / ".cache/webui2/thumbs"))
 MODELS = {"opus": "Opus", "sonnet": "Sonnet", "haiku": "Haiku"}
 DEFAULT_MODEL = "sonnet"
 PAGE_MESSAGES = 40                    # сообщений на странице разговора

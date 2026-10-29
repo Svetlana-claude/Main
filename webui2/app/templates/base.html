@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="robots" content="noindex, nofollow">
   <title>{% block title %}{{ title or "Claude" }}{% endblock %} — Claude</title>
-  <link rel="stylesheet" href="{{ root }}/static/site.css?v=13">
+  <link rel="stylesheet" href="{{ root }}/static/site.css?v=15">
   {% block head %}{% endblock %}
 </head>
 <body class="{% block body_class %}{% endblock %}">
@@ -17,6 +17,10 @@
     <a href="{{ root }}/projects" {% if active == "projects" %}aria-current="page"{% endif %}>Проекты</a>
   </nav>
   <div class="tools">
+    <a class="icon" href="{{ root }}/pictures" title="Картинки" aria-label="Картинки"
+       {% if active == "pictures" %}aria-current="page"{% endif %}>
+      <svg viewBox="0 0 24 24" width="22" height="22" aria-hidden="true" focusable="false"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="11" cy="11" r="4.5"/><path d="M14.3 14.3L18 18"/></svg>
+    </a>
     {% set asks = asks_waiting() %}
     <a class="icon shield" href="{{ root }}/permissions" title="Разрешения" aria-label="Разрешения"
        {% if active == "permissions" %}aria-current="page"{% endif %}>

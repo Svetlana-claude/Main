@@ -7,7 +7,7 @@ from fastapi import FastAPI, Form, Request
 from fastapi.responses import HTMLResponse, JSONResponse, RedirectResponse
 from fastapi.staticfiles import StaticFiles
 
-from . import chat, config, db, files, load, perms, projects, sec, security, settings, vpn  # noqa: F401 (files — свои адреса в projects.router)
+from . import chat, config, db, files, load, perms, pictures, projects, sec, security, settings, vpn  # noqa: F401 (files — свои адреса в projects.router)
 from .web import client_ip, csrf_ok, current, guarded, page, same_origin, set_cookie, to
 
 
@@ -29,6 +29,7 @@ app.include_router(perms.router)
 app.include_router(settings.router)
 app.include_router(sec.router)
 app.include_router(vpn.router)
+app.include_router(pictures.router)
 
 
 def user_exists() -> bool:

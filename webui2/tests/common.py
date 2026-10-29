@@ -16,7 +16,7 @@ CLAUDE_LOG = TMP / "claude.log"
                               f"PROJECTS_DIR={TMP / 'projects'}\n"
                               f"POWER_CMD={sys.executable} {Path(__file__).resolve().parent / 'fake_power.py'}\n"
                               f"VPN_CMD={sys.executable} {Path(__file__).resolve().parent / 'fake_vpn.py'}\n"
-                              f"SEC_STATE={TMP / 'sec'}\n"
+                              f"SEC_STATE={TMP / 'sec'}\nTHUMB_DIR={TMP / 'thumbs'}\n"
                               f"SEC_AUDIT={sys.executable} {Path(__file__).resolve().parent / 'fake_audit.py'}\n"
                               f"SEC_APPROVE={sys.executable} {Path(__file__).resolve().parent / 'fake_audit.py'} approve\n")
 os.environ.update(WEBUI2_ENV=str(TMP / "test.env"), ROOT_PATH="", WEBUI2_INSECURE_COOKIE="1",
