@@ -1,0 +1,10 @@
+#!/bin/sh
+# Перезапуск сайта v2 и перезагрузка сервера — единственное, что сайт может
+# делать с правами root. Ставится в /usr/local/sbin/webui2-power (root, 755),
+# разрешение — deploy/sudoers-webui2-power. Других команд нет.
+set -eu
+case "${1:-}" in
+  restart-site) exec /usr/bin/systemctl --no-block restart webui2.service ;;
+  reboot)       exec /usr/bin/systemctl --no-block reboot ;;
+  *) echo "неизвестная команда" >&2; exit 2 ;;
+esac

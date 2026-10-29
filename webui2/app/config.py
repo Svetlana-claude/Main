@@ -1,7 +1,6 @@
 """Настройки сайта. Секреты и база — вне папки проекта, права 600."""
 import os
 from pathlib import Path
-from zoneinfo import ZoneInfo
 
 APP_DIR = Path(__file__).resolve().parent
 PROJECT_DIR = APP_DIR.parent
@@ -28,9 +27,26 @@ DB_PATH = Path(_env.get("DB_PATH", Path.home() / ".local/share/webui2/site.db"))
 LOGIN = _env.get("LOGIN", "Svetlana")
 ROOT_PATH = os.environ.get("ROOT_PATH", "/Claude/v2")
 
-# Время хранится в UTC, показывается в её поясе
-TIMEZONE = ZoneInfo(_env.get("TIMEZONE", "Europe/Moscow"))
-TIMEZONE_LABEL = "по Москве" if str(TIMEZONE) == "Europe/Moscow" else str(TIMEZONE)
+# Время хранится в UTC, показывается в её поясе. Пояс по умолчанию — из файла
+# настроек; выбранный в «Настройках» хранится в базе (web.zone)
+ZONES = {
+    "Europe/Kaliningrad": ("Калининград (МСК−1)", "по Калининграду"),
+    "Europe/Moscow": ("Москва (МСК)", "по Москве"),
+    "Europe/Samara": ("Самара (МСК+1)", "по Самаре"),
+    "Asia/Yekaterinburg": ("Екатеринбург (МСК+2)", "по Екатеринбургу"),
+    "Asia/Omsk": ("Омск (МСК+3)", "по Омску"),
+    "Asia/Novosibirsk": ("Новосибирск (МСК+4)", "по Новосибирску"),
+    "Asia/Krasnoyarsk": ("Красноярск (МСК+4)", "по Красноярску"),
+    "Asia/Irkutsk": ("Иркутск (МСК+5)", "по Иркутску"),
+    "Asia/Yakutsk": ("Якутск (МСК+6)", "по Якутску"),
+    "Asia/Vladivostok": ("Владивосток (МСК+7)", "по Владивостоку"),
+    "Asia/Magadan": ("Магадан (МСК+8)", "по Магадану"),
+    "Asia/Kamchatka": ("Камчатка (МСК+9)", "по Камчатке"),
+    "UTC": ("Всемирное время (UTC)", "UTC"),
+}
+TIMEZONE_NAME = _env.get("TIMEZONE", "Europe/Moscow")
+if TIMEZONE_NAME not in ZONES:
+    TIMEZONE_NAME = "Europe/Moscow"
 
 COOKIE_NAME = "v2_session"
 PRE_COOKIE = "v2_pre"                 # защита формы входа до появления сессии
@@ -58,6 +74,12 @@ GIT_NAME = _env.get("GIT_NAME", "")
 GIT_EMAIL = _env.get("GIT_EMAIL", "")
 # Папка сайта и хранилище, где она лежит: удаление проекта их не тронет
 SITE_DIRS = (PROJECT_DIR, PROJECT_DIR.parent)
+
+# Перезапуск сайта и сервера — через обёртку с закрытым списком команд (sudo -n)
+POWER_CMD = _env.get("POWER_CMD", "sudo -n /usr/local/sbin/webui2-power").split()
+POWER_WAIT_MIN = 60                   # дольше ответы не ждём — перезапуск отменяется
+LOAD_EVERY_SEC = 60                   # замер нагрузки для графика
+LOAD_KEEP_HOURS = 24
 
 TEMPLATES_DIR = APP_DIR / "templates"
 STATIC_DIR = APP_DIR / "static"

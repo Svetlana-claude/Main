@@ -13,14 +13,15 @@ FAKE = Path(__file__).resolve().parent / "fake_claude.py"
 CLAUDE_LOG = TMP / "claude.log"
 (TMP / "test.env").write_text(f"SECRET_KEY=test-key\nDB_PATH={TMP / 'site.db'}\nLOGIN=Svetlana\n"
                               f"CLAUDE_BIN={FAKE}\nCHAT_DIR={TMP / 'room'}\n"
-                              f"PROJECTS_DIR={TMP / 'projects'}\n")
+                              f"PROJECTS_DIR={TMP / 'projects'}\n"
+                              f"POWER_CMD={sys.executable} {Path(__file__).resolve().parent / 'fake_power.py'}\n")
 os.environ.update(WEBUI2_ENV=str(TMP / "test.env"), ROOT_PATH="", WEBUI2_INSECURE_COOKIE="1",
-                  FAKE_CLAUDE_LOG=str(CLAUDE_LOG))
+                  FAKE_CLAUDE_LOG=str(CLAUDE_LOG), FAKE_POWER_LOG=str(TMP / "power.log"))
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
 from fastapi.testclient import TestClient  # noqa: E402
 
-from app import db, security  # noqa: E402
+from app import db, security, web  # noqa: E402
 from app.main import app  # noqa: E402
 
 SECRET = "JBSWY3DPEHPK3PXP"
@@ -40,9 +41,11 @@ def hidden(html: str, name: str) -> str:
 def client():
     with TestClient(app, headers=ORIGIN) as c:
         with db.tx() as con:
-            for table in ("messages", "conversations", "projects", "sessions", "users", "login_fails", "setup"):
+            for table in ("messages", "conversations", "projects", "sessions", "users", "login_fails", "setup",
+                          "prefs", "load_samples"):
                 con.execute(f"DELETE FROM {table}")
             con.execute("INSERT INTO setup (key, value) VALUES ('totp_secret', ?)", (SECRET,))
+        web._zone["name"] = None
         yield c
 
 

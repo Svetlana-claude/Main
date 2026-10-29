@@ -9,7 +9,7 @@ from datetime import datetime, timedelta, timezone
 from fastapi import APIRouter, Form, Request
 from fastapi.responses import JSONResponse, RedirectResponse, StreamingResponse
 
-from . import claude, config, db, markup, perms
+from . import claude, config, db, markup, perms, power
 from .web import csrf_ok, current, guarded, page, templates, to
 
 router = APIRouter()
@@ -346,6 +346,8 @@ async def conv_send(request: Request, conv_id: int, text: str = Form(""), csrf: 
     run = RUNS.get(conv_id)
     if run and await run.add(text):
         return JSONResponse({"ok": True, "mode": "append"})
+    if power.pending():
+        return JSONResponse({"error": "Сайт ждёт перезапуска — отправь, когда он поднимется"}, status_code=409)
     if run:
         # Запуск как раз закрывается: дождаться его конца и начать новый
         for _ in range(100):

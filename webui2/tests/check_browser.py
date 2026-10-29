@@ -53,35 +53,60 @@ def free_port() -> int:
         return s.getsockname()[1]
 
 
+SITE_RUN: dict = {}
+
+
 def start_site() -> tuple[subprocess.Popen, str]:
     tmp = Path(tempfile.mkdtemp(prefix="webui2-browser-"))
     env_file = tmp / "site.env"
     env_file.write_text(f"SECRET_KEY=browser-test\nDB_PATH={tmp / 'site.db'}\nLOGIN=Svetlana\n"
                         f"CLAUDE_BIN={SITE / 'tests/fake_claude.py'}\nCHAT_DIR={tmp / 'room'}\n"
-                        f"PROJECTS_DIR={tmp / 'projects'}\n")
-    env = {**os.environ, "WEBUI2_ENV": str(env_file), "ROOT_PATH": "", "WEBUI2_INSECURE_COOKIE": "1"}
-    seed = ("from app import db; db.init(); "
-            f"db.run(\"INSERT INTO setup (key, value) VALUES ('totp_secret', '{SECRET}')\")")
+                        f"PROJECTS_DIR={tmp / 'projects'}\n"
+                        f"POWER_CMD={SITE / '.venv/bin/python'} {SITE / 'tests/fake_power.py'}\n")
+    env = {**os.environ, "WEBUI2_ENV": str(env_file), "ROOT_PATH": "", "WEBUI2_INSECURE_COOKIE": "1",
+           "FAKE_POWER_LOG": str(tmp / "power.log")}
+    # Замеры нагрузки за сутки — чтобы были графики (с перерывом в середине)
+    seed = ("import math; from datetime import datetime, timedelta, timezone; from app import db; db.init(); "
+            f"db.run(\"INSERT INTO setup (key, value) VALUES ('totp_secret', '{SECRET}')\"); "
+            "now = datetime.now(timezone.utc); "
+            "[db.run('INSERT INTO load_samples (at, cpu, mem, disk) VALUES (?, ?, ?, ?)', "
+            "((now - timedelta(minutes=5 * i)).isoformat(), 20 + 15 * math.sin(i / 20), 45 + i / 40, 57)) "
+            "for i in range(1, 288) if not 100 < i < 112]")
     subprocess.run([str(SITE / ".venv/bin/python"), "-c", seed], cwd=SITE, env=env, check=True)
-    port = free_port()
+    SITE_RUN.update(env=env, port=free_port(), tmp=tmp)
+    return launch(), f"http://127.0.0.1:{SITE_RUN['port']}"
+
+
+def launch() -> subprocess.Popen:
+    base = f"http://127.0.0.1:{SITE_RUN['port']}"
     proc = subprocess.Popen([str(SITE / ".venv/bin/uvicorn"), "app.main:app", "--host", "127.0.0.1",
-                             "--port", str(port)], cwd=SITE, env=env,
+                             "--port", str(SITE_RUN["port"])], cwd=SITE, env=SITE_RUN["env"],
                             stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
-    base = f"http://127.0.0.1:{port}"
+    SITE_RUN["proc"] = proc
     for _ in range(50):
         try:
             urllib.request.urlopen(base + "/healthz", timeout=1)
-            return proc, base
+            return proc
         except OSError:
             time.sleep(0.2)
     proc.kill()
     raise SystemExit("сайт не поднялся")
 
 
+def restart_site() -> None:
+    """Как сделала бы служба по команде обёртки: остановить и поднять снова."""
+    SITE_RUN["proc"].terminate()
+    SITE_RUN["proc"].wait(timeout=20)
+    time.sleep(1.5)
+    launch()
+
+
 def watch(page, errors: list) -> None:
-    # Отказ на неверный пароль или код — ожидаемый ответ, а не поломка
+    # Отказ на неверный пароль или код — ожидаемый ответ, а не поломка; пока
+    # сайт перезапускается, страница стучится в закрытую дверь — тоже ожидаемо
     expected = ("status of 400", "status of 401", "status of 429")
     page.on("console", lambda m: m.type == "error" and not any(e in m.text for e in expected)
+            and not (SITE_RUN.get("restarting") and "ERR_CONNECTION_REFUSED" in m.text)
             and errors.append(f"{page.url}: {m.text}"))
     page.on("pageerror", lambda e: errors.append(f"{page.url}: {e}"))
 
@@ -168,6 +193,44 @@ def chat_flow(page, name: str, mobile: bool, viewport: dict, first: bool) -> Non
     page.once("dialog", lambda d: d.accept() if d.message == "Удалить?" else d.dismiss())
     page.click("[aria-label='Удалить разговор']")
     expect(page.locator("#talk-title")).to_have_text("Про кота и чай")
+
+
+def settings_flow(page, name: str, mobile: bool) -> None:
+    # Нагрузка: графики за сутки, подсказка при наведении, замер по кнопке
+    expect(page.locator(".chart")).to_have_count(3)
+    page.locator(".chart svg").first.scroll_into_view_if_needed()
+    box = page.locator(".chart svg").first.bounding_box()
+    page.mouse.move(box["x"] + box["width"] * 0.7, box["y"] + box["height"] * 0.4)
+    expect(page.locator(".chart .tip").first).to_contain_text(" %")
+    page.click("#load-btn")
+    expect(page.locator("#load-cpu-note")).to_contain_text("сейчас")
+    expect(page.locator("#load-mem-note")).to_contain_text("ГБ из")
+    no_side_scroll(page, "настройки")
+    page.screenshot(path=SHOTS / f"{name}-5-nastroyki.png", full_page=True)
+
+    # Часовой пояс: Самара и обратно Москва
+    page.select_option("#zone-select", "Europe/Samara")
+    page.click("#zone-form button")
+    expect(page.locator("#zone-form + p")).to_contain_text("по Самаре")
+    page.select_option("#zone-select", "Europe/Moscow")
+    page.click("#zone-form button")
+    expect(page.locator("#zone-form + p")).to_contain_text("по Москве")
+
+    # Перезапуск сайта: «Перезапускаю…», сайт поднялся — страница обновилась сама
+    page.evaluate("window.__before = 1")
+    page.once("dialog", lambda d: d.accept())
+    page.click("[data-power=site]")
+    expect(page.locator("#power-msg")).to_have_text("Перезапускаю сайт…")
+    page.screenshot(path=SHOTS / f"{name}-5b-perezapusk.png")
+    log = SITE_RUN["tmp"] / "power.log"
+    assert log.read_text().split()[-1] == "restart-site"
+    SITE_RUN["restarting"] = True
+    restart_site()
+    page.wait_for_function("window.__before === undefined", timeout=30000)
+    SITE_RUN["restarting"] = False
+    expect(page.locator(".panel h1")).to_have_text("Настройки")
+    expect(page.locator("#power-msg")).to_be_hidden()
+    expect(page.locator("[data-power=site]")).to_be_enabled()
 
 
 def project_flow(page, name: str, mobile: bool) -> None:
@@ -305,7 +368,7 @@ def run(pw, base: str, name: str, viewport: dict, mobile: bool, first: bool) -> 
     expect(page.locator(".panel h1")).to_have_text("Разрешения")
     page.click("[aria-label=Настройки]")
     expect(page.locator(".panel h1")).to_have_text("Настройки")
-    page.screenshot(path=SHOTS / f"{name}-5-nastroyki.png", full_page=True)
+    settings_flow(page, name, mobile)
 
     # Замок: закрывается здесь — закрывается и в соседней вкладке
     other = ctx.new_page()
@@ -365,7 +428,7 @@ def live(pw, url: str) -> list:
 
 def main() -> None:
     SHOTS.mkdir(exist_ok=True)
-    proc, base = start_site()
+    _, base = start_site()
     try:
         with sync_playwright() as pw:
             errors = run(pw, base, "pc", {"width": 1440, "height": 900}, False, first=True)
@@ -373,7 +436,7 @@ def main() -> None:
             if len(sys.argv) > 1:
                 errors += live(pw, sys.argv[1])
     finally:
-        proc.terminate()
+        SITE_RUN["proc"].terminate()
     if errors:
         raise SystemExit("ошибки в консоли:\n" + "\n".join(errors))
     print("всё прошло, снимки в", SHOTS)

@@ -1,4 +1,5 @@
 """Личный сайт для общения с Claude: вход, замок, страницы."""
+import asyncio
 import secrets
 from contextlib import asynccontextmanager
 
@@ -6,7 +7,7 @@ from fastapi import FastAPI, Form, Request
 from fastapi.responses import HTMLResponse, JSONResponse, RedirectResponse
 from fastapi.staticfiles import StaticFiles
 
-from . import chat, config, db, files, perms, projects, security  # noqa: F401 (files — свои адреса в projects.router)
+from . import chat, config, db, files, load, perms, projects, security, settings  # noqa: F401 (files — свои адреса в projects.router)
 from .web import client_ip, csrf_ok, current, guarded, page, same_origin, set_cookie, to
 
 
@@ -15,7 +16,9 @@ async def lifespan(app: FastAPI):
     if not config.SECRET_KEY:
         raise RuntimeError(f"нет SECRET_KEY в {config.ENV_FILE}")
     db.init()
+    recorder = asyncio.create_task(load.recorder())
     yield
+    recorder.cancel()
 
 
 app = FastAPI(docs_url=None, redoc_url=None, openapi_url=None, lifespan=lifespan)
@@ -23,6 +26,7 @@ app.mount("/static", StaticFiles(directory=str(config.STATIC_DIR)), name="static
 app.include_router(chat.router)
 app.include_router(projects.router)
 app.include_router(perms.router)
+app.include_router(settings.router)
 
 
 def user_exists() -> bool:
@@ -222,41 +226,6 @@ def state(request: Request):
 @app.get("/", name="home")
 def home(request: Request):
     return to(request, "chat")
-
-
-@app.get("/settings", name="settings")
-def settings(request: Request):
-    return guarded(request, "settings.html", "settings")
-
-
-@app.post("/settings/password", name="change_password")
-def change_password(request: Request, old: str = Form(""), new: str = Form(""),
-                    new2: str = Form(""), csrf: str = Form("")):
-    sess = current(request)
-    if not sess:
-        return to(request, "login_form")
-    if sess["locked"] or not csrf_ok(request, sess, csrf):
-        return guarded(request, "settings.html", "settings")
-    ip = client_ip(request)
-
-    def answer(msg: str, ok: bool = False):
-        return page(request, "settings.html", {"sess": sess, "active": "settings",
-                                               "pw_msg": msg, "pw_ok": ok}, 200 if ok else 400)
-
-    if security.blocked(ip):
-        return answer(f"Слишком много попыток. Попробуй через {config.FAIL_WINDOW_MIN} минут")
-    user = db.one("SELECT password_hash FROM users WHERE id = ?", (sess["user_id"],))
-    if not security.check_secret(user["password_hash"], old):
-        security.note_fail(ip)
-        return answer("Старый пароль не подошёл")
-    if new != new2:
-        return answer("Новые пароли не совпадают")
-    if problem := security.password_problem(new):
-        return answer(problem)
-    db.run("UPDATE users SET password_hash = ? WHERE id = ?", (security.hash_secret(new), sess["user_id"]))
-    # Прочие входы закрываются: пароль меняют, когда опасаются чужого
-    db.run("DELETE FROM sessions WHERE user_id = ? AND id <> ?", (sess["user_id"], sess["id"]))
-    return answer("Пароль изменён", ok=True)
 
 
 @app.get("/healthz", include_in_schema=False)

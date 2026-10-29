@@ -308,3 +308,38 @@ textarea {
 .v-no, .v-late { color: var(--error); }
 .v-gone { color: var(--muted); }
 .detail { font-family: ui-monospace, monospace; font-size: .85rem; }
+
+/* Настройки */
+.settings h2 { margin-top: 1.75rem; font-size: 1.15rem; }
+.settings h3 { margin: 1.25rem 0 .5rem; font-size: 1rem; }
+.row-form { display: flex; gap: .5rem; flex-wrap: wrap; align-items: center; }
+.power { display: flex; gap: .5rem; flex-wrap: wrap; align-items: center; }
+.power button:disabled, #load-btn:disabled { opacity: .55; cursor: default; }
+.load-now { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: .5rem; margin-bottom: .75rem; }
+.tile { border: 1px solid var(--line); border-radius: 8px; padding: .6rem .75rem; display: flex; flex-direction: column; gap: .1rem; }
+.tile-name { color: var(--muted); font-size: .9rem; }
+.tile-val { font-size: 1.6rem; font-weight: 600; font-variant-numeric: tabular-nums; }
+.charts { display: grid; gap: 1rem; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); }
+.chart { margin: 0; }
+.chart figcaption { font-size: .9rem; color: var(--muted); margin-bottom: .2rem; }
+.chart-box { position: relative; }
+.chart svg { display: block; width: 100%; height: auto; touch-action: pan-y; }
+.chart .grid { stroke: #e6e8eb; stroke-width: 1.5; }
+.chart .axis { fill: var(--muted); font-size: 19px; }   /* в точках графика: он ужат почти вдвое */
+.chart .series { fill: none; stroke: var(--accent); stroke-width: 3.5; stroke-linejoin: round; stroke-linecap: round; }
+.chart .series-dot { fill: var(--accent); }
+.chart .cross { stroke: #9aa1ab; stroke-width: 2; }
+.chart .cross-dot { fill: var(--accent); stroke: var(--panel); stroke-width: 2; }
+.tip {
+  position: absolute; top: -.2rem; transform: translateX(-50%);
+  background: var(--text); color: #fff; border-radius: 6px; padding: .15rem .45rem;
+  font-size: .8rem; white-space: nowrap; pointer-events: none;
+}
+.tip[hidden] { display: none; }
+.hours { margin-top: .75rem; }
+.hours table { margin-top: .5rem; font-variant-numeric: tabular-nums; }
+@media (max-width: 700px) {
+  .tile-val { font-size: 1.3rem; }
+  .load-now { gap: .35rem; }
+  .tile { padding: .5rem; }
+}

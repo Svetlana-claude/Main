@@ -81,6 +81,19 @@ CREATE TABLE IF NOT EXISTS permissions (
     decided_at TEXT
 );
 CREATE INDEX IF NOT EXISTS permissions_state ON permissions (state, id);
+-- Выбор хозяйки в «Настройках» (пока — часовой пояс)
+CREATE TABLE IF NOT EXISTS prefs (
+    key   TEXT PRIMARY KEY,
+    value TEXT NOT NULL
+);
+-- Нагрузка сервера раз в минуту, за последние сутки: проценты
+CREATE TABLE IF NOT EXISTS load_samples (
+    at   TEXT NOT NULL,
+    cpu  REAL NOT NULL,
+    mem  REAL NOT NULL,
+    disk REAL NOT NULL
+);
+CREATE INDEX IF NOT EXISTS load_samples_at ON load_samples (at);
 -- Секрет второго шага, который ждёт первой настройки (до заведения хозяйки)
 CREATE TABLE IF NOT EXISTS setup (
     key   TEXT PRIMARY KEY,

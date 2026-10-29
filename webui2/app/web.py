@@ -1,27 +1,57 @@
 """Общее для всех страниц: шаблоны, вход, защита форм."""
 from datetime import datetime
+from zoneinfo import ZoneInfo
 
 from fastapi import Request
 from fastapi.responses import RedirectResponse
 from fastapi.templating import Jinja2Templates
 
-from . import config, security
+from . import config, db, security
 
 templates = Jinja2Templates(directory=str(config.TEMPLATES_DIR))
 
 
+_zone = {"name": None}
+
+
+def zone_name() -> str:
+    """Пояс показа: выбранный в «Настройках», иначе из файла настроек."""
+    if _zone["name"] is None:
+        row = db.one("SELECT value FROM prefs WHERE key = 'timezone'")
+        name = row["value"] if row else ""
+        _zone["name"] = name if name in config.ZONES else config.TIMEZONE_NAME
+    return _zone["name"]
+
+
+def set_zone(name: str) -> bool:
+    if name not in config.ZONES:
+        return False
+    db.run("INSERT INTO prefs (key, value) VALUES ('timezone', ?) "
+           "ON CONFLICT(key) DO UPDATE SET value = excluded.value", (name,))
+    _zone["name"] = name
+    return True
+
+
+def zone() -> ZoneInfo:
+    return ZoneInfo(zone_name())
+
+
+def zone_label() -> str:
+    return config.ZONES[zone_name()][1]
+
+
 def local_time(iso: str) -> str:
     """Время из базы (UTC) — в её поясе, с пометкой."""
-    moment = datetime.fromisoformat(iso).astimezone(config.TIMEZONE)
-    return f"{moment:%d.%m.%Y %H:%M} {config.TIMEZONE_LABEL}"
+    moment = datetime.fromisoformat(iso).astimezone(zone())
+    return f"{moment:%d.%m.%Y %H:%M} {zone_label()}"
 
 
 def short_time(iso: str) -> str:
     """Короткое время сообщения: сегодня — только часы, иначе с датой."""
-    moment = datetime.fromisoformat(iso).astimezone(config.TIMEZONE)
-    today = datetime.now(config.TIMEZONE).date()
+    moment = datetime.fromisoformat(iso).astimezone(zone())
+    today = datetime.now(zone()).date()
     stamp = f"{moment:%H:%M}" if moment.date() == today else f"{moment:%d.%m.%Y %H:%M}"
-    return f"{stamp} {config.TIMEZONE_LABEL}"
+    return f"{stamp} {zone_label()}"
 
 
 templates.env.globals["local_time"] = local_time

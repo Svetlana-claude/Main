@@ -1,0 +1,3 @@
+# Сайт v2 (служба webui2, пользователь mokeeva): только перезапуск себя и сервера.
+# Ставится в /etc/sudoers.d/webui2-power (root, 440), проверка: visudo -cf
+mokeeva ALL=(root) NOPASSWD: /usr/local/sbin/webui2-power restart-site, /usr/local/sbin/webui2-power reboot

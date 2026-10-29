@@ -1,7 +1,7 @@
 {% extends "base.html" %}
 {% set title = "Настройки" %}
 {% block content %}
-<section class="panel">
+<section class="panel settings">
   <h1>Настройки</h1>
   <h2>Смена пароля</h2>
   {% if pw_msg %}<p class="{{ 'ok' if pw_ok else 'error' }}" role="status">{{ pw_msg }}</p>{% endif %}
@@ -19,6 +19,85 @@
     </label>
     <button type="submit" class="primary">Сменить пароль</button>
   </form>
-  <p class="muted">Остальные настройки появятся на шестом этапе.</p>
+
+  <h2 id="zone">Часовой пояс</h2>
+  <form method="post" action="{{ root }}/settings/timezone" class="row-form" id="zone-form">
+    <input type="hidden" name="csrf" value="{{ sess.csrf }}">
+    <label class="sr-only" for="zone-select">Часовой пояс</label>
+    <select name="zone_id" id="zone-select">
+      {% for key, z in zones.items() %}
+      <option value="{{ key }}" {% if key == zone %}selected{% endif %}>{{ z[0] }}</option>
+      {% endfor %}
+    </select>
+    <button type="submit" class="primary">Сохранить</button>
+  </form>
+  <p class="muted small">Время на сайте показывается в этом поясе, сейчас — {{ zones[zone][1] }}.</p>
+
+  <h2>Перезапуск</h2>
+  <div class="power" id="power" data-boot="{{ power.boot }}" data-what="{{ power.what or '' }}">
+    <button type="button" class="primary" data-power="site"
+            data-ask="Перезапустить сайт? Сначала допишутся идущие ответы, потом страница обновится сама.">Перезапустить сайт</button>
+    <button type="button" class="primary danger" data-power="server"
+            data-ask="Перезагрузить сервер? Сначала допишутся идущие ответы. Сервер будет недоступен минуту-две, потом страница обновится сама.">Перезагрузить сервер</button>
+    <button type="button" class="link" id="power-cancel" hidden>Отменить</button>
+  </div>
+  <p id="power-msg" role="status" class="{{ 'error' if power.error else '' }}" {% if not power.error %}hidden{% endif %}>{{ power.error }}</p>
+  <noscript><p class="muted small">Для перезапуска нужен включённый JavaScript.</p></noscript>
+
+  <h2>Нагрузка сервера</h2>
+  <div class="load-now" id="load-now">
+    <div class="tile"><span class="tile-name">Процессор</span>
+      <span class="tile-val" id="load-cpu">{{ "%.0f"|format(latest.cpu) ~ " %" if latest else "—" }}</span>
+      <span class="muted small" id="load-cpu-note">{{ "за последнюю минуту" if latest else "" }}</span></div>
+    <div class="tile"><span class="tile-name">Память</span>
+      <span class="tile-val" id="load-mem">{{ "%.0f"|format(latest.mem) ~ " %" if latest else "—" }}</span>
+      <span class="muted small" id="load-mem-note"></span></div>
+    <div class="tile"><span class="tile-name">Диск</span>
+      <span class="tile-val" id="load-disk">{{ "%.0f"|format(latest.disk) ~ " %" if latest else "—" }}</span>
+      <span class="muted small" id="load-disk-note"></span></div>
+  </div>
+  <button type="button" class="primary" id="load-btn">Замерить сейчас</button>
+
+  <h3>За сутки</h3>
+  {% if charts %}
+  <div class="charts">
+    {% for name, c in charts %}
+    <figure class="chart" data-points="{{ c.points }}">
+      <figcaption>{{ name }}, %</figcaption>
+      <div class="chart-box">
+        <svg viewBox="0 0 {{ c.w }} {{ c.h }}" role="img" aria-label="{{ name }} за сутки, проценты">
+          {% for v in (0, 50, 100) %}
+          {% set y = c.pad_t + c.plot_h - c.plot_h * v / 100 %}
+          <line class="grid" x1="{{ c.pad_l }}" x2="{{ c.w }}" y1="{{ y }}" y2="{{ y }}"/>
+          <text class="axis" x="{{ c.pad_l - 6 }}" y="{{ y + 4 }}" text-anchor="end">{{ v }}</text>
+          {% endfor %}
+          {% for t in c.ticks %}
+          <text class="axis" x="{{ t.x }}" y="{{ c.h - 3 }}" text-anchor="middle">{{ t.label }}</text>
+          {% endfor %}
+          {% for pts in c.lines %}<polyline class="series" points="{{ pts }}"/>{% endfor %}
+          {% for d in c.dots %}{% set xy = d[0].split(",") %}<circle class="series-dot" cx="{{ xy[0] }}" cy="{{ xy[1] }}" r="5"/>{% endfor %}
+          <line class="cross" x1="0" x2="0" y1="{{ c.pad_t }}" y2="{{ c.pad_t + c.plot_h }}" visibility="hidden"/>
+          <circle class="cross-dot" r="7" cx="0" cy="0" visibility="hidden"/>
+        </svg>
+        <div class="tip" hidden></div>
+      </div>
+    </figure>
+    {% endfor %}
+  </div>
+  <details class="hours">
+    <summary>Таблицей по часам</summary>
+    <table class="md">
+      <thead><tr><th>Час ({{ zones[zone][1] }})</th><th>Процессор, %</th><th>Память, %</th><th>Диск, %</th></tr></thead>
+      <tbody>
+        {% for h in hours|reverse %}
+        <tr><td>{{ h.hour }}</td><td>{{ h.cpu }}</td><td>{{ h.mem }}</td><td>{{ h.disk }}</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </details>
+  {% else %}
+  <p class="muted">Замеров пока нет: сайт пишет их раз в минуту, график появится через пару минут.</p>
+  {% endif %}
 </section>
 {% endblock %}
+{% block scripts %}<script src="{{ root }}/static/settings.js?v=1"></script>{% endblock %}
