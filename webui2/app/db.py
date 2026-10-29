@@ -64,6 +64,23 @@ CREATE TABLE IF NOT EXISTS projects (
     created_at     TEXT NOT NULL,
     updated_at     TEXT NOT NULL
 );
+-- Разрешения: о чём Claude в теме просит хозяйку. state: wait (ждёт) | yes |
+-- no | late (нет ответа за 25 минут — отказ) | gone (вопрос снят: ответ
+-- оборвался или Claude передумал). place — проект и тема словами, на память
+CREATE TABLE IF NOT EXISTS permissions (
+    id         INTEGER PRIMARY KEY,
+    conv_id    INTEGER,
+    project_id INTEGER,
+    request_id TEXT NOT NULL,
+    place      TEXT NOT NULL DEFAULT '',
+    tool       TEXT NOT NULL,
+    what       TEXT NOT NULL,
+    detail     TEXT NOT NULL DEFAULT '',
+    state      TEXT NOT NULL DEFAULT 'wait',
+    created_at TEXT NOT NULL,
+    decided_at TEXT
+);
+CREATE INDEX IF NOT EXISTS permissions_state ON permissions (state, id);
 -- Секрет второго шага, который ждёт первой настройки (до заведения хозяйки)
 CREATE TABLE IF NOT EXISTS setup (
     key   TEXT PRIMARY KEY,
@@ -107,6 +124,8 @@ def init() -> None:
         con.execute("UPDATE projects SET delete_state = '' WHERE delete_state = 'checking'")
         con.execute("UPDATE projects SET delete_state = 'unclear', delete_report = "
                     "'Удаление прервал перезапуск сайта. Папка могла остаться.' WHERE delete_state = 'removing'")
+        # Запуски Claude не переживают перезапуск сайта — их вопросы сняты
+        con.execute("UPDATE permissions SET state = 'gone', decided_at = ? WHERE state = 'wait'", (now(),))
     config.DB_PATH.chmod(0o600)
     config.CHAT_DIR.mkdir(parents=True, exist_ok=True, mode=0o700)
 

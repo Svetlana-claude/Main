@@ -1,0 +1,48 @@
+{% extends "base.html" %}
+{% block content %}
+<section class="panel perms" id="perms" data-asks="{{ asks|length }}">
+  <h1>Разрешения</h1>
+  <p class="muted">Здесь Claude спрашивает то, что галочки проекта ему не разрешают.
+    Нет ответа за {{ wait_min }} минут — это отказ.</p>
+  {% if asks %}
+  <ul class="results asks">
+    {% for a in asks %}
+    <li id="ask-{{ a.id }}">
+      <p><strong>{{ a.what }}</strong>
+        <span class="muted"> · {% if a.link %}<a href="{{ a.link }}">{{ a.place }}</a>{% else %}{{ a.place }}{% endif %}
+          · {{ local_time(a.created_at) }}</span></p>
+      {% if a.detail %}<pre class="report">{{ a.detail }}</pre>{% endif %}
+      <div class="ask-buttons">
+        <form method="post" action="{{ root }}/permissions/{{ a.id }}/yes">
+          <input type="hidden" name="csrf" value="{{ sess.csrf }}">
+          <button type="submit" class="primary">Разрешить</button>
+        </form>
+        <form method="post" action="{{ root }}/permissions/{{ a.id }}/no">
+          <input type="hidden" name="csrf" value="{{ sess.csrf }}">
+          <button type="submit" class="danger primary">Запретить</button>
+        </form>
+      </div>
+    </li>
+    {% endfor %}
+  </ul>
+  {% else %}
+  <p class="ok">Сейчас никто не ждёт разрешения.</p>
+  {% endif %}
+
+  <h2>Последние решения</h2>
+  {% if done %}
+  <ul class="results done">
+    {% for a in done %}
+    <li>
+      <p><span class="verdict v-{{ a.state }}">{{ a.state_text }}</span> · <strong>{{ a.what }}</strong>
+        <span class="muted"> · {% if a.link %}<a href="{{ a.link }}">{{ a.place }}</a>{% else %}{{ a.place }}{% endif %}
+          · {{ local_time(a.decided_at or a.created_at) }}</span></p>
+      {% if a.detail %}<p class="muted detail">{{ a.detail|truncate(300) }}</p>{% endif %}
+    </li>
+    {% endfor %}
+  </ul>
+  {% else %}
+  <p class="muted">Решений пока не было.</p>
+  {% endif %}
+</section>
+{% endblock %}

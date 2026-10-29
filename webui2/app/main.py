@@ -6,7 +6,7 @@ from fastapi import FastAPI, Form, Request
 from fastapi.responses import HTMLResponse, JSONResponse, RedirectResponse
 from fastapi.staticfiles import StaticFiles
 
-from . import chat, config, db, files, projects, security  # noqa: F401 (files — свои адреса в projects.router)
+from . import chat, config, db, files, perms, projects, security  # noqa: F401 (files — свои адреса в projects.router)
 from .web import client_ip, csrf_ok, current, guarded, page, same_origin, set_cookie, to
 
 
@@ -22,6 +22,7 @@ app = FastAPI(docs_url=None, redoc_url=None, openapi_url=None, lifespan=lifespan
 app.mount("/static", StaticFiles(directory=str(config.STATIC_DIR)), name="static")
 app.include_router(chat.router)
 app.include_router(projects.router)
+app.include_router(perms.router)
 
 
 def user_exists() -> bool:
@@ -221,12 +222,6 @@ def state(request: Request):
 @app.get("/", name="home")
 def home(request: Request):
     return to(request, "chat")
-
-
-@app.get("/permissions", name="permissions")
-def permissions(request: Request):
-    return guarded(request, "stub.html", "permissions",
-                   {"title": "Разрешения", "stage": "Разрешения появятся на пятом этапе."})
 
 
 @app.get("/settings", name="settings")

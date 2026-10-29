@@ -65,19 +65,25 @@ def secret_deny() -> list[str]:
 BASH_FAMILY = ["Bash", "BashOutput", "KillShell"]
 
 
+# Вопросы-уточнения Claude задаёт текстом в ответе, а не отдельным окном
+NO_ASK_TOOLS = ["AskUserQuestion"]
+
+
 def project_argv(model: str, session_id: str | None, project: dict) -> list[str]:
-    """Тема проекта. Без галочек — чтение и правка файлов в папке проекта
-    (за её пределы — отказ: спросить пока некого); «Запускать команды» —
-    ещё и команды; «Полный доступ» — всё без вопросов."""
+    """Тема проекта. Без галочек — чтение и правка файлов в папке проекта;
+    «Запускать команды» — ещё и команды; «Полный доступ» — всё без вопросов.
+    Что сверх разрешённого, Claude спрашивает у сайта (control_request в
+    потоке), сайт — у хозяйки на странице «Разрешения». Безопасные команды
+    только для чтения Claude выполняет сам, без вопроса."""
     cmd = _base(model)
     if project["full_access"]:
-        cmd += ["--permission-mode", "bypassPermissions", "--disallowed-tools", *secret_deny()]
+        cmd += ["--permission-mode", "bypassPermissions",
+                "--disallowed-tools", *NO_ASK_TOOLS, *secret_deny()]
     else:
-        cmd += ["--permission-mode", "acceptEdits", "--permission-prompts", "none"]
+        cmd += ["--permission-mode", "acceptEdits", "--permission-prompt-tool", "stdio"]
         if project["allow_commands"]:
-            cmd += ["--allowed-tools", *BASH_FAMILY, "--disallowed-tools", *secret_deny()]
-        else:
-            cmd += ["--disallowed-tools", *BASH_FAMILY, *secret_deny()]
+            cmd += ["--allowed-tools", *BASH_FAMILY]
+        cmd += ["--disallowed-tools", *NO_ASK_TOOLS, *secret_deny()]
     if session_id:
         cmd += ["--resume", session_id]
     return cmd
@@ -95,6 +101,23 @@ def argv(model: str, session_id: str | None) -> list[str]:
     if session_id:
         cmd += ["--resume", session_id]
     return cmd
+
+
+def control_line(request_id: str, allow: bool, data: dict | None = None,
+                 message: str = "") -> bytes:
+    """Ответ на вопрос Claude о разрешении."""
+    answer = {"behavior": "allow", "updatedInput": data or {}} if allow else \
+        {"behavior": "deny", "message": message}
+    msg = {"type": "control_response",
+           "response": {"subtype": "success", "request_id": request_id, "response": answer}}
+    return (json.dumps(msg, ensure_ascii=False) + "\n").encode()
+
+
+def control_error(request_id: str) -> bytes:
+    """Ответ на незнакомый служебный вопрос: чтобы Claude не ждал зря."""
+    msg = {"type": "control_response",
+           "response": {"subtype": "error", "request_id": request_id, "error": "не поддерживается"}}
+    return (json.dumps(msg) + "\n").encode()
 
 
 def user_line(text: str) -> bytes:
@@ -143,6 +166,25 @@ def tool_status(name: str, data: dict) -> str:
     return "Работаю…"
 
 
+def ask_text(name: str, data: dict) -> tuple[str, str]:
+    """О чём просит Claude: (что сделать — по-русски, подробность)."""
+    data = data or {}
+    if name in ("Bash", "BashOutput", "KillShell"):
+        return "Выполнить команду", str(data.get("command") or data.get("bash_id") or data.get("shell_id") or "")
+    if name in ("Edit", "MultiEdit", "Write", "NotebookEdit"):
+        return "Изменить файл", str(data.get("file_path") or data.get("notebook_path") or "")
+    if name in ("Read", "NotebookRead"):
+        return "Прочитать файл", str(data.get("file_path") or "")
+    if name in ("Glob", "Grep"):
+        return "Искать в файлах", " ".join(str(data.get(k)) for k in ("pattern", "path") if data.get(k))
+    if name == "WebFetch":
+        return "Открыть страницу", str(data.get("url") or "")
+    if name == "WebSearch":
+        return "Искать в интернете", str(data.get("query") or "")
+    detail = json.dumps(data, ensure_ascii=False)
+    return f"Инструмент {name}", detail[:2000]
+
+
 async def _lines(stream: asyncio.StreamReader) -> AsyncIterator[bytes]:
     """Построчно, без предела на длину строки (штатный readline рвётся на 64 КБ)."""
     buf = bytearray()
@@ -167,7 +209,8 @@ def _context(usage: dict) -> int:
 async def events(proc: asyncio.subprocess.Process) -> AsyncIterator[dict]:
     """События запуска: init (номер беседы), start (новое сообщение Claude —
     прежний черновой текст сбрасывается), delta (кусок текста), status (что
-    делает), turn (ход закончен: весь текст, вес беседы, ошибка ли).
+    делает), ask / unask (просит разрешения / вопрос снят), control (другой
+    служебный вопрос), turn (ход закончен: весь текст, вес беседы, ошибка ли).
     События помощников (parent_tool_use_id) не показываются."""
     context = 0
     async for raw in _lines(proc.stdout):
@@ -178,6 +221,16 @@ async def events(proc: asyncio.subprocess.Process) -> AsyncIterator[dict]:
         kind = event.get("type")
         if kind == "system" and event.get("subtype") == "init":
             yield {"type": "init", "session_id": event.get("session_id")}
+        elif kind == "control_request":
+            req = event.get("request") or {}
+            rid = str(event.get("request_id") or "")
+            if req.get("subtype") == "can_use_tool":
+                yield {"type": "ask", "request_id": rid, "tool": str(req.get("tool_name") or ""),
+                       "input": req.get("input") if isinstance(req.get("input"), dict) else {}}
+            else:
+                yield {"type": "control", "request_id": rid}
+        elif kind == "control_cancel_request":
+            yield {"type": "unask", "request_id": str(event.get("request_id") or "")}
         elif event.get("parent_tool_use_id"):
             continue
         elif kind == "stream_event":

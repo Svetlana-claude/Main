@@ -115,7 +115,7 @@
         feed.innerHTML = data.html;
         document.getElementById("weight").textContent = data.weight;
         document.getElementById("talk-title").textContent = data.title;
-        var item = document.querySelector(".conv-list a[aria-current=page]");
+        var item = document.querySelector(".conv-list a[aria-current=page] .conv-title");
         if (item) item.textContent = data.title;
         setRunning(data.running);
         if (stick) toBottom();

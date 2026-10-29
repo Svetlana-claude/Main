@@ -13,6 +13,7 @@ import base64
 import hashlib
 import hmac
 import os
+import re
 import socket
 import struct
 import subprocess
@@ -214,6 +215,25 @@ def project_flow(page, name: str, mobile: bool) -> None:
     page.click(f"text=‹ {title}")
     expect(page.locator("#talk-title")).to_have_text("медленно глянь файлы")
     sample.unlink()
+
+    # Разрешение: Claude просит — кружок оранжевый, на щите 1; «Разрешить» —
+    # Claude продолжает, ответ дописан
+    ask(page, "спроси разрешения")
+    expect(page.locator("#live-status")).to_contain_text("Жду твоего разрешения", timeout=20000)
+    expect(page.locator("#ask-count")).to_have_text("1", timeout=10000)
+    expect(page.locator(".talk-head .light")).to_have_class(re.compile("wait"), timeout=10000)
+    expect(page.locator(".conv-list [aria-current=page] .light")).to_have_class(re.compile("wait"))
+    page.screenshot(path=SHOTS / f"{name}-p4a-zhdyot.png")
+    page.click("[aria-label='Разрешения']")
+    expect(page.locator(".asks")).to_contain_text("curl -s https://example.com")
+    no_side_scroll(page, "разрешения")
+    page.screenshot(path=SHOTS / f"{name}-p4b-razresheniya.png", full_page=True)
+    page.click(".asks >> text=Разрешить")
+    expect(page.locator(".done li").first).to_contain_text("разрешено")
+    expect(page.locator("#ask-count")).to_be_hidden()
+    page.click(".done li >> nth=0 >> a")
+    expect(page.locator(".msg-assistant:not(.live)").last).to_contain_text("разрешили", timeout=30000)
+    expect(page.locator(".talk-head .light")).to_have_class(re.compile("free"), timeout=10000)
 
     # Галочка «Запускать команды»
     open_list(page, mobile)

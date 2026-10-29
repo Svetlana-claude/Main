@@ -1,0 +1,2 @@
+{# Кружок: kind — c (разговор, тема) или p (проект), ident — номер #}
+{% set st = light(kind, ident) %}<span class="light {{ st }}" data-{{ kind }}="{{ ident }}" role="img" title="{{ light_text[st] }}" aria-label="{{ light_text[st] }}"></span>

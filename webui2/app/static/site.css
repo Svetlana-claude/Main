@@ -270,3 +270,33 @@ textarea {
   .composer { padding: .5rem .6rem; }
   .convs { border-right: 0; }
 }
+
+/* Кружки: красный — работает, оранжевый — ждёт разрешения, зелёный — свободен */
+.light {
+  display: inline-block; width: 10px; height: 10px; border-radius: 50%;
+  margin-right: .45rem; vertical-align: middle; flex: none;
+  background: #2e9e57;
+}
+.light.busy { background: #d92d20; }
+.light.wait { background: #f08c00; box-shadow: 0 0 0 3px #fde3bf; }
+.talk-head .light, .proj-head .light { margin-right: 0; }
+
+/* Щит с числом ждущих разрешений */
+.shield { position: relative; }
+.badge {
+  position: absolute; top: 2px; right: 0; min-width: 18px; height: 18px; padding: 0 4px;
+  border-radius: 9px; background: #f08c00; color: #fff;
+  font-size: .72rem; font-weight: 700; line-height: 18px; text-align: center;
+}
+.badge[hidden] { display: none; }
+
+/* Страница «Разрешения» */
+.perms h2 { margin-top: 1.5rem; font-size: 1.1rem; }
+.asks pre.report { white-space: pre-wrap; margin: .5rem 0; font-size: .9rem; }
+.ask-buttons { display: flex; gap: .5rem; flex-wrap: wrap; }
+.ask-buttons form { margin: 0; }
+.verdict { font-weight: 600; }
+.v-yes { color: var(--ok); }
+.v-no, .v-late { color: var(--error); }
+.v-gone { color: var(--muted); }
+.detail { font-family: ui-monospace, monospace; font-size: .85rem; }

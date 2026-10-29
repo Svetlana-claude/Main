@@ -13,6 +13,7 @@
   <ul class="results projects">
     {% for p in projects %}
     <li>
+      {% with kind="p", ident=p.id %}{% include "_light.html" %}{% endwith %}
       <a href="{{ root }}/projects/{{ p.id }}">{{ p.name }}</a>
       <span class="muted"> · {{ p.folder }} · тем: {{ p.topics }}{% if p.delete_state %} · удаляется{% endif %}</span>
     </li>

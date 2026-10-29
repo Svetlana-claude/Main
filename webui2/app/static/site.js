@@ -40,4 +40,39 @@
       }).catch(function () { btn.disabled = false; });
     });
   }
+
+  // Кружки и щит сверяются с сайтом сами, пока страница на виду
+  var TEXT = {free: "Свободен", busy: "Работает", wait: "Ждёт разрешения"};
+  var badge = document.getElementById("ask-count");
+  var perms = document.getElementById("perms");
+
+  function paint(el, state) {
+    if (el.classList.contains(state)) return;
+    el.classList.remove("free", "busy", "wait");
+    el.classList.add(state);
+    el.title = TEXT[state];
+    el.setAttribute("aria-label", TEXT[state]);
+  }
+
+  function lights() {
+    if (!badge || document.visibilityState !== "visible") return;
+    fetch(site.root + "/lights", {credentials: "same-origin", cache: "no-store"})
+      .then(function (r) { return r.ok ? r.json() : null; })
+      .then(function (s) {
+        if (!s) return;
+        badge.textContent = s.ask;
+        badge.hidden = !s.ask;
+        // На странице «Разрешения» новый или снятый вопрос — сразу виден
+        if (perms && String(s.ask) !== perms.dataset.asks) location.reload();
+        document.querySelectorAll(".light[data-c]").forEach(function (el) {
+          paint(el, s.c[el.dataset.c] || "free");
+        });
+        document.querySelectorAll(".light[data-p]").forEach(function (el) {
+          paint(el, s.p[el.dataset.p] || "free");
+        });
+      })
+      .catch(function () { /* сайт недоступен — оставляем как есть */ });
+  }
+  setInterval(lights, 3000);
+  document.addEventListener("visibilitychange", lights);
 })();

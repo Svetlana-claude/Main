@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="robots" content="noindex, nofollow">
   <title>{% block title %}{{ title or "Claude" }}{% endblock %} — Claude</title>
-  <link rel="stylesheet" href="{{ root }}/static/site.css?v=4">
+  <link rel="stylesheet" href="{{ root }}/static/site.css?v=5">
   {% block head %}{% endblock %}
 </head>
 <body class="{% block body_class %}{% endblock %}">
@@ -17,9 +17,11 @@
     <a href="{{ root }}/projects" {% if active == "projects" %}aria-current="page"{% endif %}>Проекты</a>
   </nav>
   <div class="tools">
-    <a class="icon" href="{{ root }}/permissions" title="Разрешения" aria-label="Разрешения"
+    {% set asks = asks_waiting() %}
+    <a class="icon shield" href="{{ root }}/permissions" title="Разрешения" aria-label="Разрешения"
        {% if active == "permissions" %}aria-current="page"{% endif %}>
       <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3l7 3v5c0 4.5-3 8.5-7 10-4-1.5-7-5.5-7-10V6z"/></svg>
+      <span class="badge" id="ask-count" title="Ждут разрешения" {% if not asks %}hidden{% endif %}>{{ asks }}</span>
     </a>
     <a class="icon" href="{{ root }}/settings" title="Настройки" aria-label="Настройки"
        {% if active == "settings" %}aria-current="page"{% endif %}>
@@ -38,7 +40,7 @@
   {% block content %}{% endblock %}
 </main>
 <script>window.SITE = {root: {{ root|tojson }}, csrf: {{ sess.csrf|tojson }}};</script>
-<script src="{{ root }}/static/site.js?v=2"></script>
+<script src="{{ root }}/static/site.js?v=3"></script>
 {% block scripts %}{% endblock %}
 {% endblock %}
 </body>

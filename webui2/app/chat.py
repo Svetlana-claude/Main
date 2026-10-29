@@ -9,7 +9,7 @@ from datetime import datetime, timedelta, timezone
 from fastapi import APIRouter, Form, Request
 from fastapi.responses import JSONResponse, RedirectResponse, StreamingResponse
 
-from . import claude, config, db, markup
+from . import claude, config, db, markup, perms
 from .web import csrf_ok, current, guarded, page, templates, to
 
 router = APIRouter()
@@ -35,6 +35,7 @@ class Run:
         self.lock = asyncio.Lock()
         self.listeners: set[asyncio.Queue] = set()
         self.stderr: list[str] = []
+        self.asks = 0                  # сколько вопросов о разрешении ждут хозяйку
 
     def tell(self, event: dict) -> None:
         for queue in list(self.listeners):
@@ -66,6 +67,23 @@ class Run:
         self.tell({"t": "added"})
         return True
 
+    async def _write(self, line: bytes) -> None:
+        async with self.lock:
+            if self.proc.returncode is None and not self.proc.stdin.is_closing():
+                self.proc.stdin.write(line)
+                await self.proc.stdin.drain()
+
+    async def _answer(self, pid: int, request_id: str, data: dict) -> None:
+        """Дождаться хозяйку и передать её ответ Claude."""
+        allow, message = await perms.wait(pid)
+        self.asks -= 1
+        try:
+            await self._write(claude.control_line(request_id, allow, data, message))
+        except (ConnectionError, RuntimeError):
+            return
+        if not self.asks:
+            self.set_status(WAITING)
+
     async def _read_stderr(self) -> None:
         async for raw in claude._lines(self.proc.stderr):
             line = raw.decode("utf-8", "replace").strip()
@@ -91,6 +109,15 @@ class Run:
                         self.tell({"t": "start"})
                 elif ev["type"] == "status":
                     self.set_status(ev["text"])
+                elif ev["type"] == "ask":
+                    pid = perms.open_request(self.conv_id, ev["request_id"], ev["tool"], ev["input"])
+                    self.asks += 1
+                    self.set_status(perms.ASKING)
+                    asyncio.create_task(self._answer(pid, ev["request_id"], ev["input"]))
+                elif ev["type"] == "unask":
+                    perms.cancel(self.conv_id, ev["request_id"])
+                elif ev["type"] == "control":
+                    await self._write(claude.control_error(ev["request_id"]))
                 elif ev["type"] == "delta":
                     self.text += ev["text"]
                     self.set_status(WRITING)
@@ -119,17 +146,21 @@ class Run:
         except Exception as exc:                       # noqa: BLE001
             self.stderr.append(str(exc))
         finally:
+            perms.cancel(self.conv_id)
             async with self.lock:
                 self.open = False
                 if self.proc.returncode is None:
                     self.proc.kill()
-                if self.turns < self.sent:
-                    if self.text:
-                        save_message(self.conv_id, "assistant", self.text)
-                    why = self.stderr[-1] if self.stderr else "ответ оборвался"
-                    save_message(self.conv_id, "error", "Не получилось ответить: " + why)
-                self._flush_pending()
-            RUNS.pop(self.conv_id, None)
+                # Разговор могли удалить на ходу — тогда сохранять некуда
+                if conversation(self.conv_id):
+                    if self.turns < self.sent:
+                        if self.text:
+                            save_message(self.conv_id, "assistant", self.text)
+                        why = self.stderr[-1] if self.stderr else "ответ оборвался"
+                        save_message(self.conv_id, "error", "Не получилось ответить: " + why)
+                    self._flush_pending()
+            if RUNS.get(self.conv_id) is self:
+                RUNS.pop(self.conv_id, None)
             self.tell({"t": "done"})
 
 

@@ -7,7 +7,8 @@ JSON на входе и выходе, но отвечает эхом и ниче
 Аргументы и окружение запуска пишутся в файл из FAKE_CLAUDE_LOG.
 
 В теме проекта (есть --permission-mode) перед ответом «читает» CLAUDE.md —
-так видна строка «Читаю…». Разовый запуск (--output-format json) — проверка
+так видна строка «Читаю…». Со словом «спроси» — просит разрешения на команду
+и отвечает, что решили; «передумай» — просит и сам снимает вопрос. Разовый запуск (--output-format json) — проверка
 перед удалением проекта или само удаление (с bypassPermissions).
 """
 import json
@@ -61,6 +62,19 @@ for line in sys.stdin:
         out({"type": "assistant", "message": {"content": [{"type": "tool_use", "name": "Read",
              "input": {"file_path": os.path.join(os.getcwd(), "CLAUDE.md")}}]}})
         time.sleep(1.5 if slow else 0.01)
+        if "спроси" in text or "передумай" in text:
+            out({"type": "control_request", "request_id": "ask-1", "request": {
+                "subtype": "can_use_tool", "tool_name": "Bash",
+                "input": {"command": "curl -s https://example.com", "description": "Скачать страницу"}}})
+            if "передумай" in text:
+                time.sleep(0.5)
+                out({"type": "control_cancel_request", "request_id": "ask-1"})
+                text += " (передумал)"
+            else:
+                reply = json.loads(sys.stdin.readline())["response"]
+                verdict = reply["response"]
+                text += (" — разрешили" if verdict["behavior"] == "allow" and reply["request_id"] == "ask-1"
+                         else " — отказ: " + verdict.get("message", ""))
         if "загрузки" in text:
             with open(os.path.join("downloads", "ответ.md"), "w", encoding="utf-8") as fh:
                 fh.write("# Ответ\n\n**Готово**")

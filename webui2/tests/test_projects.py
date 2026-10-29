@@ -86,8 +86,10 @@ def test_topic_runs_in_project_folder(inside):
     argv = launch["argv"]
     assert "--tools" not in argv and "--setting-sources" not in argv and "--system-prompt" not in argv
     assert argv[argv.index("--permission-mode") + 1] == "acceptEdits"
+    assert argv[argv.index("--permission-prompt-tool") + 1] == "stdio"
     banned = argv[argv.index("--disallowed-tools") + 1:]
-    assert "Bash" in banned
+    assert "Bash" not in banned and "AskUserQuestion" in banned
+    assert "--allowed-tools" not in argv
     assert f"Read(/{config.DB_PATH.parent}/**)" in banned
     assert not any(k.startswith("WEBUI2_") for k in launch["env"])
     # Тема не видна в чате, а её адрес в чате ведёт в проект

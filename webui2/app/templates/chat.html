@@ -6,6 +6,7 @@
     {% if project %}
     <a href="{{ root }}/projects" class="back-link">‹ Все проекты</a>
     <div class="proj-head">
+      {% with kind="p", ident=project.id %}{% include "_light.html" %}{% endwith %}
       <h2 id="project-name">{{ project.name }}</h2>
       <form method="post" action="{{ root }}/projects/{{ project.id }}/delete"
             data-confirm="Удалить проект? Сначала Claude посмотрит, что проект завёл на сервере, и покажет список.">
@@ -46,7 +47,8 @@
       <ul class="conv-list">
         {% for c in convs %}
         <li><a href="{{ root }}{{ conv_path(c) }}" {% if conv and c.id == conv.id %}aria-current="page"{% endif %}>
-          {{ c.title or ("Новая тема" if project else "Новый разговор") }}</a></li>
+          {% with kind="c", ident=c.id %}{% include "_light.html" %}{% endwith %}
+          <span class="conv-title">{{ c.title or ("Новая тема" if project else "Новый разговор") }}</span></a></li>
         {% else %}
         <li class="muted">{{ "Тем пока нет" if project else "Разговоров пока нет" }}</li>
         {% endfor %}
@@ -58,6 +60,7 @@
   <section class="talk" aria-label="{{ 'Тема' if project else 'Разговор' }}">
     <header class="talk-head">
       <button type="button" class="link to-list" id="to-list">‹ {{ "Темы" if project else "Разговоры" }}</button>
+      {% with kind="c", ident=conv.id %}{% include "_light.html" %}{% endwith %}
       <h1 id="talk-title">{{ conv.title or ("Новая тема" if project else "Новый разговор") }}</h1>
       <button type="button" class="icon" id="rename-btn" title="Переименовать" aria-label="Переименовать">✎</button>
       <form method="post" action="{{ root }}/chat/{{ conv.id }}/delete" data-confirm="Удалить?">
@@ -105,4 +108,4 @@
   {% endif %}
 </div>
 {% endblock %}
-{% block scripts %}<script src="{{ root }}/static/chat.js?v=7"></script>{% endblock %}
+{% block scripts %}<script src="{{ root }}/static/chat.js?v=8"></script>{% endblock %}
