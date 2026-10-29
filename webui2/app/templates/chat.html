@@ -62,6 +62,11 @@
       <button type="button" class="link to-list" id="to-list">‹ {{ "Темы" if project else "Разговоры" }}</button>
       {% with kind="c", ident=conv.id %}{% include "_light.html" %}{% endwith %}
       <h1 id="talk-title">{{ conv.title or ("Новая тема" if project else "Новый разговор") }}</h1>
+      {% if project %}
+      <a href="{{ root }}/projects/{{ project.id }}/files" class="icon files-btn" id="files-btn"
+         title="Файлы проекта" aria-label="Файлы проекта">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/></svg></a>
+      {% endif %}
       <button type="button" class="icon" id="rename-btn" title="Переименовать" aria-label="Переименовать">✎</button>
       <form method="post" action="{{ root }}/chat/{{ conv.id }}/delete" data-confirm="Удалить?">
         <input type="hidden" name="csrf" value="{{ sess.csrf }}">

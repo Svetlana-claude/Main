@@ -197,8 +197,8 @@ def project_flow(page, name: str, mobile: bool) -> None:
     sample = SHOTS / "план поездки.md"
     sample.write_text("# План\n\n- **лодка**\n- вёсла\n", encoding="utf-8")
     if mobile:
-        open_list(page, mobile)
-        page.click("text=Файлы проекта")
+        # На телефоне — значок папки в шапке темы
+        page.click("#files-btn")
         expect(page.locator(".files-title")).to_be_visible()
     else:
         expect(page.locator(".files-col")).to_be_visible()
