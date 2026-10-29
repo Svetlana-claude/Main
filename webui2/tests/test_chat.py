@@ -174,3 +174,33 @@ def test_big_quiet_conversation_hint(inside):
     db.run("UPDATE conversations SET context_tokens = 200000, updated_at = '2026-01-01T00:00:00+00:00' WHERE id = ?",
            (conv,))
     assert "дешевле начать новый разговор" in inside.get(f"/chat/{conv}").text
+
+
+def test_files_access_switch(inside):
+    from test_projects import new_project
+    CLAUDE_LOG.write_text("")
+    pid = new_project(inside, "Сад")
+    path = db.one("SELECT path FROM projects WHERE id = ?", (pid,))["path"]
+    conv = new_conv(inside)
+    page = inside.get(f"/chat/{conv}").text
+    assert 'id="files-access"' in page and "по прежней цене" in page
+    inside.post(f"/chat/{conv}/access", data={"on": "1", "csrf": "подделка"})
+    assert db.one("SELECT files_access FROM conversations WHERE id = ?", (conv,))["files_access"] == 0
+    send(inside, conv, "без доступа")
+    wait_idle(inside, conv)
+    inside.post(f"/chat/{conv}/access", data={"on": "1", "csrf": csrf_of(inside)})
+    assert "может читать файлы проектов" in inside.get(f"/chat/{conv}").text
+    send(inside, conv, "с доступом")
+    wait_idle(inside, conv)
+    off, on = [json.loads(line)["argv"] for line in CLAUDE_LOG.read_text().splitlines()]
+    assert off[off.index("--tools") + 1] == "" and "--add-dir" not in off
+    assert on[on.index("--tools") + 1] == "Read,Glob,Grep" and on[on.index("--add-dir") + 1] == path
+    assert "Edit" not in on and "Bash" not in on
+    assert f"Read(/{path}/**/.env)" in on and "Сад — " + path in on[on.index("--system-prompt") + 1]
+    assert on[on.index("--resume") + 1]                 # тот же разговор продолжается
+    # Выключение — снова просто разговор; у тем проекта переключателя нет
+    inside.post(f"/chat/{conv}/access", data={"csrf": csrf_of(inside)})
+    assert db.one("SELECT files_access FROM conversations WHERE id = ?", (conv,))["files_access"] == 0
+    topic = int(inside.post(f"/projects/{pid}/topic/new", data={"csrf": csrf_of(inside)},
+                            follow_redirects=False).headers["location"].rsplit("/", 1)[1])
+    assert 'id="files-access"' not in inside.get(f"/projects/{pid}/t/{topic}").text

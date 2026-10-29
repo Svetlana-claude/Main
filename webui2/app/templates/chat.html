@@ -95,6 +95,14 @@
       </form>
       <span class="weight" title="Сколько беседа занимает в памяти Claude">вес: <span id="weight">{{ weight }}</span></span>
     </header>
+    {% if not project %}
+    <form method="post" action="{{ root }}/chat/{{ conv.id }}/access" class="access-bar" id="access-bar">
+      <input type="hidden" name="csrf" value="{{ sess.csrf }}">
+      <label class="check"><input type="checkbox" name="on" value="1" id="files-access"
+        {% if conv.files_access %}checked{% endif %}> Доступ к проектам</label>
+      <span class="muted small">{% if conv.files_access %}Claude может читать файлы проектов, но не менять их. Дороже — только когда читает.{% else %}Выключен: просто разговор, по прежней цене.{% endif %}</span>
+    </form>
+    {% endif %}
     <form method="post" action="{{ root }}/chat/{{ conv.id }}/rename" class="rename" id="rename-form" hidden>
       <input type="hidden" name="csrf" value="{{ sess.csrf }}">
       <label class="sr-only" for="rename-input">Название</label>
@@ -123,4 +131,4 @@
   {% endif %}
 </div>
 {% endblock %}
-{% block scripts %}<script src="{{ root }}/static/chat.js?v=9"></script>{% endblock %}
+{% block scripts %}<script src="{{ root }}/static/chat.js?v=10"></script>{% endblock %}

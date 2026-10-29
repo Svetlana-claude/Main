@@ -141,6 +141,9 @@ def init() -> None:
         if "project_id" not in columns:
             con.execute("ALTER TABLE conversations ADD COLUMN project_id INTEGER "
                         "REFERENCES projects(id) ON DELETE CASCADE")
+        # «Доступ к проектам» у разговора чата: 1 — Claude читает папки проектов
+        if "files_access" not in columns:
+            con.execute("ALTER TABLE conversations ADD COLUMN files_access INTEGER NOT NULL DEFAULT 0")
         con.execute("CREATE INDEX IF NOT EXISTS conversations_project ON conversations (project_id, updated_at)")
         # Проверка или удаление проекта, прерванные перезапуском сайта
         con.execute("UPDATE projects SET delete_state = '' WHERE delete_state = 'checking'")

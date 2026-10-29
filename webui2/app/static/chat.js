@@ -19,6 +19,8 @@
   // Модель и галочки проекта меняются сразу при выборе
   var model = document.getElementById("model");
   if (model) model.addEventListener("change", function () { model.form.submit(); });
+  var accessBar = document.getElementById("access-bar");
+  if (accessBar) accessBar.addEventListener("change", function () { accessBar.submit(); });
   var access = document.getElementById("access-form");
   if (access) access.addEventListener("change", function () { access.submit(); });
 

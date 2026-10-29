@@ -5,6 +5,7 @@
 import asyncio
 import json
 from datetime import datetime, timedelta, timezone
+from pathlib import Path
 
 from fastapi import APIRouter, Form, Request
 from fastapi.responses import JSONResponse, RedirectResponse, StreamingResponse
@@ -47,8 +48,8 @@ class Run:
             self.tell({"t": "status", "x": status})
 
     async def begin(self, text: str, model: str, session_id: str | None,
-                    project: dict | None = None) -> None:
-        self.proc = await claude.start(model, session_id, project)
+                    project: dict | None = None, read_projects: list[dict] | None = None) -> None:
+        self.proc = await claude.start(model, session_id, project, read_projects)
         self.proc.stdin.write(claude.user_line(text))
         await self.proc.stdin.drain()
         self.sent = 1
@@ -360,7 +361,7 @@ async def conv_send(request: Request, conv_id: int, text: str = Form(""), csrf: 
     run = Run(conv_id)
     RUNS[conv_id] = run
     try:
-        await run.begin(text, conv["model"], conv["session_id"], project)
+        await run.begin(text, conv["model"], conv["session_id"], project, readable(conv))
     except Exception:                                  # noqa: BLE001
         RUNS.pop(conv_id, None)
         save_message(conv_id, "error", "Не получилось запустить Claude")
@@ -401,6 +402,24 @@ async def conv_stream(request: Request, conv_id: int):
 
 def _sse(event: dict) -> str:
     return f"data: {json.dumps(event, ensure_ascii=False)}\n\n"
+
+
+def readable(conv: dict) -> list[dict] | None:
+    """Проекты, которые разговор чата может читать: только при включённом
+    «Доступе к проектам» и только существующие папки (не удаляемые)."""
+    if conv["project_id"] or not conv.get("files_access"):
+        return None
+    return [{"name": p["name"], "path": p["path"]}
+            for p in db.rows("SELECT name, path FROM projects WHERE delete_state = '' ORDER BY lower(name)")
+            if Path(p["path"]).is_dir()]
+
+
+@router.post("/chat/{conv_id}/access", name="conv_access")
+def conv_access(request: Request, conv_id: int, on: str = Form(""), csrf: str = Form("")):
+    conv = conversation(conv_id)
+    if conv and not conv["project_id"] and _allowed(request, csrf):
+        db.run("UPDATE conversations SET files_access = ? WHERE id = ?", (int(bool(on)), conv_id))
+    return _back(request, conv_id)
 
 
 @router.post("/chat/{conv_id}/model", name="conv_model")

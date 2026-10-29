@@ -1,7 +1,8 @@
 """Запуск Claude и разбор его потока.
 
-В чате Claude запускается без инструментов, без CLAUDE.md, без памяти и
-настроек, в пустой папке. В теме проекта — полноценно, в папке проекта, с её
+В чате Claude запускается без CLAUDE.md, без памяти и настроек, в пустой
+папке и без инструментов; с переключателем «Доступ к проектам» — с чтением
+папок проектов (Read, Glob, Grep), без правки и команд. В теме проекта — полноценно, в папке проекта, с её
 CLAUDE.md и памятью; что можно, решают галочки проекта. Сообщения подаются
 через stdin потоком JSON: так дописку можно отдать в уже идущий запуск, она
 станет следующим ходом того же ответа, а не новым запуском.
@@ -89,15 +90,54 @@ def project_argv(model: str, session_id: str | None, project: dict) -> list[str]
     return cmd
 
 
-def argv(model: str, session_id: str | None) -> list[str]:
+# Чат с доступом к проектам: только чтение, только папки проектов
+READ_TOOLS = ["Read", "Glob", "Grep"]
+# Файлы с ключами и паролями закрыты и для чтения — в каждой папке проекта
+# (правило с абсолютным путём пишется с двумя косыми; без пути оно считалось
+# бы от пустой папки чата и не действовало)
+SECRET_FILES = [".env", ".env.*", "*.key", "*.pem", "id_rsa*", "id_ed25519*"]
+
+ACCESS_PROMPT = """
+
+Доступ к проектам. В этом разговоре ты можешь читать файлы проектов Светланы —
+только читать: смотреть список файлов, открывать их, искать по тексту. Править,
+удалять и запускать ничего нельзя; для работы есть темы во вкладке «Проекты».
+Проекты (название — папка):
+{projects}
+Что Светлана загрузила в «Файлы проекта», лежит в папке downloads внутри проекта.
+Читай только нужное: сначала список, потом конкретный файл; длинный — по частям.
+Картинки открывай, только когда она просит, — они дороже текста."""
+
+
+def access_rules(paths: list[str]) -> list[str]:
+    return [f"{tool}(/{path.rstrip('/')}/**/{name})"
+            for path in paths for name in SECRET_FILES for tool in ("Read", "Grep")]
+
+
+def argv(model: str, session_id: str | None, projects: list[dict] | None = None) -> list[str]:
+    """Чат. projects — None: просто разговор, без инструментов; список —
+    разговор с доступом к этим папкам только на чтение."""
+    prompt = SYSTEM_PROMPT
+    if projects is None:
+        tools = [""]
+    else:
+        tools = [",".join(READ_TOOLS)]
+        lines = "\n".join(f"- {p['name']} — {p['path']}" for p in projects) or "- (проектов пока нет)"
+        prompt = SYSTEM_PROMPT.replace(
+            "Это просто разговор: у тебя нет\nинструментов, ты ничего не делаешь на сервере.",
+            "Это разговор: на сервере ты ничего\nне делаешь.") + ACCESS_PROMPT.format(projects=lines)
     cmd = _base(model) + [
-        "--tools", "",
+        "--tools", *tools,
         "--setting-sources", "",
         "--disable-slash-commands",
         "--strict-mcp-config",
-        "--system-prompt", SYSTEM_PROMPT,
+        "--system-prompt", prompt,
         "--permission-prompts", "none",
     ]
+    if projects:
+        cmd += ["--add-dir", *[p["path"] for p in projects],
+                "--allowed-tools", *READ_TOOLS,
+                "--disallowed-tools", *access_rules([p["path"] for p in projects]), *secret_deny()]
     if session_id:
         cmd += ["--resume", session_id]
     return cmd
@@ -125,13 +165,13 @@ def user_line(text: str) -> bytes:
     return (json.dumps(msg, ensure_ascii=False) + "\n").encode()
 
 
-async def start(model: str, session_id: str | None,
-                project: dict | None = None) -> asyncio.subprocess.Process:
+async def start(model: str, session_id: str | None, project: dict | None = None,
+                read_projects: list[dict] | None = None) -> asyncio.subprocess.Process:
     if project:
         cmd, cwd = project_argv(model, session_id, project), project["path"]
     else:
         config.CHAT_DIR.mkdir(parents=True, exist_ok=True, mode=0o700)
-        cmd, cwd = argv(model, session_id), str(config.CHAT_DIR)
+        cmd, cwd = argv(model, session_id, read_projects), str(config.CHAT_DIR)
     return await asyncio.create_subprocess_exec(
         *cmd, stdin=asyncio.subprocess.PIPE, stdout=asyncio.subprocess.PIPE,
         stderr=asyncio.subprocess.PIPE, cwd=cwd, env=child_env(),
