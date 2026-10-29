@@ -306,9 +306,10 @@ const F = {
   // сваливание: глубокое торможение дольше glubDo с; резкий разворот ниже rezkoNizhe м дольше rezkoDo с
   glubDo:2.5, rezkoNizhe:40, rezkoDolya:0.6, rezkoDo:0.4, svalDlit:2.2, svalVert:13, zhestko:7, myagko:2.5,
   raskrytieMin:900, zapasnoy:350, raskrytieDlit:3,
-  // два купола (фитиль не отцеплен, прибор раскрыл запасной; «биплан»): медленнее вперёд, быстрее вниз,
-  // разворот вдвое слабее, подушка — вполсилы
-  dvaGor:0.65, dvaVert:1.5, dvaPovorot:0.5, dvaPodushka:0.5,
+  // два купола (фитиль не отцеплен, прибор раскрыл запасной; «биплан»), по AFF, с. 58: медленнее вперёд,
+  // быстрее вниз; управлять только передним, плавно, клеванты не ниже плеч (ход — до dvaKlevanta);
+  // подушку не делать, приземление с перекатом
+  dvaGor:0.65, dvaVert:1.5, dvaKlevanta:0.5,
   // фитиль: купол вышел, но не наполнился — 35 м/с вниз; бывает при раскрытии не лицом к земле
   fitilVert:35, fitilShans:0.5, fitilOt:1.4,   // фитилить купол начинает через fitilOt с после начала раскрытия
   // игровое время: свободное падение и раскрытие — настоящие; спуск под куполом — с перемоткой
@@ -957,12 +958,17 @@ function shag(dtReal) {
       s.vz = F.padenie + (F.kupolVert - F.padenie) * k; s.h -= s.vz * dt; s.kKupol = k;
       if (s.t >= F.raskrytieDlit) {
         s.faza = 'kupol'; s.om = 0; knopkaPodushka(true);
-        if (s.dvaKupola) pokazat('ДВА КУПОЛА! Основной не отцеплен — управляй плавно, подушку вполсилы, приземление с группировкой', 4, true);
+        if (s.dvaKupola) pokazat('ДВА КУПОЛА! Основной не отцеплен — плавно, клеванты не ниже плеч, подушку не делать, приземление с перекатом', 4, true);
       }
     }
   } else if (s.faza === 'kupol') {
     // клеванты: куда тянет игрок — подушка до упора, обе кнопки — средний режим, одна — разворот
-    const cel = nazh.podushka ? [1, 1] : oba ? [0.5, 0.5] : [L ? 1 : 0, P ? 1 : 0];
+    let cel = nazh.podushka ? [1, 1] : oba ? [0.5, 0.5] : [L ? 1 : 0, P ? 1 : 0];
+    if (s.dvaKupola) {
+      // два купола: подушку не делают, клеванты — не ниже плеч
+      if (nazh.podushka && !s.dvaPodushkaBylo) { s.dvaPodushkaBylo = true; pokazat('Два купола — подушку не делаем! Ноги вместе, готовься к перекату', 2.4, true); }
+      cel = nazh.podushka ? [0, 0] : cel.map(c => Math.min(c, F.dvaKlevanta));
+    }
     // клеванты ходят в игровом времени — круг за 8 с и с перемоткой остаётся кругом за 8 с
     const hod = (d, c) => d + Math.max(-F.klevantaVverh * dt, Math.min(F.klevantaVniz * dt, c - d));
     s.dL = hod(s.dL, cel[0]); s.dP = hod(s.dP, cel[1]);
@@ -979,7 +985,7 @@ function shag(dtReal) {
       vCel = b <= 0.5 ? F.kupolGor - (F.kupolGor - F.tormozGor) * b * 2 : F.tormozGor - (F.tormozGor - F.glubGor) * (b - 0.5) * 2;
       vzCel = b <= 0.5 ? F.kupolVert - (F.kupolVert - F.tormozVert) * b * 2 : F.tormozVert + (F.glubVert - F.tormozVert) * (b - 0.5) * 2;
       omCel = F.povorot * tr * (1 - 0.4 * b);
-      if (s.dvaKupola) { vCel *= F.dvaGor; vzCel += F.dvaVert; omCel *= F.dvaPovorot; }
+      if (s.dvaKupola) { vCel *= F.dvaGor; vzCel += F.dvaVert; }
       const q = Math.abs(s.om) / F.povorot;                          // насколько резко разворачивается
       vzCel += F.povorotVert * q * (1 - b);
       if (q > 0.3 && s.h < 15) s.razvorotNizko = true;
@@ -1000,7 +1006,7 @@ function shag(dtReal) {
     s.uskor += (dv / Math.max(dt, 1e-3) - s.uskor) * Math.min(1, dt / 0.25);   // для качания парашютиста под куполом
     // подушка: гашение скорости вперёд переходит в подъёмную силу и снижает вертикальную —
     // работает только с полной скорости и только пока скорость гасится (≈ 4–6 м над землёй)
-    s.vzK += (vzCel - s.vzK) * Math.min(1, dt / (s.svalT > 0 ? 0.5 : F.tauVert)) - (s.svalT > 0 ? 0 : F.podemnaya * (s.dvaKupola ? F.dvaPodushka : 1) * Math.max(0, -dv));
+    s.vzK += (vzCel - s.vzK) * Math.min(1, dt / (s.svalT > 0 ? 0.5 : F.tauVert)) - (s.svalT > 0 ? 0 : (s.dvaKupola ? 0 : F.podemnaya) * Math.max(0, -dv));
     s.vzK = Math.max(0.2, s.vzK);
     s.vzTek = s.vzK;                                                // ветер на снижение не влияет
     s.turb = turbulentnost();
@@ -1056,6 +1062,7 @@ const ISHODY = {
   koleni:    { imya:'Упал на колени',             ochki:'',    sovet:'' },
   popa:      { imya:'Упал назад, на спину',       ochki:'',    sovet:'подушка рано — купол встал и просел' },
   kuvyrok:   { imya:'Перекат — большая скорость', ochki:'×0,5', sovet:'' },
+  perekat:   { imya:'Перекат',                    ochki:'',    sovet:'два купола — без подушки, как учит AFF' },
   zhestko:   { imya:'Жёсткий удар',               ochki:'',    sovet:'' },
 };
 // vz — вниз, vf — вперёд над землёй (минус — ветер тащит назад), vVozd — скорость купола по воздуху
@@ -1070,6 +1077,7 @@ function ishodPosadki(vz, vf, vVozd, nogaVroz) {
 function sovetPosadki(ishod) {
   const h = s.podushkaH, r = s.razH, [raz, dva] = razDva(s.W), m = v => String(v).replace('.', ',') + ' м';
   if (ishod === 'zhestko') return '';
+  if (ishod === 'perekat') return ISHODY.perekat.sovet;
   if (h == null) return s.bKas > 0.3 ? 'в среднем режиме, без подушки' : 'без подушки';
   if (ishod === 'popa' && s.posadka.vf < -4) return 'встречный ветер утащил назад — подушку мельче и позже';
   if (ishod === 'nogi') return r != null && r > h + 0.5 ? 'подушка на раз-два: ' + m(r) + ' и ' + m(h) : ISHODY.nogi.sovet;
@@ -1084,7 +1092,8 @@ function prizemlenie() {
   kR.classList.remove('vidno'); knopkaPodushka(false); nazh.podushka = false;
   const vKas = s.vzTek, zhestko = s.svalT > 0 || vKas > F.zhestko;
   const [wx0, wy0] = veterNa(0), [kx0, ky0] = vec(s.kurs), vf = s.v + wx0 * kx0 + wy0 * ky0;
-  const ishod = zhestko ? 'zhestko' : ishodPosadki(vKas, vf, s.v, s.razvorotNizko);
+  // два купола: подушку не делают, приземление — перекатом; это правильная посадка, а не ошибка
+  const ishod = zhestko ? 'zhestko' : s.dvaKupola ? 'perekat' : ishodPosadki(vKas, vf, s.v, s.razvorotNizko);
   const g = grunt(s.x, s.y), d = Math.hypot(s.x, s.y);
   // сильный ветер у земли (с порывом) тянет купол: его надо погасить, иначе протащит
   const wk = Math.hypot(wx0, wy0), tyanet = !zhestko && g === 0 && wk >= F.protaschit;
@@ -1428,7 +1437,7 @@ function pozaZemlya(P, t) {
       return [{ taz:[x - 0.25 * kk, lerp(0.96, 0.13, kk)], tors:lerp(0, -0.5, kk) - ot * 0.35 + ot * Math.max(0, 0.6 - t) * 0.5, kist:[0.35, -0.15], rot:0,
         nogi:[[lerp(0.15, 1.35, kk), lerp(-0.3, 1.55, kk)], [lerp(0.1, 1.25, kk), lerp(-0.35, 1.45, kk)]] }, x];
     }
-    case 'kuvyrok': {
+    case 'kuvyrok': case 'perekat': {
       // перекат через плечо: тело катится вперёд и гасит скорость
       const tr = Math.min(t, 1.1), x = vp * 0.55 * (1 - Math.exp(-tr * 1.8)), ob = plavno(tr / 1.0);
       const rot = ob * Math.PI * 2.5, gr = Math.sin(Math.min(1, tr / 0.9) * Math.PI);
@@ -1601,7 +1610,7 @@ function risovatBok() {
     ctx.fillStyle = 'rgba(200,180,130,.35)';
     for (let i = 0; i < 5; i++) { ctx.beginPath(); ctx.arc(J.taz[0] - P.napr * (0.3 + i * 0.45), 0.12 + (i % 2) * 0.15, 0.22 + i * 0.07, 0, 7); ctx.fill(); }
   }
-  if (P && (P.ishod === 'kuvyrok' || P.ishod === 'zhestko' || P.ishod === 'popa') && P.t < 1.2) {
+  if (P && (P.ishod === 'kuvyrok' || P.ishod === 'perekat' || P.ishod === 'zhestko' || P.ishod === 'popa') && P.t < 1.2) {
     ctx.fillStyle = `rgba(200,180,130,${0.5 * (1 - P.t / 1.2)})`;
     for (let i = 0; i < 6; i++) { const r = 0.25 + P.t * 0.9; ctx.beginPath(); ctx.arc(J.taz[0] + (i - 2.5) * 0.35, 0.1 + (i % 2) * 0.2 * P.t, r * (0.6 + (i % 3) * 0.2), 0, 7); ctx.fill(); }
   }

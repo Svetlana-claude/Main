@@ -14,6 +14,7 @@
 2а) Скорость игры (?skorost=): нормальная — без перемотки, ×1 — 6 / 2,5 / 1, ×2 — 12 / 5 / 1.
 4) Фитиль без отцепки: прибор раскрывает запасной на 350 м — два купола: строка «ДВА КУПОЛА!»,
    ≈ 6,5 м/с вперёд и 6,5 вниз, на экране два купола (сверху и сбоку), в разборе «два купола».
+   По AFF, с. 58: клеванты не ниже плеч (ход до 0,5), подушка не делается, посадка — «Перекат» без штрафа.
 """
 import sys
 from playwright.sync_api import sync_playwright
@@ -142,12 +143,20 @@ with sync_playwright() as p:
     v, vz = s.evaluate("[s.v, s.vzTek]")
     s.screenshot(path=f'{kuda}/dva-kupola.png')
     proverit(abs(v - 6.5) < 0.3 and abs(vz - 6.5) < 0.2, f'на двух куполах: {v:.1f} м/с вперёд, {vz:.1f} вниз')
-    s.evaluate("s.h = 35; s.trevogaBylo.k3 = s.trevogaBylo.k4 = 1")
+    s.evaluate("s.h = 35; s.x = 0; s.y = 0; s.trevogaBylo.k3 = s.trevogaBylo.k4 = 1")   # садимся в круг — в разборе будет посадка
     s.wait_for_function("bokVid()", timeout=10000); s.wait_for_timeout(500)
     s.screenshot(path=f'{kuda}/dva-kupola-sboku.png')
+    # по AFF, с. 58: клеванты не ниже плеч, подушку не делать
+    s.keyboard.down('ArrowRight'); s.wait_for_timeout(700)
+    dP = s.evaluate("s.dP"); s.keyboard.up('ArrowRight')
+    proverit(dP <= 0.51, f'на двух куполах клеванта не ниже плеч: ход {dP:.2f}')
+    s.keyboard.down('ArrowUp'); s.wait_for_timeout(700)
+    dL, dP, tekst = s.evaluate("[s.dL, s.dP, document.getElementById('soobshenie').innerText]")
+    proverit(dL < 0.05 and dP < 0.05 and 'подушку не делаем' in tekst, f'подушка на двух куполах не делается: ход {dL:.2f}/{dP:.2f}, «{tekst[:45]}»')
+    s.keyboard.up('ArrowUp')
     s.wait_for_selector('#e-itog.vidno', timeout=30000)
     razbor = s.inner_text('#itog-razbor').replace('\n', ' ')
-    proverit('два купола' in razbor, f'разбор: {razbor[:110]}')
+    proverit('два купола' in razbor and 'Перекат — два купола' in razbor and 'большая скорость' not in razbor, f'разбор: {razbor[:200]}')
     b.close()
 print('ошибки:', oshibki or 'нет')
 sys.exit(1 if oshibki or provaly else 0)
