@@ -271,10 +271,10 @@ textarea {
   .feed { padding: .75rem .6rem; }
   .composer { padding: .5rem .6rem; }
   .convs { border-right: 0; }
-  /* Кнопки под палец: крупнее значки у темы, проекта и файлов */
-  .talk-head .icon, .proj-head .icon, .file-list .icon { width: 44px; height: 44px; }
-  .talk-head .icon svg, .proj-head .icon svg, .file-list .icon svg { width: 26px; height: 26px; }
-  .talk-head #rename-btn { font-size: 1.6rem; }
+  /* Кнопки под палец: все значки одного размера — 44 точки, рисунок 26 */
+  .icon { width: 44px; height: 44px; }
+  .icon svg { width: 26px; height: 26px; }
+  #rename-btn { font-size: 1.6rem; }
   .talk-head { gap: .15rem; }
 }
 
