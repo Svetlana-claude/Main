@@ -99,6 +99,15 @@ CREATE TABLE IF NOT EXISTS setup (
     key   TEXT PRIMARY KEY,
     value TEXT NOT NULL
 );
+-- Что перенесено со старого сайта (tools/import_old.py): старый номер → новый
+CREATE TABLE IF NOT EXISTS imported (
+    kind     TEXT NOT NULL,      -- project | conv
+    old_id   INTEGER NOT NULL,
+    new_id   INTEGER NOT NULL,
+    old_last INTEGER NOT NULL DEFAULT 0,   -- последнее перенесённое сообщение старого сайта
+    new_last INTEGER NOT NULL DEFAULT 0,   -- и его номер на новом
+    PRIMARY KEY (kind, old_id)
+);
 """
 
 
