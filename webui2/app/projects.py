@@ -275,6 +275,17 @@ def project_access(request: Request, pid: int, csrf: str = Form(""),
     return to_project(pid, tail)
 
 
+@router.post("/projects/{pid}/rename", name="project_rename")
+def project_rename(request: Request, pid: int, name: str = Form(""), csrf: str = Form(""),
+                   back: str = Form("")):
+    """Меняется только название: папка и адрес остаются прежними."""
+    name = " ".join(name.split())[:80]
+    if project(pid) and _allowed(request, csrf) and name:
+        db.run("UPDATE projects SET name = ? WHERE id = ?", (name, pid))
+    tail = f"/t/{int(back)}" if back.isdigit() else ""
+    return to_project(pid, tail)
+
+
 @router.post("/projects/{pid}/delete", name="project_delete")
 async def project_delete(request: Request, pid: int, csrf: str = Form("")):
     proj = project(pid)

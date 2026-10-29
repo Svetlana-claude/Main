@@ -8,6 +8,8 @@
     <div class="proj-head">
       {% with kind="p", ident=project.id %}{% include "_light.html" %}{% endwith %}
       <h2 id="project-name">{{ project.name }}</h2>
+      <button type="button" class="icon" id="proj-rename-btn" title="Переименовать проект" aria-label="Переименовать проект"
+              aria-controls="proj-rename-form" aria-expanded="false">✎</button>
       <form method="post" action="{{ root }}/projects/{{ project.id }}/delete"
             data-confirm="Удалить проект? Сначала Claude посмотрит, что проект завёл на сервере, и покажет список.">
         <input type="hidden" name="csrf" value="{{ sess.csrf }}">
@@ -16,6 +18,14 @@
         </button>
       </form>
     </div>
+    <form method="post" action="{{ root }}/projects/{{ project.id }}/rename" class="rename proj-rename" id="proj-rename-form" hidden>
+      <input type="hidden" name="csrf" value="{{ sess.csrf }}">
+      <input type="hidden" name="back" value="{{ conv.id if conv else '' }}">
+      <label class="sr-only" for="proj-rename-input">Название проекта</label>
+      <input name="name" id="proj-rename-input" value="{{ project.name }}" maxlength="80" required>
+      <button type="submit" class="primary">Сохранить</button>
+      <button type="button" class="link" id="proj-rename-cancel">Отмена</button>
+    </form>
     <p class="muted folder" title="Папка проекта на сервере">{{ folder }}</p>
     <a href="{{ root }}/projects/{{ project.id }}/files" class="files-link">Файлы проекта</a>
     <form method="post" action="{{ root }}/projects/{{ project.id }}/access" class="access" id="access-form">
@@ -113,4 +123,4 @@
   {% endif %}
 </div>
 {% endblock %}
-{% block scripts %}<script src="{{ root }}/static/chat.js?v=8"></script>{% endblock %}
+{% block scripts %}<script src="{{ root }}/static/chat.js?v=9"></script>{% endblock %}

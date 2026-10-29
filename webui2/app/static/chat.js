@@ -36,6 +36,22 @@
     });
   }
 
+  // Переименование проекта: то же, у названия проекта
+  var projBtn = document.getElementById("proj-rename-btn");
+  var projForm = document.getElementById("proj-rename-form");
+  if (projBtn && projForm) {
+    projBtn.addEventListener("click", function () {
+      projForm.hidden = !projForm.hidden;
+      projBtn.setAttribute("aria-expanded", projForm.hidden ? "false" : "true");
+      if (!projForm.hidden) document.getElementById("proj-rename-input").select();
+    });
+    document.getElementById("proj-rename-cancel").addEventListener("click", function () {
+      projForm.hidden = true;
+      projBtn.setAttribute("aria-expanded", "false");
+      projBtn.focus();
+    });
+  }
+
   // Файлы проекта: загрузка с ходом в процентах, список обновляется сам
   var filesBox = document.getElementById("files");
   var filesBase = filesBox ? site.root + "/projects/" + filesBox.dataset.project + "/files" : "";

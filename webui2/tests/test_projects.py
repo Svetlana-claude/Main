@@ -246,3 +246,20 @@ def test_old_base_gets_project_column(tmp_path, monkeypatch):
     db.init()
     db.init()
     assert db.one("SELECT project_id FROM conversations") == {"project_id": None}
+
+
+def test_project_rename_keeps_folder(inside):
+    pid = new_project(inside, "Сад")
+    before = db.one("SELECT slug, path FROM projects WHERE id = ?", (pid,))
+    topic = new_topic(inside, pid)
+    inside.post(f"/projects/{pid}/rename", data={"name": "Чужое", "csrf": "подделка"})
+    assert db.one("SELECT name FROM projects WHERE id = ?", (pid,))["name"] == "Сад"
+    inside.post(f"/projects/{pid}/rename", data={"name": "   ", "csrf": csrf_of(inside)})
+    assert db.one("SELECT name FROM projects WHERE id = ?", (pid,))["name"] == "Сад"
+    r = inside.post(f"/projects/{pid}/rename", data={"name": "  Огород   у дома ", "csrf": csrf_of(inside),
+                                                     "back": str(topic)}, follow_redirects=False)
+    assert r.headers["location"].endswith(f"/projects/{pid}/t/{topic}")
+    after = db.one("SELECT name, slug, path FROM projects WHERE id = ?", (pid,))
+    assert after["name"] == "Огород у дома" and after["slug"] == before["slug"] and after["path"] == before["path"]
+    assert "Огород у дома" in inside.get("/projects").text
+    assert 'id="proj-rename-btn"' in inside.get(f"/projects/{pid}/t/{topic}").text
