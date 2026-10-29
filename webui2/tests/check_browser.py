@@ -62,9 +62,14 @@ def start_site() -> tuple[subprocess.Popen, str]:
     env_file.write_text(f"SECRET_KEY=browser-test\nDB_PATH={tmp / 'site.db'}\nLOGIN=Svetlana\n"
                         f"CLAUDE_BIN={SITE / 'tests/fake_claude.py'}\nCHAT_DIR={tmp / 'room'}\n"
                         f"PROJECTS_DIR={tmp / 'projects'}\n"
-                        f"POWER_CMD={SITE / '.venv/bin/python'} {SITE / 'tests/fake_power.py'}\n")
+                        f"POWER_CMD={SITE / '.venv/bin/python'} {SITE / 'tests/fake_power.py'}\n"
+                        f"VPN_CMD={SITE / '.venv/bin/python'} {SITE / 'tests/fake_vpn.py'}\n"
+                        f"SEC_STATE={tmp / 'sec'}\n"
+                        f"SEC_AUDIT={SITE / '.venv/bin/python'} {SITE / 'tests/fake_audit.py'}\n"
+                        f"SEC_APPROVE={SITE / '.venv/bin/python'} {SITE / 'tests/fake_audit.py'} approve\n")
     env = {**os.environ, "WEBUI2_ENV": str(env_file), "ROOT_PATH": "", "WEBUI2_INSECURE_COOKIE": "1",
-           "FAKE_POWER_LOG": str(tmp / "power.log")}
+           "FAKE_POWER_LOG": str(tmp / "power.log"), "FAKE_VPN_DB": str(tmp / "vpn.json"),
+           "FAKE_SEC_STATE": str(tmp / "sec")}
     # Замеры нагрузки за сутки — чтобы были графики (с перерывом в середине)
     seed = ("import math; from datetime import datetime, timedelta, timezone; from app import db; db.init(); "
             f"db.run(\"INSERT INTO setup (key, value) VALUES ('totp_secret', '{SECRET}')\"); "
@@ -233,6 +238,58 @@ def settings_flow(page, name: str, mobile: bool) -> None:
     expect(page.locator("[data-power=site]")).to_be_enabled()
 
 
+def vpn_flow(page, name: str) -> None:
+    # VPN: новое устройство — QR-код и файл, затем отзыв
+    page.click("#vpn-link")
+    expect(page.locator(".panel h1")).to_have_text("VPN")
+    page.fill("#vpn-name", f"Телефон {name}")
+    page.click("#vpn-new button")
+    device = f"telefon-{name}"
+    expect(page.locator(".panel h1")).to_have_text(device)
+    expect(page.locator("#vpn-qr")).to_be_visible()
+    page.wait_for_function("document.getElementById('vpn-qr').naturalWidth > 0")
+    no_side_scroll(page, "устройство VPN")
+    page.screenshot(path=SHOTS / f"{name}-7-vpn.png", full_page=True)
+    with page.expect_download() as got:
+        page.click("#vpn-file")
+    assert got.value.suggested_filename == f"{device}.conf"
+    assert "fake-secret" in Path(got.value.path()).read_text()
+    page.click("text=← VPN")
+    expect(page.locator(".vpn-list")).to_contain_text(device)
+    page.click(f"text={device}")
+    page.once("dialog", lambda d: d.accept())
+    page.click("#vpn-remove button")
+    expect(page.locator(".ok")).to_contain_text(f"«{device}» отозвано")
+    expect(page.locator(".vpn-list")).to_have_count(0)
+
+
+def security_flow(page, name: str) -> None:
+    # Безопасность: проверка по кнопке, сводка, отчёт, «так и должно быть»
+    (SITE_RUN["tmp"] / "sec" / "approved").unlink(missing_ok=True)
+    page.click("[aria-label=Безопасность]")
+    expect(page.locator(".panel h1")).to_have_text("Безопасность")
+    page.once("dialog", lambda d: d.accept())
+    page.click("[data-sec=check]")
+    expect(page.locator(".sec-tiles")).to_be_visible(timeout=30000)
+    expect(page.locator("#sec-count")).to_have_text("2")
+    expect(page.locator(".sec-change")).to_have_count(2)
+    page.click(".sec-change summary >> nth=0")
+    expect(page.locator(".sec-change").first).to_contain_text("tcp 0.0.0.0:4444")
+    no_side_scroll(page, "безопасность")
+    page.screenshot(path=SHOTS / f"{name}-8-bezopasnost.png", full_page=True)
+    page.click(".sec-reports a >> nth=0")
+    expect(page.locator(".sec-report h1")).to_contain_text("Отчёт безопасности")
+    expect(page.locator(".sec-report")).to_contain_text("по Москве")
+    no_side_scroll(page, "отчёт")
+    page.click("text=← Безопасность")
+    page.once("dialog", lambda d: d.accept())
+    page.click("[data-sec=approve]")
+    expect(page.locator(".ok")).to_have_text("Ничего не поменялось.", timeout=30000)
+    expect(page.locator("#sec-count")).to_be_hidden()
+    page.click("[aria-label=Настройки]")
+    expect(page.locator(".panel h1")).to_have_text("Настройки")
+
+
 def project_flow(page, name: str, mobile: bool) -> None:
     page.click("nav.tabs >> text=Проекты")
     expect(page.locator(".panel h1")).to_have_text("Проекты")
@@ -369,6 +426,8 @@ def run(pw, base: str, name: str, viewport: dict, mobile: bool, first: bool) -> 
     page.click("[aria-label=Настройки]")
     expect(page.locator(".panel h1")).to_have_text("Настройки")
     settings_flow(page, name, mobile)
+    vpn_flow(page, name)
+    security_flow(page, name)
 
     # Замок: закрывается здесь — закрывается и в соседней вкладке
     other = ctx.new_page()

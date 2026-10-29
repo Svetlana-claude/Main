@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="robots" content="noindex, nofollow">
   <title>{% block title %}{{ title or "Claude" }}{% endblock %} — Claude</title>
-  <link rel="stylesheet" href="{{ root }}/static/site.css?v=11">
+  <link rel="stylesheet" href="{{ root }}/static/site.css?v=13">
   {% block head %}{% endblock %}
 </head>
 <body class="{% block body_class %}{% endblock %}">
@@ -22,6 +22,12 @@
        {% if active == "permissions" %}aria-current="page"{% endif %}>
       <svg viewBox="0 0 24 24" width="22" height="22" aria-hidden="true" focusable="false"><path d="M12 3l7 3v5c0 4.5-3 8.5-7 10-4-1.5-7-5.5-7-10V6z"/></svg>
       <span class="badge" id="ask-count" title="Ждут разрешения" {% if not asks %}hidden{% endif %}>{{ asks }}</span>
+    </a>
+    {% set sec = sec_alert() %}
+    <a class="icon shield" href="{{ root }}/security" title="Безопасность" aria-label="Безопасность"
+       {% if active == "security" %}aria-current="page"{% endif %}>
+      <svg viewBox="0 0 24 24" width="22" height="22" aria-hidden="true" focusable="false"><path d="M2 12s3.5-6.5 10-6.5S22 12 22 12s-3.5 6.5-10 6.5S2 12 2 12z"/><circle cx="12" cy="12" r="3"/></svg>
+      <span class="badge" id="sec-count" title="{{ 'Ночной проверки давно не было' if sec == '!' else 'Изменений с прошлой нормы' }}" {% if not sec %}hidden{% endif %}>{{ sec }}</span>
     </a>
     <a class="icon" href="{{ root }}/settings" title="Настройки" aria-label="Настройки"
        {% if active == "settings" %}aria-current="page"{% endif %}>

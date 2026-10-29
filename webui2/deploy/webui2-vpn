@@ -1,0 +1,66 @@
+#!/bin/bash
+# Устройства VPN для сайта v2 — то, что сайт может делать с WireGuard от root.
+# Ставится в /usr/local/sbin/webui2-vpn (root, 755), разрешение —
+# deploy/sudoers-webui2-vpn. Работает с тем же сервером, что завёл старый сайт:
+# его root-овые скрипты в /usr/local/lib/webui-vpn (сами они не правятся).
+#
+#     webui2-vpn peers          устройства таблицей: имя, адрес, ключ, принято,
+#                               передано, рукопожатие, откуда
+#     webui2-vpn add ИМЯ        завести устройство, файл для него — в stdout
+#     webui2-vpn config ИМЯ     файл для подключения заведённого устройства
+#     webui2-vpn remove ИМЯ     отозвать устройство
+#
+# В файле устройства — его закрытый ключ, поэтому он только печатается и
+# никуда не копируется: сайт отдаёт его после входа и без кэша.
+set -euo pipefail
+
+LIB=/usr/local/lib/webui-vpn
+CLIENTS=/etc/wireguard/clients
+
+die() { echo "$*" >&2; exit 2; }
+
+# Запускать от root можно только файл root, закрытый на запись прочим
+run_lib() {
+    local script="$LIB/$1" st perm; shift
+    [ -f "$script" ] || die "не установлен $script"
+    st="$(stat -c '%U %a' "$script")"
+    [[ "$st" == "root "* ]] || die "$script принадлежит не root"
+    perm="${st##* }"
+    if (( 8#$perm & 0022 )); then die "$script открыт на запись не только root"; fi
+    /bin/bash "$script" "$@"
+}
+
+# Имя — латиница, цифры, дефис, подчёркивание; первым знаком не дефис (не флаг)
+check_name() {
+    [[ "$1" =~ ^[A-Za-z0-9][A-Za-z0-9_-]{0,31}$ ]] \
+        || die "имя устройства — латиница, цифры, дефис и подчёркивание, до 32 знаков"
+}
+
+cmd="${1:-}"
+[ $# -gt 0 ] && shift
+case "$cmd" in
+    peers)
+        [ $# -eq 0 ] || die "peers доводов не принимает"
+        run_lib list-peers.sh
+        ;;
+    add)
+        [ $# -eq 1 ] || die "нужно одно имя"
+        check_name "$1"
+        run_lib add-client.sh "$1" > /dev/null
+        cat "$CLIENTS/$1.conf"
+        ;;
+    config)
+        [ $# -eq 1 ] || die "нужно одно имя"
+        check_name "$1"
+        [ -f "$CLIENTS/$1.conf" ] || die "файла для «$1» нет"
+        cat "$CLIENTS/$1.conf"
+        ;;
+    remove)
+        [ $# -eq 1 ] || die "нужно одно имя"
+        check_name "$1"
+        run_lib remove-client.sh "$1" > /dev/null
+        ;;
+    *)
+        die "неизвестная команда"
+        ;;
+esac

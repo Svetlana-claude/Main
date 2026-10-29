@@ -14,9 +14,14 @@ CLAUDE_LOG = TMP / "claude.log"
 (TMP / "test.env").write_text(f"SECRET_KEY=test-key\nDB_PATH={TMP / 'site.db'}\nLOGIN=Svetlana\n"
                               f"CLAUDE_BIN={FAKE}\nCHAT_DIR={TMP / 'room'}\n"
                               f"PROJECTS_DIR={TMP / 'projects'}\n"
-                              f"POWER_CMD={sys.executable} {Path(__file__).resolve().parent / 'fake_power.py'}\n")
+                              f"POWER_CMD={sys.executable} {Path(__file__).resolve().parent / 'fake_power.py'}\n"
+                              f"VPN_CMD={sys.executable} {Path(__file__).resolve().parent / 'fake_vpn.py'}\n"
+                              f"SEC_STATE={TMP / 'sec'}\n"
+                              f"SEC_AUDIT={sys.executable} {Path(__file__).resolve().parent / 'fake_audit.py'}\n"
+                              f"SEC_APPROVE={sys.executable} {Path(__file__).resolve().parent / 'fake_audit.py'} approve\n")
 os.environ.update(WEBUI2_ENV=str(TMP / "test.env"), ROOT_PATH="", WEBUI2_INSECURE_COOKIE="1",
-                  FAKE_CLAUDE_LOG=str(CLAUDE_LOG), FAKE_POWER_LOG=str(TMP / "power.log"))
+                  FAKE_CLAUDE_LOG=str(CLAUDE_LOG), FAKE_POWER_LOG=str(TMP / "power.log"),
+                  FAKE_VPN_DB=str(TMP / "vpn.json"), FAKE_SEC_STATE=str(TMP / "sec"))
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
 from fastapi.testclient import TestClient  # noqa: E402

@@ -1,0 +1,34 @@
+{% extends "base.html" %}
+{% block content %}
+<section class="panel vpn">
+  <p><a class="back-link" href="{{ root }}/settings">← Настройки</a></p>
+  <h1>VPN</h1>
+  <p class="muted">Устройства, которые могут подключаться к VPN этого сервера.</p>
+  {% if error %}<p class="error" role="alert">{{ error }}</p>{% endif %}
+  {% if gone %}<p class="ok" role="status">Устройство «{{ gone }}» отозвано — подключиться оно больше не сможет.</p>{% endif %}
+
+  {% if devices %}
+  <ul class="results vpn-list">
+    {% for d in devices %}
+    <li>
+      <p><span class="light {{ '' if d.online else 'off' }}" title="{{ d.seen }}"></span>
+        {% if d.known %}<a href="{{ root }}/vpn/d/{{ d.name }}"><strong>{{ d.name }}</strong></a>{% else %}<strong>без имени</strong>{% endif %}
+        <span class="muted"> · {{ d.seen }}</span></p>
+      <p class="muted small">адрес в VPN {{ d.ip }} · {{ d.traffic }}</p>
+    </li>
+    {% endfor %}
+  </ul>
+  {% elif not error %}
+  <p class="muted">Устройств пока нет.</p>
+  {% endif %}
+
+  <h2>Новое устройство</h2>
+  <form method="post" action="{{ root }}/vpn/new" class="row-form" id="vpn-new">
+    <input type="hidden" name="csrf" value="{{ sess.csrf }}">
+    <label class="sr-only" for="vpn-name">Имя устройства</label>
+    <input id="vpn-name" name="name" maxlength="40" placeholder="например, планшет" required autocomplete="off">
+    <button type="submit" class="primary">Завести</button>
+  </form>
+  <p class="muted small">Имя запишется латиницей. После этого будет QR-код для телефона и файл для компьютера.</p>
+</section>
+{% endblock %}

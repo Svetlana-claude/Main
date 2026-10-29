@@ -1,0 +1,5 @@
+# Сайт v2 (служба webui2, пользователь mokeeva): устройства VPN и ночная проверка.
+# Ставится в /etc/sudoers.d/webui2-vpn (root, 440), проверка: visudo -cf
+# webui-sec collect — сбор фактов для проверки по кнопке (её делает audit.sh);
+# webui-sec baseline-approve — «так и должно быть»: принять снимок дня нормой.
+mokeeva ALL=(root) NOPASSWD: /usr/local/sbin/webui2-vpn, /usr/local/sbin/webui-sec collect, /usr/local/sbin/webui-sec baseline-approve

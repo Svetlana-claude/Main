@@ -81,5 +81,15 @@ POWER_WAIT_MIN = 60                   # дольше ответы не ждём 
 LOAD_EVERY_SEC = 60                   # замер нагрузки для графика
 LOAD_KEEP_HOURS = 24
 
+# VPN: устройства того же WireGuard, что завёл старый сайт; root — только через обёртку
+VPN_CMD = _env.get("VPN_CMD", "sudo -n /usr/local/sbin/webui2-vpn").split()
+QR_BIN = _env.get("QR_BIN", "/usr/bin/qrencode")
+# Ночная проверка безопасности: её ставил старый сайт, отчёты — в SEC_STATE
+SEC_STATE = Path(_env.get("SEC_STATE", "/var/lib/secaudit"))
+SEC_AUDIT = _env.get("SEC_AUDIT", "/bin/bash /opt/secaudit/audit.sh").split()
+SEC_APPROVE = _env.get("SEC_APPROVE", "sudo -n /usr/local/sbin/webui-sec baseline-approve").split()
+SEC_STALE_HOURS = 36                  # отчёта нет дольше — ночная проверка, видимо, не идёт
+SEC_RUN_MIN = 15                      # дольше проверку не ждём
+
 TEMPLATES_DIR = APP_DIR / "templates"
 STATIC_DIR = APP_DIR / "static"

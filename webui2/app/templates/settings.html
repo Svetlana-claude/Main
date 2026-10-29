@@ -33,6 +33,9 @@
   </form>
   <p class="muted small">Время на сайте показывается в этом поясе, сейчас — {{ zones[zone][1] }}.</p>
 
+  <h2>VPN</h2>
+  <p><a href="{{ root }}/vpn" id="vpn-link">Устройства VPN</a> — список, новое устройство с QR-кодом, отзыв.</p>
+
   <h2>Перезапуск</h2>
   <div class="power" id="power" data-boot="{{ power.boot }}" data-what="{{ power.what or '' }}">
     <button type="button" class="primary" data-power="site"

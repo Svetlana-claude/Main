@@ -1,0 +1,38 @@
+{% extends "base.html" %}
+{% block content %}
+<section class="panel vpn">
+  <p><a class="back-link" href="{{ root }}/vpn">← VPN</a></p>
+  <h1>{{ device.name }}</h1>
+  {% if error %}<p class="error" role="alert">{{ error }}</p>{% endif %}
+  {% if fresh %}<p class="ok" role="status">Устройство заведено. Подключи его сейчас.</p>{% endif %}
+  <p class="muted">{{ device.seen }} · адрес в VPN {{ device.ip }} · {{ device.traffic }}</p>
+
+  {% if has_file %}
+  <details class="vpn-secret" {% if fresh %}open{% endif %}>
+    <summary>QR-код и файл для подключения</summary>
+    <p class="muted small">В них ключ этого устройства — не показывай их и не пересылай чужим.</p>
+    <div class="vpn-how">
+      <img class="qr" id="vpn-qr" src="{{ root }}/vpn/d/{{ device.name }}/qr.svg" alt="QR-код для подключения {{ device.name }}"
+           width="280" height="280" {% if not fresh %}loading="lazy"{% endif %}>
+      <div>
+        <p><strong>Телефон:</strong> в приложении WireGuard нажми «+», затем «Сканировать QR-код»
+          и наведи камеру на код.</p>
+        <p><strong>Компьютер:</strong> скачай файл и в программе WireGuard выбери
+          «Импорт туннеля из файла».</p>
+        <a class="primary btn-link" id="vpn-file" href="{{ root }}/vpn/d/{{ device.name }}/file" download>Скачать файл</a>
+      </div>
+    </div>
+  </details>
+  {% else %}
+  <p class="muted">Файла для этого устройства на сервере нет — если оно потеряно, отзови его и заведи новое.</p>
+  {% endif %}
+
+  <h2>Отозвать</h2>
+  <p class="muted small">После отзыва устройство больше не сможет подключиться. Вернуть нельзя — только завести заново.</p>
+  <form method="post" action="{{ root }}/vpn/d/{{ device.name }}/remove" id="vpn-remove"
+        onsubmit="return confirm('Отозвать «{{ device.name }}»? Это устройство больше не сможет подключиться к VPN.');">
+    <input type="hidden" name="csrf" value="{{ sess.csrf }}">
+    <button type="submit" class="primary danger">Отозвать устройство</button>
+  </form>
+</section>
+{% endblock %}

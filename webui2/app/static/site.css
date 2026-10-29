@@ -343,3 +343,40 @@ textarea {
   .load-now { gap: .35rem; }
   .tile { padding: .5rem; }
 }
+
+/* Безопасность */
+.sec h3 { margin: 1.4rem 0 .5rem; font-size: 1.05rem; }
+.sec-run { display: flex; gap: .5rem; flex-wrap: wrap; align-items: center; }
+.sec-tiles { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: .5rem; }
+.sec-tiles .tile-val { font-size: 1.25rem; }
+.tile-ok { border-left: 4px solid var(--ok); }
+.tile-warn { border-left: 4px solid #f08c00; }
+.sec-list { margin: 0; padding-left: 1.2rem; display: flex; flex-direction: column; gap: .35rem; }
+.sec-items { list-style: none; margin: .2rem 0 0; padding: 0; display: flex; flex-direction: column; gap: .15rem; }
+.sec-items li, .sec-list .detail { overflow-wrap: anywhere; }
+.sec-alert strong { color: var(--error); }
+.plus, .minus { font-size: .78rem; font-weight: 600; border-radius: 4px; padding: 0 .3rem; margin-right: .3rem; white-space: nowrap; }
+.plus { background: #e5f2ea; color: var(--ok); }
+.minus { background: #fdecd6; color: #8a4b00; }
+.sec-reports { list-style: none; padding: 0; margin: 0; display: flex; flex-wrap: wrap; gap: .3rem .9rem; }
+.sec-report pre { background: #f8f9fa; border: 1px solid var(--line); border-radius: 8px; padding: .6rem .8rem; font-size: .85rem; }
+.snap summary { cursor: pointer; margin-top: 1rem; }
+
+/* VPN */
+.light.off { background: #9aa1ab; }
+.vpn-list p { margin: 0; }
+.vpn-secret summary { cursor: pointer; font-weight: 600; margin: .5rem 0; }
+.vpn-how { display: flex; gap: 1.25rem; align-items: flex-start; flex-wrap: wrap; }
+.qr { width: 280px; height: 280px; max-width: 100%; background: #fff; border: 1px solid var(--line); border-radius: 8px; image-rendering: pixelated; }
+.vpn-how > div { flex: 1; min-width: 220px; }
+#vpn-name { min-width: 0; flex: 1 1 200px; max-width: 320px; }
+
+@media (max-width: 700px) {
+  .sec-tiles { grid-template-columns: 1fr; }
+  .qr { width: 100%; height: auto; aspect-ratio: 1; }
+}
+.sec-changes { display: flex; flex-direction: column; gap: .3rem; }
+.sec-change { border: 1px solid var(--line); border-radius: 8px; padding: .45rem .7rem; }
+.sec-change summary { cursor: pointer; }
+.sec-change summary .plus, .sec-change summary .minus { margin-left: .4rem; }
+.sec-change .sec-items { margin-top: .5rem; }

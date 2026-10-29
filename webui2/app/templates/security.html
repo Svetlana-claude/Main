@@ -1,0 +1,145 @@
+{% extends "base.html" %}
+{% block content %}
+<section class="panel sec" id="sec" data-what="{{ run.what or '' }}">
+  <h1>Безопасность</h1>
+  <p class="muted">Каждую ночь сервер проверяет себя: что открыто наружу, кто может войти,
+    что поменялось с прошлого раза. Здесь — сводка последней проверки и отчёты.</p>
+
+  <div class="sec-run">
+    <button type="button" class="primary" data-sec="check"
+            data-ask="Проверить сервер сейчас? Это займёт около минуты, ничего не меняется.">Проверить сейчас</button>
+    {% if s and s.approvable %}
+    <button type="button" class="primary" data-sec="approve"
+            data-ask="Принять всё, что сейчас отличается, как норму? Эти отличия больше не будут показываться как изменения.">Так и должно быть</button>
+    {% endif %}
+  </div>
+  <p id="sec-msg" role="status" class="{{ 'error' if run.error else 'status-line' }}"
+     {% if not run.error and not run.what %}hidden{% endif %}>{% if run.error %}{{ run.error }}{% elif run.what == 'approve' %}Принимаю как норму и проверяю заново…{% elif run.what %}Проверяю сервер…{% endif %}</p>
+
+  {% if not s %}
+  <p class="error">Отчётов пока нет — ночная проверка, видимо, ещё не запускалась. Нажми «Проверить сейчас».</p>
+  {% else %}
+  <h2>Последняя проверка — {{ local_time(s.at) }}</h2>
+  {% if s.stale %}
+  <p class="error">Свежего отчёта нет больше полутора суток — ночная проверка, видимо, не идёт.
+    Нажми «Проверить сейчас».</p>
+  {% endif %}
+
+  <div class="sec-tiles">
+    <div class="tile {{ 'tile-warn' if s.count else 'tile-ok' }}">
+      <span class="tile-name">Изменений и тревог</span>
+      <span class="tile-val">{{ s.count }}</span>
+      <span class="muted small">{{ "с прошлой нормы" if s.count else "всё как в норме" }}</span>
+    </div>
+    <div class="tile {{ 'tile-ok' if s.wall else 'tile-warn' }}">
+      <span class="tile-name">Защитная стена</span>
+      <span class="tile-val">{{ "включена" if s.wall else "не закрыта" }}</span>
+      <span class="muted small">{% if s.guard %}заблокировано подборщиков: {{ s.banned or 0 }}{% else %}блокировка подборщиков не работает{% endif %}</span>
+    </div>
+    <div class="tile {{ 'tile-warn' if s.updates.security != '0' or s.updates.reboot else 'tile-ok' }}">
+      <span class="tile-name">Обновления защиты</span>
+      <span class="tile-val">{{ "все стоят" if s.updates.security == '0' else "ждут: " ~ s.updates.security }}</span>
+      <span class="muted small">{{ "нужна перезагрузка" if s.updates.reboot else "прочих обновлений: " ~ s.updates.total }}</span>
+    </div>
+  </div>
+
+  {% if s.alerts %}
+  <h3>Тревоги</h3>
+  <ul class="sec-list">
+    {% for a in s.alerts %}
+    <li class="sec-alert"><strong>{{ a.title }}</strong>
+      {% for ln in a.lines %}<div class="detail">{{ ln }}</div>{% endfor %}</li>
+    {% endfor %}
+  </ul>
+  {% endif %}
+
+  {% if s.fixed %}
+  <h3>Исправлено ночью само</h3>
+  <pre class="report">{{ s.fixed }}</pre>
+  {% endif %}
+
+  <h3>Что поменялось</h3>
+  {% if s.no_reference %}
+  <p class="muted">Нормы ещё нет — сравнивать не с чем. Посмотри сводку и нажми «Так и должно быть».</p>
+  {% elif s.changes %}
+  <p class="muted small">Это отличия от того, что раньше было принято нормой. Если всё это — твои
+    дела (новый сайт, новая служба, вход с нового места), нажми «Так и должно быть».
+    {% if not s.approvable %}Кнопка появится после сегодняшней проверки.{% endif %}</p>
+  <div class="sec-changes">
+    {% for c in s.changes %}
+    {% set plus = c.rows|selectattr("added")|list|length %}
+    <details class="sec-change" {% if s.changes|length == 1 %}open{% endif %}>
+      <summary><strong>{{ c.title }}</strong>
+        {% if plus %}<span class="plus">появилось: {{ plus }}</span>{% endif %}
+        {% if c.rows|length - plus %}<span class="minus">пропало: {{ c.rows|length - plus }}</span>{% endif %}</summary>
+      <ul class="sec-items">
+        {% for it in c.rows %}
+        <li><span class="{{ 'plus' if it.added else 'minus' }}">{{ "появилось" if it.added else "пропало" }}</span>
+          <span class="detail">{{ it.text|truncate(240) }}</span></li>
+        {% endfor %}
+      </ul>
+    </details>
+    {% endfor %}
+  </div>
+  {% else %}
+  <p class="ok">Ничего не поменялось.</p>
+  {% endif %}
+
+  <h3>Что открыто наружу</h3>
+  {% if s.outside %}
+  <ul class="sec-list">
+    {% for o in s.outside %}
+    <li>{% if not o.known %}<span class="minus">проверь</span> {% endif %}<strong>порт {{ o.port }}</strong> — {{ o.what }}
+      <span class="muted small">({{ o.how }}{% if o.progs %}, {{ o.progs }}{% endif %})</span></li>
+    {% endfor %}
+  </ul>
+  {% else %}
+  <p class="muted">Данных нет.</p>
+  {% endif %}
+
+  <h3>Кто может войти</h3>
+  <ul class="sec-list">
+    <li>Пользователи с входом на сервер: <strong>{{ s.logins.users|join(", ") or "нет" }}</strong></li>
+    <li>Ключей для входа: {{ s.logins.key_count }}; вход по паролю
+      {% if s.logins.password %}<span class="minus">включён</span>{% else %}выключен{% endif %};
+      администратор (root) напрямую {% if s.logins.root %}<span class="minus">может войти</span>{% else %}войти не может{% endif %}.</li>
+    <li>За сутки неудачных попыток с паролем: {{ s.logins.failed }}</li>
+    {% for w in s.logins.ok_from %}
+    <li class="muted small">Входы: {{ w.user }} с адреса {{ w.ip }} — {{ w.count }} раз</li>
+    {% endfor %}
+  </ul>
+
+  {% if s.notes %}
+  <details class="hours">
+    <summary>Заметки проверки</summary>
+    {% for n in s.notes %}
+    <p><strong>{{ n.title }}</strong></p>
+    {% for ln in n.lines %}<div class="detail">{{ ln }}</div>{% endfor %}
+    {% endfor %}
+  </details>
+  {% endif %}
+  {% endif %}
+
+  <h2>Отчёты</h2>
+  {% if dates %}
+  <ul class="sec-reports">
+    {% for d in dates[:14] %}
+    <li><a href="{{ root }}/security/report/{{ d }}">{{ day_label(d) }}</a></li>
+    {% endfor %}
+  </ul>
+  {% if dates|length > 14 %}
+  <details class="hours">
+    <summary>Ранее</summary>
+    <ul class="sec-reports">
+      {% for d in dates[14:] %}
+      <li><a href="{{ root }}/security/report/{{ d }}">{{ day_label(d) }}</a></li>
+      {% endfor %}
+    </ul>
+  </details>
+  {% endif %}
+  {% else %}
+  <p class="muted">Отчётов нет.</p>
+  {% endif %}
+</section>
+{% endblock %}
+{% block scripts %}<script src="{{ root }}/static/security.js?v=1"></script>{% endblock %}
