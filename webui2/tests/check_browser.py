@@ -99,10 +99,10 @@ def open_list(page, mobile: bool) -> None:
 def ask(page, text: str, keys: bool = False) -> None:
     page.fill("#text", text)
     if keys:
-        # Enter — новая строка, Shift+Enter — отправка
+        # Enter — новая строка, Ctrl+Enter — отправка
         page.press("#text", "Enter")
         expect(page.locator("#text")).to_have_value(text + "\n")
-        page.press("#text", "Shift+Enter")
+        page.press("#text", "Control+Enter")
     else:
         page.click("#send-btn")
 

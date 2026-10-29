@@ -183,8 +183,8 @@
 
   composer.addEventListener("submit", function (e) { e.preventDefault(); send(); });
   text.addEventListener("keydown", function (e) {
-    // Shift+Enter — отправить, Enter — новая строка (на телефоне — кнопкой)
-    if (e.key === "Enter" && e.shiftKey && !e.isComposing) { e.preventDefault(); send(); }
+    // Ctrl+Enter (на Mac — Cmd+Enter) — отправить, Enter — новая строка
+    if (e.key === "Enter" && (e.ctrlKey || e.metaKey) && !e.isComposing) { e.preventDefault(); send(); }
   });
 
   if (!location.hash) toBottom();
