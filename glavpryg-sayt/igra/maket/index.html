@@ -438,17 +438,20 @@ function sezonPoDate(d) {                                       // без сво
 }
 const ikonkaKoda = c => c <= 1 ? '☀️' : c === 2 ? '🌤' : c === 3 ? '☁️' : c <= 48 ? '🌫' : c <= 67 ? '🌧' : c <= 77 ? '❄️' : c <= 82 ? '🌦' : c <= 86 ? '🌨' : '⛈';
 const mskChas = d => new Intl.DateTimeFormat('sv-SE', { timeZone:'Europe/Moscow', year:'numeric', month:'2-digit', day:'2-digit', hour:'2-digit', hourCycle:'h23' }).format(d).replace(' ', 'T');
-// час прыжков: сейчас, ночью — ближайшее утро; всё прошло — последний час сводки
+// час прыжков: сейчас, вечером и ночью — ближайшее утро. Все часы сводки уже прошли — сводка
+// устарела (не обновлялась): её не берём, иначе игра навсегда застревает в её последнем вечере
 function vybratChas(d, seychas = new Date()) {
   const kl = Object.keys(d.chasy).sort(), tek = mskChas(seychas);
-  return kl.find(k => k >= tek) || kl[kl.length - 1];
+  return kl.find(k => k >= tek) || null;
 }
 const otkudaTekst = kuda => ['С','СВ','В','ЮВ','Ю','ЮЗ','З','СЗ'][Math.round(((kuda + 180) % 360) / 45) % 8];
 function prinyatSvodku(d) {
   const p = POGODA.find(p => p.segodnya), kl = d && d.chasy && vybratChas(d);
   if (!kl) {
-    p.sloi = null; p.kratko = 'нет сводки';
-    p.opis = 'Сводки погоды нет — погоду и ветер выберет игра по уровню.';
+    DEN = DEN_CHAS = null; p.sloi = null; p.zapret = false;
+    const ustarela = d && d.chasy && Object.keys(d.chasy).length;
+    p.kratko = ustarela ? 'сводка устарела' : 'нет сводки';
+    p.opis = (ustarela ? 'Сводка погоды устарела' : 'Сводки погоды нет') + ' — погоду и ветер выберет игра по уровню.';
   } else {
     const c = d.chasy[kl], v0 = c.veter[0], v1 = Math.hypot(...veterProfil(c.veter, 1000));
     const chas = kl.slice(11) + ':00' + (kl.slice(0, 10) === mskChas(new Date()).slice(0, 10) ? '' : ' завтра');

@@ -13,7 +13,7 @@
 метео «откуда» + 180 и поправка на поворот карты учебника к северу (+3,9°,
 см. osm-karta.py).
 """
-import sys, json, math, os, datetime, urllib.request, urllib.parse
+import sys, json, math, os, time, datetime, urllib.request, urllib.parse
 
 LAT, LON, VYS_AERO = 54.7884, 37.6460, 243
 POVOROT = 3.9
@@ -30,8 +30,19 @@ def zapros():
     q = urllib.parse.urlencode({'latitude': LAT, 'longitude': LON, 'timezone': 'Europe/Moscow', 'forecast_days': 2,
                                 'wind_speed_unit': 'ms', 'hourly': ','.join(hourly)})
     req = urllib.request.Request('https://api.open-meteo.com/v1/forecast?' + q, headers={'User-Agent': 'glavpryg-igra/1.0'})
-    with urllib.request.urlopen(req, timeout=60) as r:
-        return json.load(r)
+    # Open-Meteo временами отвечает 503: с 25.10.2026 так пропадали сутки подряд и сводка в игре
+    # застыла. Пробуем ещё через 1, 5 и 15 минут — запуск всё равно раз в два часа
+    for pauza in (60, 300, 900, None):
+        try:
+            with urllib.request.urlopen(req, timeout=60) as r:
+                return json.load(r)
+        except Exception as e:
+            print(msk(), 'Open-Meteo:', e, '— ещё раз через', pauza, 'с' if pauza else '— сдаюсь', flush=True)
+            if pauza is None: raise
+            time.sleep(pauza)
+
+def msk():
+    return datetime.datetime.now(datetime.timezone(datetime.timedelta(hours=3))).strftime('%d.%m.%Y %H:%M МСК')
 
 def kuda(otkuda):
     return round((otkuda + 180 + POVOROT) % 360)
@@ -120,4 +131,4 @@ if __name__ == '__main__':
     vrem = kuda_pisat + '.tmp'
     with open(vrem, 'w') as f: json.dump(rez, f, ensure_ascii=False, separators=(',', ':'))
     os.chmod(vrem, 0o644); os.replace(vrem, kuda_pisat)
-    print(rez['data'], rez['sezon'], len(rez['chasy']), 'ч')
+    print(msk(), rez['data'], rez['sezon'], len(rez['chasy']), 'ч')

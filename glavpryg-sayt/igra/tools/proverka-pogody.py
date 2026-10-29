@@ -4,7 +4,8 @@
     python proverka-pogody.py <адрес index.html> <каталог снимков>
 
 Сводка `pogoda-dnya.json` подменяется своей (снег, запрет, слой облаков) — игра выбирает «Сегодня в Грызлово»,
-пишет запрет, берёт зимние карты и профиль ветра из сводки. Без сводки — «нет сводки», погода по уровню.
+пишет запрет, берёт зимние карты и профиль ветра из сводки. Без сводки — «нет сводки», погода по уровню;
+сводка, все часы которой прошли, — «сводка устарела», тоже по уровню (а не её последний вечер).
 Ветер по высотам: между точками профиля — по составляющим; на 6-м уровне наверху дует иначе, чем у земли.
 Отделение: вниз — с нуля и к 10–12 с почти 50 м/с, вперёд — 44 м/с и к 10–12 с почти ноль, вынос 200–350 м
 (AFF, с. 21). Широкая маска: лес за краем снимка учебника. За лесом при ветре 8 м/с — турбулентность.
@@ -22,9 +23,10 @@ def proverit(uslovie, chto):
     if not uslovie: provaly.append(chto)
 
 
-def svodka():
-    """Сводка на сегодня и завтра по Москве: снег, ветер 3 м/с у земли и 12 м/с на 1500 м против него, пелена 1200 м."""
-    msk = datetime.datetime.now(datetime.timezone(datetime.timedelta(hours=3))).date()
+def svodka(sdvig=0):
+    """Сводка на сегодня и завтра по Москве: снег, ветер 3 м/с у земли и 12 м/с на 1500 м против него, пелена 1200 м.
+    sdvig — на сколько дней она старше (устаревшая сводка: сервер погоды не отвечал)"""
+    msk = datetime.datetime.now(datetime.timezone(datetime.timedelta(hours=3))).date() - datetime.timedelta(days=sdvig)
     chasy = {}
     for d in (msk, msk + datetime.timedelta(days=1)):
         for h in range(8, 21):
@@ -92,6 +94,18 @@ with sync_playwright() as p:
     r = bezopasno(s2, "() => { pauza = true; vybranaPogoda = 0; noviyPryzhok(3); return { sloi: POGODA[0].sloi, prof: s.profil.length } }")
     proverit('нет сводки' in vybrana and isinstance(r, dict) and r.get('sloi') is None and r.get('prof', 0) > 3,
              f'нет сводки — «нет сводки», погода и профиль по уровню ({r})')
+    # ── устаревшая сводка: все её часы прошли — не брать, иначе игра застывает в её последнем вечере ──
+    s3 = b.new_context(viewport={'width': 1440, 'height': 900}).new_page()
+    s3.on('pageerror', lambda e: oshibki.append(str(e)))
+    s3.route('**/pogoda-dnya.json', lambda r: r.fulfill(status=200, content_type='application/json',
+                                                        body=json.dumps(svodka(4), ensure_ascii=False)))
+    s3.goto(adres); s3.wait_for_timeout(1500)
+    vybrana = s3.inner_text('#pogoda button[aria-pressed=true]') if s3.query_selector('#pogoda button[aria-pressed=true]') else ''
+    r = bezopasno(s3, "() => ({ chas: DEN_CHAS, sloi: POGODA[0].sloi, zapret: !!POGODA[0].zapret })")
+    proverit('сводка устарела' in vybrana and isinstance(r, dict) and r.get('chas') is None and r.get('sloi') is None and not r.get('zapret'),
+             f'сводка четырёхдневной давности не берётся — «сводка устарела», погода по уровню ({vybrana.strip()[:40]!r}, {r})')
+    s3.context.close()
+
     # 6-й уровень: наверху дует иначе, чем у земли («колено», AFF с. 36)
     r = bezopasno(s2, """() => { let n = 0; for (let i = 0; i < 20; i++) { const p = profilVetra(6, 0, 6);
       const d = ((p[p.length - 1][2] - p[0][2]) + 540) % 360 - 180; if (Math.abs(d - 35) >= 59 && p[p.length - 1][1] > 9) n++; } return n; }""")
