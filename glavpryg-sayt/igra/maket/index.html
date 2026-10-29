@@ -424,9 +424,9 @@ function profilVetra(W, kuda, nomer) {
 }
 
 // ───────── Погода дня и время года ─────────
-// pogoda-dnya.json кладёт на сервер igra/tools/pogoda-dnya.py (crontab, раз в два часа): по часам 8–20
+// pogoda-dnya.json кладёт на сервер igra/tools/pogoda-dnya.py (crontab, раз в два часа): по всем часам
 // ветер по высотам, облачные слои, порывы, запрет прыжков и время года. Нет файла — погоду выбирает игра.
-let DEN = null, DEN_CHAS = null, SEZON = 'leto';
+let DEN = null, DEN_CHAS = null, SEZON = 'leto', SVODKA = null;
 const SEZONY = ['leto', 'osen', 'golaya', 'zima', 'vesna'];
 function sezonPoDate(d) {                                       // без сводки: снег — с середины декабря до середины марта
   const m = d.getMonth() + 1, dd = d.getDate();
@@ -438,14 +438,16 @@ function sezonPoDate(d) {                                       // без сво
 }
 const ikonkaKoda = c => c <= 1 ? '☀️' : c === 2 ? '🌤' : c === 3 ? '☁️' : c <= 48 ? '🌫' : c <= 67 ? '🌧' : c <= 77 ? '❄️' : c <= 82 ? '🌦' : c <= 86 ? '🌨' : '⛈';
 const mskChas = d => new Intl.DateTimeFormat('sv-SE', { timeZone:'Europe/Moscow', year:'numeric', month:'2-digit', day:'2-digit', hour:'2-digit', hourCycle:'h23' }).format(d).replace(' ', 'T');
-// час прыжков: сейчас, вечером и ночью — ближайшее утро. Все часы сводки уже прошли — сводка
-// устарела (не обновлялась): её не берём, иначе игра навсегда застревает в её последнем вечере
-function vybratChas(d, seychas = new Date()) {
-  const kl = Object.keys(d.chasy).sort(), tek = mskChas(seychas);
+// час сводки — тот, в который идёт прыжок (vremyaPryzhka: сейчас, в темноте — ближайшее светлое утро);
+// такого часа нет — следующий за ним. Все часы сводки уже прошли — сводка устарела (не обновлялась):
+// её не берём, иначе игра навсегда застревает в её последнем вечере
+function vybratChas(d, kogda = vremyaPryzhka().d) {
+  const kl = Object.keys(d.chasy).sort(), tek = mskChas(kogda);
   return kl.find(k => k >= tek) || null;
 }
 const otkudaTekst = kuda => ['С','СВ','В','ЮВ','Ю','ЮЗ','З','СЗ'][Math.round(((kuda + 180) % 360) / 45) % 8];
 function prinyatSvodku(d) {
+  SVODKA = d;
   const p = POGODA.find(p => p.segodnya), kl = d && d.chasy && vybratChas(d);
   if (!kl) {
     DEN = DEN_CHAS = null; p.sloi = null; p.zapret = false;
@@ -481,13 +483,13 @@ function polozhenieSolnca(d) {
   return { vys, az:(az + 360) % 360 };
 }
 const chasMsk = d => new Intl.DateTimeFormat('ru-RU', { timeZone:'Europe/Moscow', hour:'2-digit', minute:'2-digit' }).format(d);
-// Время прыжка: сейчас; при сводке — её час; ?vremya=2026-12-20T15:30 — для проверок (по Москве).
-// Прыгают при свете: солнце ниже 4° — прыжок переносится на ближайший светлый час.
+// Время прыжка: сейчас по Москве; ?vremya=2026-12-20T15:30 — для проверок (по Москве).
+// Прыгают при свете: солнце ниже 4° — прыжок переносится на ближайший светлый час. Погода «сегодня»
+// берётся из сводки на этот же час (vybratChas), так что время суток и облака всегда совпадают.
 function vremyaPryzhka() {
   const q = new URLSearchParams(location.search).get('vremya');
   let d = q ? new Date(q + ':00+03:00') : new Date();
   if (isNaN(d)) d = new Date();
-  if (!q && POGODA[vybranaPogoda]?.segodnya && DEN_CHAS && DEN_CHAS !== mskChas(d)) d = new Date(DEN_CHAS + ':30:00+03:00');
   let perenos = false;
   for (let i = 0; i < 24 * 6 && polozhenieSolnca(d).vys < 4; i++) { d = new Date(d.getTime() + 600000); perenos = true; }
   const { vys, az } = polozhenieSolnca(d), chas = +mskChas(d).slice(11, 13);
@@ -729,6 +731,8 @@ function norm180(a) { return ((a + 540) % 360) - 180; }
 
 function noviyPryzhok(nomer) {
   const u = UROVNI[nomer];
+  // пока игрок на странице, час прыжка мог смениться — берём сводку на новый час
+  if (SVODKA && SVODKA.chasy && vybratChas(SVODKA) !== DEN_CHAS) prinyatSvodku(SVODKA);
   // погода — выбранная на старте или случайная по уровню
   const pogoda = POGODA[vybranaPogoda].sloi ? POGODA[vybranaPogoda] : sluchaynayaPogoda(nomer);
   const sloi = sozdatSloi(pogoda), vys = vysotaVybroski(pogoda);

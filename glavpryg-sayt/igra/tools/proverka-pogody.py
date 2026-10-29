@@ -29,9 +29,10 @@ def svodka(sdvig=0):
     msk = datetime.datetime.now(datetime.timezone(datetime.timedelta(hours=3))).date() - datetime.timedelta(days=sdvig)
     chasy = {}
     for d in (msk, msk + datetime.timedelta(days=1)):
-        for h in range(8, 21):
+        for h in range(24):
             chasy[f'{d.isoformat()}T{h:02d}'] = {
-                't': -6, 'veter': [[10, 3, 90], [180, 5, 100], [800, 8, 180], [1500, 12, 270], [3000, 14, 270]],
+                't': h,                                         # по температуре видно, какой час взят
+                'veter': [[10, 3, 90], [180, 5, 100], [800, 8, 180], [1500, 12, 270], [3000, 14, 270]],
                 'poryvy': 5, 'sloi': [{'tip': 'sc', 'niz': 1200, 'verh': 1800, 'pokr': 1}],
                 'osadki': 0, 'sneg': 0, 'kod': 3, 'zapret': 'облачность 1200 м — проверка'}
     return {'mesto': 'Большое Грызлово', 'data': msk.isoformat(), 'sezon': 'zima', 'snegM': 0.2,
@@ -94,6 +95,20 @@ with sync_playwright() as p:
     r = bezopasno(s2, "() => { pauza = true; vybranaPogoda = 0; noviyPryzhok(3); return { sloi: POGODA[0].sloi, prof: s.profil.length } }")
     proverit('нет сводки' in vybrana and isinstance(r, dict) and r.get('sloi') is None and r.get('prof', 0) > 3,
              f'нет сводки — «нет сводки», погода и профиль по уровню ({r})')
+    # ── час сводки = час прыжка: днём — тот же час, ночью — ближайшее светлое утро и его сводка ──
+    segodnya = datetime.datetime.now(datetime.timezone(datetime.timedelta(hours=3))).date().isoformat()
+    for vremya, chto in ((f'{segodnya}T12:20', 'днём'), (f'{segodnya}T02:10', 'ночью')):
+        s4 = b.new_context(viewport={'width': 1440, 'height': 900}).new_page()
+        s4.on('pageerror', lambda e: oshibki.append(str(e)))
+        s4.route('**/pogoda-dnya.json', lambda r: r.fulfill(status=200, content_type='application/json',
+                                                            body=json.dumps(svodka(), ensure_ascii=False)))
+        s4.goto(adres + '?vremya=' + vremya); s4.wait_for_timeout(1500)
+        r = bezopasno(s4, "() => { const S = vremyaPryzhka(); return { chas: DEN_CHAS, pryzhok: mskChas(S.d), t: DEN && DEN.t, perenos: S.perenos } }")
+        ok = isinstance(r, dict) and r.get('chas') == r.get('pryzhok') and r.get('t') == int(r.get('pryzhok', 'T-1')[11:13])
+        ok = ok and (r.get('perenos') if chto == 'ночью' else r.get('chas') == vremya[:13])
+        proverit(ok, f'{chto} ({vremya[11:]}): погода взята на час прыжка ({r})')
+        s4.context.close()
+
     # ── устаревшая сводка: все её часы прошли — не брать, иначе игра застывает в её последнем вечере ──
     s3 = b.new_context(viewport={'width': 1440, 'height': 900}).new_page()
     s3.on('pageerror', lambda e: oshibki.append(str(e)))

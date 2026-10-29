@@ -18,7 +18,7 @@ import sys, json, math, os, time, datetime, urllib.request, urllib.parse
 LAT, LON, VYS_AERO = 54.7884, 37.6460, 243
 POVOROT = 3.9
 UROVNI = [1000, 975, 950, 925, 900, 850, 800, 700, 600, 500, 400, 300]   # гПа
-CHASY = range(8, 21)                                                      # когда прыгают
+CHASY = range(24)            # все часы: прыгают от восхода до заката, а он летом с 4 до 21 по Москве
 
 def zapros():
     hourly = ['temperature_2m', 'dew_point_2m', 'wind_speed_10m', 'wind_direction_10m', 'wind_gusts_10m',
