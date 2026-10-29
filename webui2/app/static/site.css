@@ -48,10 +48,11 @@ pre, table { display: block; max-width: 100%; overflow-x: auto; }
   display: inline-flex; align-items: center; justify-content: center;
   width: 40px; height: 40px; border: 0; border-radius: 8px;
   background: none; color: var(--muted); cursor: pointer;
+  padding: 0; flex: none; -webkit-appearance: none; appearance: none;
 }
 .icon:hover, .icon[aria-current="page"] { background: #eef0f3; color: var(--text); }
-.icon svg { width: 22px; height: 22px; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
-.logout { margin: 0; }
+.icon svg { display: block; flex: none; width: 22px; height: 22px; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
+.logout { margin: 0; flex: none; }
 
 /* Содержимое */
 .content { max-width: 1100px; margin: 0 auto; padding: 1.25rem 1rem; }
@@ -155,7 +156,7 @@ textarea {
   font-size: 1.1rem; margin: 0; flex: 1; min-width: 8rem;
   overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
 }
-.talk-head form { margin: 0; }
+.talk-head form { margin: 0; flex: none; }
 .talk-head .icon { font-size: 1.15rem; }
 .weight { color: var(--muted); font-size: .9rem; white-space: nowrap; }
 .to-list { display: none; }
@@ -199,7 +200,7 @@ textarea {
 .back-link { font-size: .95rem; }
 .proj-head { display: flex; align-items: center; gap: .3rem; }
 .proj-head h2 { margin: 0; flex: 1; font-size: 1.1rem; overflow-wrap: anywhere; }
-.proj-head form { margin: 0; }
+.proj-head form { margin: 0; flex: none; }
 .folder { margin: -.4rem 0 0; font-size: .85rem; overflow-wrap: anywhere; }
 .access { display: flex; flex-direction: column; gap: .2rem; margin: 0; }
 .check { flex-direction: row; align-items: center; gap: .5rem; cursor: pointer; }
@@ -273,7 +274,7 @@ textarea {
   .convs { border-right: 0; }
   /* Кнопки под палец: все значки одного размера — 44 точки, рисунок 26 */
   .icon { width: 44px; height: 44px; }
-  .icon svg { width: 26px; height: 26px; }
+  .icon svg { width: 26px; height: 26px; min-width: 26px; min-height: 26px; }
   #rename-btn { font-size: 1.6rem; }
   .talk-head { gap: .15rem; }
 }

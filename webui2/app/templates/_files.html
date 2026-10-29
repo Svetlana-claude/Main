@@ -18,7 +18,7 @@
     <span class="muted small">{{ f.size }} · {{ f.time }}</span>
     <a href="{{ root }}/projects/{{ project.id }}/files/get/{{ fname_url(f.name) }}" class="icon dl" download
        title="Скачать" aria-label="Скачать {{ f.name }}">
-      <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 4v11M7 10l5 5 5-5M5 20h14"/></svg></a>
+      <svg viewBox="0 0 24 24" width="22" height="22" aria-hidden="true" focusable="false"><path d="M12 4v11M7 10l5 5 5-5M5 20h14"/></svg></a>
   </li>
   {% else %}
   <li class="muted small">Файлов пока нет. Сюда попадает папка downloads проекта: то, что загрузишь ты, и то, что положит Claude.</li>
