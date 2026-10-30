@@ -21,6 +21,7 @@ ok(await s.locator('input[type=file], .vkladki, #b-sohranit').count() === 0, 'п
 await s.click('.dv-tabl tr[data-id="kupol"]');
 ok(await s.locator('.dv-num.akt').textContent() === '2', 'по ссылке: клик по строке подсвечивает деталь');
 await s.screenshot({ path: '/tmp/v1.png' });
+if (process.env.BEZ_VSTAVKI) { console.log(itog.join('\n')); await b.close(); process.exit(0); }
 await s.goto('http://127.0.0.1:8765/proverki/vstavka.html');
 const f = s.frameLocator('#vst');
 await f.locator('.dv-tabl tr[data-id]').first().waitFor({ timeout: 20000 });

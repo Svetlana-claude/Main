@@ -43,7 +43,7 @@ function soobshchit(tekst, oshibka = false, dolgo = false) {
 
 // ---------- Сервер ----------
 async function api(put, opts = {}) {
-  const r = await fetch('/api/' + put, {
+  const r = await fetch('api/' + put, {
     ...opts,
     headers: opts.body ? { 'content-type': 'application/json' } : undefined,
     body: opts.body ? JSON.stringify(opts.body) : undefined,
@@ -410,7 +410,7 @@ $('#b-skachat').onclick = () => skachat(new Blob([JSON.stringify(model, null, 2)
 window.addEventListener('beforeunload', (e) => { if (izmeneno) e.preventDefault(); });
 
 // ---------- Предпросмотр и экспорт ----------
-const adresProsmotra = () => server?.viewerUrl || 'https://model.mokeevasky.ru/';
+const adresProsmotra = () => server?.viewerUrl || 'https://mokeevasky.ru/glavpryg/model-3d/parashyutnaya-sistema/';
 
 $('#b-predprosmotr').onclick = async () => {
   if (proverit(model).length) { soobshchit('Сначала исправьте ошибки в описании.', true); return; }
@@ -440,7 +440,7 @@ $('#b-eksport').onclick = async () => {
   let tekst = 'Готов файл просмотрщика. Его выкладывают на открытый адрес как главную страницу (index.html).';
   if (server) {
     try {
-      const r = await fetch(`/api/exports/${encodeURIComponent(model.id)}?name=${encodeURIComponent(model.name || '')}`, { method: 'PUT', headers: { 'content-type': 'text/html' }, body: fayl });
+      const r = await fetch(`api/exports/${encodeURIComponent(model.id)}?name=${encodeURIComponent(model.name || '')}`, { method: 'PUT', headers: { 'content-type': 'text/html' }, body: fayl });
       if (!r.ok) throw new Error((await r.json().catch(() => null))?.error || `ошибка ${r.status}`);
       await pokazatEksporty();
       tekst += ' Копия сохранена в «Материалах».';
@@ -457,7 +457,7 @@ async function pokazatEksporty() {
   if (!spisok.length) ul.append(el('li', {}, 'Пока нет ни одного.'));
   for (const e of spisok) {
     ul.append(el('li', {},
-      el('a', { href: `/api/exports/${encodeURIComponent(e.id)}`, download: `${e.id}.html` }, e.name || e.id),
+      el('a', { href: `api/exports/${encodeURIComponent(e.id)}`, download: `${e.id}.html` }, e.name || e.id),
       el('span', { class: 'id' }, new Date(e.updated).toLocaleString('ru-RU', { timeZone: 'Europe/Moscow', dateStyle: 'short', timeStyle: 'short' }) + ' МСК')));
   }
 }
@@ -564,7 +564,7 @@ function pokazatIstochniki(zapis) {
   if (!foto.length) return;
   for (const f of foto) {
     box.append(el('div', { class: 'foto' },
-      el('img', { src: `/api/photos/${encodeURIComponent(zapis.model.id)}/${f.n}`, alt: f.view }),
+      el('img', { src: `api/photos/${encodeURIComponent(zapis.model.id)}/${f.n}`, alt: f.view }),
       el('div', { class: 'podskazka' }, f.view)));
   }
 }
@@ -583,7 +583,7 @@ $('#b-foto-sohranit').onclick = async () => {
     for (const [i, f] of fotoNaZagruzku.entries()) {
       const n = nachalo + i;
       b.textContent = `Загружаю ${i + 1} из ${fotoNaZagruzku.length}…`;
-      const r = await fetch(`/api/photos/${encodeURIComponent(id)}/${n}?view=${encodeURIComponent(f.vid)}`, { method: 'PUT', headers: { 'content-type': f.type }, body: f.blob });
+      const r = await fetch(`api/photos/${encodeURIComponent(id)}/${n}?view=${encodeURIComponent(f.vid)}`, { method: 'PUT', headers: { 'content-type': f.type }, body: f.blob });
       if (!r.ok) throw new Error((await r.json().catch(() => null))?.error || 'Фото не загрузилось.');
       novye.push({ n });
     }
@@ -619,7 +619,7 @@ $('#b-sozdat').onclick = async () => {
     const id = 'model-' + Date.now().toString(36);
     for (const [n, f] of fotoNaZagruzku.entries()) {
       b.textContent = `Загружаю фото ${n + 1} из ${fotoNaZagruzku.length}…`;
-      const r = await fetch(`/api/photos/${id}/${n}?view=${encodeURIComponent(f.vid)}`, { method: 'PUT', headers: { 'content-type': f.type }, body: f.blob });
+      const r = await fetch(`api/photos/${id}/${n}?view=${encodeURIComponent(f.vid)}`, { method: 'PUT', headers: { 'content-type': f.type }, body: f.blob });
       if (!r.ok) throw new Error((await r.json().catch(() => null))?.error || 'Фото не загрузилось.');
     }
     b.textContent = 'ИИ составляет описание… (до пары минут)';

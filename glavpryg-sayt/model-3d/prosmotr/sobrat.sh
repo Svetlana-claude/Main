@@ -56,6 +56,10 @@ EOF
   "$PY" ../tools/oblozhka.py dist "$s"
 done
 
+# 4а. Просмотрщик из конструктора — готовая страница, не собирается здесь
+mkdir -p dist/parashyutnaya-sistema
+cp ../../../3d/konstruktor/prosmotrshchik/public/index.html dist/parashyutnaya-sistema/
+
 # 5. Готовое сжатие для nginx (gzip_static): сервер не жмёт на каждый запрос
 find dist -type f \( -name '*.js' -o -name '*.css' -o -name '*.html' -o -name '*.glb' \) -exec gzip -9 -k -n {} \;
 
