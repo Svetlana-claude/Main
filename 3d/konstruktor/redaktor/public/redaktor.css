@@ -1,0 +1,70 @@
+* { box-sizing: border-box; }
+html, body { margin: 0; height: 100%; }
+body { display: flex; flex-direction: column; font: 14px/1.4 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; color: #1f2933; background: #eef1f4; }
+button { font: inherit; font-size: 13px; padding: 5px 11px; border: 1px solid #c5ced6; border-radius: 6px; background: #fff; color: #1f2933; cursor: pointer; }
+button:hover { background: #f1f4f7; }
+button:disabled { opacity: .5; cursor: default; }
+button.glavnaya { background: #2f5d8a; border-color: #2f5d8a; color: #fff; }
+button.glavnaya:hover { background: #274f76; }
+button.malaya { padding: 1px 8px; font-size: 12px; margin-left: 8px; }
+button.shirokaya { width: 100%; margin: 6px 0; }
+input, select, textarea { font: inherit; font-size: 13px; padding: 4px 6px; border: 1px solid #c5ced6; border-radius: 5px; background: #fff; }
+label { display: block; font-size: 12.5px; color: #4a5560; }
+label input:not([type=radio]):not([type=checkbox]), label select, label textarea { display: block; width: 100%; margin-top: 2px; color: #1f2933; }
+
+.shapka { display: flex; align-items: center; gap: 6px; padding: 8px 12px; background: #fff; border-bottom: 1px solid #dde3e8; flex-wrap: wrap; }
+.logo { margin-right: 8px; }
+.razdel { width: 1px; height: 22px; background: #dde3e8; margin: 0 4px; }
+.pustota { flex: 1; }
+.kto { font-size: 12px; color: #66727e; }
+
+.rabochee { flex: 1; display: flex; min-height: 0; }
+.scena { flex: 1; min-width: 0; position: relative; }
+.bok { width: 380px; flex: none; display: flex; flex-direction: column; background: #fff; border-left: 1px solid #dde3e8; min-height: 0; }
+.vkladki { display: flex; border-bottom: 1px solid #dde3e8; }
+.vkladki button { flex: 1; border: 0; border-radius: 0; background: none; padding: 9px 4px; border-bottom: 2px solid transparent; }
+.vkladki button.akt { border-bottom-color: #2f5d8a; color: #2f5d8a; font-weight: 600; }
+.vkladka { display: none; flex: 1; overflow: auto; padding: 10px 12px 20px; }
+.vkladka.akt { display: block; }
+.ryad { margin: 6px 0; }
+.zag { font-size: 12px; font-weight: 600; color: #66727e; text-transform: uppercase; letter-spacing: .04em; margin: 14px 0 6px; display: flex; align-items: center; }
+.podskazka { font-size: 12.5px; color: #66727e; margin: 6px 0; }
+
+.derevo { list-style: none; margin: 0; padding: 0; border: 1px solid #e6eaee; border-radius: 6px; max-height: 240px; overflow: auto; }
+.derevo li { padding: 4px 8px; cursor: pointer; font-size: 13px; border-top: 1px solid #f0f2f4; display: flex; gap: 6px; }
+.derevo li:first-child { border-top: 0; }
+.derevo li:hover { background: #f6f9fb; }
+.derevo li.akt { background: #fdf0e5; }
+.derevo .n { color: #2f5d8a; font-weight: 700; min-width: 20px; }
+.derevo .id { color: #9aa5b1; font-size: 11.5px; margin-left: auto; }
+
+.forma { margin-top: 10px; }
+.forma .tri { display: grid; grid-template-columns: repeat(3, 1fr); gap: 4px; }
+.forma .dva { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; }
+.forma textarea { min-height: 54px; resize: vertical; }
+.forma textarea.kod { font-family: ui-monospace, Menlo, Consolas, monospace; font-size: 12px; min-height: 110px; }
+.forma .knopki { display: flex; gap: 6px; margin-top: 8px; }
+.kartochka { border: 1px solid #e6eaee; border-radius: 8px; padding: 8px 10px; margin-bottom: 10px; }
+
+#json { width: 100%; height: calc(100vh - 230px); min-height: 300px; font-family: ui-monospace, Menlo, Consolas, monospace; font-size: 12px; white-space: pre; }
+
+.knopka-fayl { display: block; text-align: center; padding: 10px; border: 1px dashed #9fb0c0; border-radius: 8px; color: #2f5d8a; cursor: pointer; margin: 6px 0; font-size: 13px; }
+.foto-spisok { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin: 6px 0; }
+.foto { border: 1px solid #e6eaee; border-radius: 6px; padding: 4px; position: relative; }
+.foto img { width: 100%; height: 90px; object-fit: contain; background: #f4f6f8; display: block; }
+.foto select { width: 100%; margin-top: 4px; }
+.foto .ubrat { position: absolute; top: 2px; right: 2px; padding: 0 6px; }
+.rezhim label { display: flex; gap: 6px; align-items: center; margin: 3px 0; color: #1f2933; }
+
+.status { position: fixed; left: 50%; bottom: 14px; transform: translateX(-50%); max-width: 80vw; padding: 8px 14px; border-radius: 8px; background: #1f2933; color: #fff; font-size: 13px; white-space: pre-line; opacity: 0; transition: opacity .25s; pointer-events: none; z-index: 20; }
+.status.vidno { opacity: .95; }
+.status.oshibka { background: #9b2c1c; }
+
+.okno { position: fixed; inset: 0; background: rgba(20, 28, 36, .55); display: flex; flex-direction: column; z-index: 10; }
+.okno[hidden] { display: none; }
+.okno-shapka { display: flex; gap: 8px; align-items: center; padding: 8px 12px; background: #fff; flex-wrap: wrap; }
+.okno-shapka .razmery button.akt { background: #2f5d8a; color: #fff; border-color: #2f5d8a; }
+.okno-shapka .vstavka { display: flex; gap: 6px; align-items: center; }
+.okno-shapka .vstavka input { width: 360px; font-family: ui-monospace, monospace; font-size: 11.5px; }
+.okno-telo { flex: 1; display: flex; align-items: center; justify-content: center; overflow: auto; padding: 16px; }
+.okno-telo iframe { border: 0; background: #fff; box-shadow: 0 6px 30px rgba(0, 0, 0, .35); max-width: 100%; max-height: 100%; }

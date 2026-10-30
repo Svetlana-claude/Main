@@ -1,0 +1,28 @@
+// Закрытый редактор 3D-моделей. Вход — только через Cloudflare Access по списку почт.
+{
+  "name": "konstruktor-3d-redaktor",
+  "main": "src/worker.js",
+  "compatibility_date": "2026-10-01",
+  "compatibility_flags": ["nodejs_compat"],
+  // Служебные адреса отключены: редактор открывается только на своём адресе за Access.
+  "workers_dev": false,
+  "preview_urls": false,
+  "routes": [{ "pattern": "3d.mokeevasky.ru", "custom_domain": true }],
+  "assets": { "directory": "./public", "binding": "ASSETS", "run_worker_first": true },
+  "kv_namespaces": [
+    // id заменяется на настоящий при первом размещении
+    { "binding": "HRAN", "id": "00000000000000000000000000000000" }
+  ],
+  "vars": {
+    "AI_MODEL": "claude-opus-5-5",
+    "AI_EFFORT": "high",
+    "DAILY_LIMIT": "30",
+    "MAX_PHOTOS": "8",
+    "MAX_PHOTO_MB": "5",
+    "VIEWER_URL": "https://model.mokeevasky.ru/",
+    // Заполняются при настройке Access: адрес команды и метка приложения.
+    "ACCESS_TEAM_DOMAIN": "",
+    "ACCESS_AUD": ""
+  }
+  // Ключ ИИ задаётся только как секрет: wrangler secret put ANTHROPIC_API_KEY
+}

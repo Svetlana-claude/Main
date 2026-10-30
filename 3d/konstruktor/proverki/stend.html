@@ -1,0 +1,11 @@
+<!doctype html><html lang="ru"><head><meta charset="utf-8"><title>Стенд движка</title><link rel="icon" href="data:,">
+<script type="importmap">{"imports":{"three":"../redaktor/public/vendor/three-bundle.min.js"}}</script>
+<style>html,body{margin:0;height:100%}#v{height:100%}</style></head>
+<body><div id="v"></div>
+<script type="module">
+import { sozdatProsmotr } from '../redaktor/public/dvizhok/dvizhok.js';
+const imya = new URLSearchParams(location.search).get('m') || 'parashyut';
+const model = await (await fetch(`../redaktor/public/modeli/${imya}.json`)).json();
+window.prosmotr = sozdatProsmotr(document.getElementById('v'), model, { snimki: true });
+window.gotovo = true;
+</script></body></html>

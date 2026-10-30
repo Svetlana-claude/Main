@@ -1,0 +1,123 @@
+{
+  "format": 1,
+  "id": "samolet",
+  "name": "Самолёт для прыжков (лёгкий, высокоплан)",
+  "scale": { "text": "Размах крыла 11 м", "part": "krylo", "size": 11 },
+  "parts": [
+    { "id": "koren", "name": "Центр самолёта", "parent": null, "shape": { "type": "group" }, "position": [0, 0, 0] },
+    {
+      "id": "fyuzelyazh", "num": 1, "name": "Фюзеляж",
+      "desc": "Корпус самолёта: спереди кабина пилота, сзади место для парашютистов. К нему крепятся крыло, хвост и шасси.",
+      "parent": "koren", "position": [0, 0, 0], "shape": { "type": "group" }, "label": [0.6, 0.1, -1.6]
+    },
+    {
+      "id": "obshivka", "name": "Обшивка фюзеляжа", "parent": "fyuzelyazh", "position": [0, 0, 0], "rotation": [90, 0, 0],
+      "shape": { "type": "lathe", "segments": 36, "points": [[0, -4.4], [0.18, -4.1], [0.32, -3.4], [0.52, -2], [0.64, -0.6], [0.66, 1.1], [0.6, 2.4], [0.46, 3.2], [0.2, 3.6], [0, 3.66]] },
+      "color": "#f3f1ec"
+    },
+    {
+      "id": "okna", "num": 10, "name": "Остекление кабины",
+      "desc": "Лобовое и боковые стёкла кабины. Через них пилот видит землю и площадку выброски.",
+      "parent": "fyuzelyazh", "position": [0, 0.42, 1.5], "scale": [1.15, 0.55, 1.35],
+      "shape": { "type": "sphere", "radius": 0.5 }, "color": "#8fb9d6",
+      "explode": { "dir": [0, 1, 0], "dist": 0.7 }
+    },
+    {
+      "id": "krylo", "num": 2, "name": "Крыло",
+      "desc": "Создаёт подъёмную силу. Расположено над кабиной, поэтому парашютистам удобно выходить и висеть под ним.",
+      "parent": "fyuzelyazh", "position": [0, 0.76, 0.55],
+      "shape": { "type": "wing", "span": 11, "chord": 1.6, "thickness": 0.14, "taper": 0.72, "dihedral": 1.7, "segments": 20 },
+      "color": "#c8452f", "label": [3.5, 0.86, 0.5],
+      "explode": { "dir": [0, 1, 0], "dist": 1.3 }
+    },
+    {
+      "id": "podkosy", "num": 3, "name": "Подкосы крыла",
+      "desc": "Наклонные стойки между фюзеляжем и крылом. Разгружают крыло, чтобы оно было лёгким.",
+      "parent": "fyuzelyazh", "position": [0, 0, 0],
+      "shape": { "type": "tube", "radius": 0.04, "points": [[0.58, -0.32, 0.55], [1.7, 0.2, 0.6], [2.8, 0.72, 0.62]] },
+      "color": "#9aa3ab", "label": [1.7, 0.2, 0.6],
+      "explode": { "dir": [0, -1, 0], "dist": 0.5 }
+    },
+    {
+      "id": "podkos-p", "name": "Правый подкос", "parent": "podkosy", "position": [0, 0, 0],
+      "shape": { "type": "tube", "radius": 0.04, "points": [[-0.58, -0.32, 0.55], [-1.7, 0.2, 0.6], [-2.8, 0.72, 0.62]] },
+      "color": "#9aa3ab"
+    },
+    {
+      "id": "kil", "num": 4, "name": "Киль и руль направления",
+      "desc": "Вертикальное хвостовое оперение. Держит самолёт по курсу, а подвижный руль поворачивает его влево и вправо.",
+      "parent": "fyuzelyazh", "position": [0, 0.95, -3.75], "rotation": [0, 0, 90],
+      "shape": { "type": "wing", "span": 1.8, "chord": 1.2, "thickness": 0.1, "taper": 0.55, "sweep": 0, "segments": 8 },
+      "color": "#c8452f",
+      "explode": { "dir": [0, 1, -0.4], "dist": 1.0 }
+    },
+    {
+      "id": "stabilizator", "num": 5, "name": "Стабилизатор и руль высоты",
+      "desc": "Горизонтальное хвостовое оперение. Руль высоты поднимает и опускает нос самолёта.",
+      "parent": "fyuzelyazh", "position": [0, 0.12, -3.8],
+      "shape": { "type": "wing", "span": 3.6, "chord": 0.95, "thickness": 0.09, "taper": 0.7, "segments": 10 },
+      "color": "#f3f1ec",
+      "explode": { "dir": [0, 0, -1], "dist": 1.1 }
+    },
+    {
+      "id": "vint", "num": 6, "name": "Воздушный винт",
+      "desc": "Две лопасти, которые вращает двигатель. Винт тянет самолёт вперёд.",
+      "parent": "fyuzelyazh", "position": [0, 0, 3.82],
+      "shape": { "type": "box", "size": [0.16, 2.0, 0.05] }, "color": "#2b2f36",
+      "explode": { "dir": [0, 0, 1], "dist": 1.2 }
+    },
+    {
+      "id": "kok", "name": "Кок винта", "parent": "vint", "position": [0, 0, 3.92], "rotation": [90, 0, 0],
+      "shape": { "type": "cone", "radius": 0.2, "height": 0.36 }, "color": "#c8452f"
+    },
+    {
+      "id": "shassi", "num": 7, "name": "Основные стойки шасси",
+      "desc": "Пружинные стойки с колёсами под кабиной. Принимают удар при посадке.",
+      "parent": "fyuzelyazh", "position": [0, 0, 0],
+      "shape": { "type": "tube", "radius": 0.035, "points": [[0.32, -0.58, 0.25], [1.25, -1.36, 0.15]] },
+      "color": "#5b6168", "label": [0.8, -1.0, 0.2],
+      "explode": { "dir": [0, -1, 0], "dist": 0.9 }
+    },
+    {
+      "id": "stoyka-p", "name": "Правая стойка", "parent": "shassi", "position": [0, 0, 0],
+      "shape": { "type": "tube", "radius": 0.035, "points": [[-0.32, -0.58, 0.25], [-1.25, -1.36, 0.15]] }, "color": "#5b6168"
+    },
+    {
+      "id": "koleso-l", "name": "Левое колесо", "parent": "shassi", "position": [1.3, -1.45, 0.15], "rotation": [0, 0, 90],
+      "shape": { "type": "cylinder", "radius": 0.22, "height": 0.14 }, "color": "#23262b"
+    },
+    {
+      "id": "koleso-p", "name": "Правое колесо", "parent": "shassi", "position": [-1.3, -1.45, 0.15], "rotation": [0, 0, 90],
+      "shape": { "type": "cylinder", "radius": 0.22, "height": 0.14 }, "color": "#23262b"
+    },
+    {
+      "id": "nosovaya", "num": 8, "name": "Носовая стойка",
+      "desc": "Передняя стойка с колесом под двигателем. На земле ею рулят, как у велосипеда.",
+      "parent": "fyuzelyazh", "position": [0, 0, 0],
+      "shape": { "type": "tube", "radius": 0.04, "points": [[0, -0.5, 2.85], [0, -1.3, 2.95]] },
+      "color": "#5b6168", "label": [0, -1.1, 2.93],
+      "explode": { "dir": [0, -1, 0.3], "dist": 0.8 }
+    },
+    {
+      "id": "koleso-n", "name": "Носовое колесо", "parent": "nosovaya", "position": [0, -1.45, 2.95], "rotation": [0, 0, 90],
+      "shape": { "type": "cylinder", "radius": 0.19, "height": 0.12 }, "color": "#23262b"
+    },
+    {
+      "id": "dver", "num": 9, "name": "Дверь для выброски",
+      "desc": "Широкий проём на правом борту за крылом. Через него парашютисты выходят из самолёта.",
+      "parent": "fyuzelyazh", "position": [-0.65, -0.05, 0.2],
+      "shape": { "type": "box", "size": [0.03, 0.95, 1.05] }, "color": "#3a4a5c",
+      "explode": { "dir": [-1, 0, 0], "dist": 0.9 }
+    }
+  ],
+  "animations": [
+    { "id": "vint", "name": "Вращение винта", "type": "rotate", "target": "vint", "autoplay": true,
+      "params": { "axis": [0, 0, 1], "speed": 900 } },
+    { "id": "kachanie", "name": "Покачивание крыльями", "type": "swing", "target": "koren",
+      "params": { "amplitude": 10, "period": 3, "axis": [0, 0, 1], "pivot": [0, 0, 0] } },
+    { "id": "boltanka", "name": "Болтанка", "type": "jitter", "target": "koren",
+      "params": { "amplitude": 1.5, "speed": 0.8, "offset": 0.04 } },
+    { "id": "razvorot", "name": "Разворот", "type": "control", "target": "koren",
+      "params": { "yawSpeed": 20, "bank": 25 } }
+  ]
+}

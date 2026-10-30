@@ -1,0 +1,10 @@
+// Открытый просмотрщик одной модели. Только готовая страница: без редактора,
+// без загрузки фото, без серверных функций и без других моделей.
+{
+  "name": "konstruktor-3d-prosmotrshchik",
+  "compatibility_date": "2026-10-01",
+  "workers_dev": false,
+  "preview_urls": false,
+  "routes": [{ "pattern": "model.mokeevasky.ru", "custom_domain": true }],
+  "assets": { "directory": "./public" }
+}

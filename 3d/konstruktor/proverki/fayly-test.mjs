@@ -1,0 +1,21 @@
+// Проверка дополнительных выгрузок: GLB и видео.
+import { chromium } from 'playwright-core';
+import { readdirSync, readFileSync, statSync } from 'node:fs';
+const kesh = process.env.HOME + '/.cache/ms-playwright/chromium-1234/';
+const chrome = kesh + readdirSync(kesh).find((d) => d.startsWith('chrome-')) + '/chrome';
+const b = await chromium.launch({ executablePath: chrome, args: ['--use-gl=angle', '--use-angle=swiftshader', '--enable-unsafe-swiftshader'] });
+const s = await b.newPage({ viewport: { width: 1440, height: 900 }, acceptDownloads: true });
+const oshibki = [];
+s.on('pageerror', (e) => oshibki.push(String(e)));
+await s.goto('http://127.0.0.1:8787/');
+await s.waitForSelector('.dv-tabl tr[data-id]');
+const [g] = await Promise.all([s.waitForEvent('download'), s.click('#b-glb')]);
+await g.saveAs('/tmp/test.glb');
+const glb = readFileSync('/tmp/test.glb');
+console.log(glb.slice(0, 4).toString() === 'glTF' && glb.length > 50000 ? 'OK   GLB выгружается (' + Math.round(glb.length / 1024) + ' КБ)' : 'FAIL GLB');
+const [v] = await Promise.all([s.waitForEvent('download', { timeout: 30000 }), s.click('#b-video')]);
+const imya = v.suggestedFilename();
+await v.saveAs('/tmp/' + imya);
+console.log(statSync('/tmp/' + imya).size > 20000 ? `OK   видео записывается (${imya}, ${Math.round(statSync('/tmp/' + imya).size / 1024)} КБ)` : 'FAIL видео');
+console.log(oshibki.length ? 'FAIL ' + oshibki.join(' | ') : 'OK   ошибок нет');
+await b.close();

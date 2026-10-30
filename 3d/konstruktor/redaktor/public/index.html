@@ -1,0 +1,105 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex, nofollow">
+<title>Конструктор 3D-моделей</title>
+<link rel="icon" href="data:,">
+<link rel="stylesheet" href="redaktor.css">
+<script type="importmap">{ "imports": { "three": "./vendor/three-bundle.min.js" } }</script>
+</head>
+<body>
+<header class="shapka">
+  <strong class="logo">Конструктор 3D</strong>
+  <select id="spisok-modeley" title="Модели"></select>
+  <button id="b-novaya">Новая</button>
+  <button id="b-otkryt">Открыть файл</button>
+  <input type="file" id="f-otkryt" accept=".json,application/json" hidden>
+  <button id="b-sohranit" class="glavnaya">Сохранить</button>
+  <button id="b-skachat">Скачать описание</button>
+  <span class="razdel"></span>
+  <button id="b-predprosmotr">Предпросмотр как на сайте</button>
+  <button id="b-eksport" class="glavnaya">Экспорт для сайта</button>
+  <button id="b-video">Видео</button>
+  <button id="b-glb">GLB</button>
+  <span class="pustota"></span>
+  <span id="kto" class="kto"></span>
+</header>
+
+<main class="rabochee">
+  <section id="scena" class="scena"></section>
+  <aside class="bok">
+    <nav class="vkladki">
+      <button data-v="detali" class="akt">Детали</button>
+      <button data-v="animacii">Анимации</button>
+      <button data-v="foto">По фото</button>
+      <button data-v="tekst">Описание</button>
+    </nav>
+
+    <div class="vkladka akt" id="v-detali">
+      <div class="ryad">
+        <label>Название модели <input id="m-name"></label>
+      </div>
+      <div class="ryad">
+        <label>Масштаб (один реальный размер) <input id="m-scale" placeholder="например, размах купола 8 м"></label>
+      </div>
+      <div class="zag">Части <button id="b-dobavit-chast" class="malaya">+ деталь</button></div>
+      <ul id="derevo" class="derevo"></ul>
+      <div id="forma-chasti" class="forma"></div>
+    </div>
+
+    <div class="vkladka" id="v-animacii">
+      <div class="zag">Анимации <button id="b-dobavit-anim" class="malaya">+ анимация</button></div>
+      <div id="spisok-anim"></div>
+    </div>
+
+    <div class="vkladka" id="v-foto">
+      <p class="podskazka">Загрузите фото или схемы и для каждого укажите вид. ИИ составит описание модели, потом его можно поправить словами.</p>
+      <label class="knopka-fayl">Добавить фото или схемы
+        <input type="file" id="f-foto" accept="image/*" multiple hidden>
+      </label>
+      <div id="foto-spisok" class="foto-spisok"></div>
+      <div class="ryad"><label>Название <input id="g-name" placeholder="например, Парашютная система"></label></div>
+      <div class="ryad"><label>Один реальный размер <input id="g-size" placeholder="например, размах купола 8 м"></label></div>
+      <div class="ryad rezhim">
+        <label><input type="radio" name="g-mode" value="shema" checked> По схеме — точнее</label>
+        <label><input type="radio" name="g-mode" value="foto"> По фото — приблизительно</label>
+      </div>
+      <button id="b-sozdat" class="glavnaya shirokaya">Создать модель</button>
+      <div class="zag">Правка словами</div>
+      <div class="ryad"><input id="g-pravka" placeholder="например: купол выше, стропы тоньше"></div>
+      <button id="b-pravka" class="shirokaya">Поправить</button>
+      <div id="g-limity" class="podskazka"></div>
+      <div id="istochniki" class="foto-spisok"></div>
+      <p class="podskazka">Если ИИ не подключён, описание можно подготовить отдельно и загрузить кнопкой «Открыть файл».</p>
+    </div>
+
+    <div class="vkladka" id="v-tekst">
+      <p class="podskazka">Полное описание модели. Номера, таблица и подписи берутся отсюда.</p>
+      <textarea id="json" spellcheck="false"></textarea>
+      <button id="b-primenit" class="glavnaya shirokaya">Применить</button>
+    </div>
+  </aside>
+</main>
+
+<div id="status" class="status" role="status"></div>
+
+<div id="okno" class="okno" hidden>
+  <div class="okno-shapka">
+    <strong>Предпросмотр — так увидит посетитель</strong>
+    <span class="razmery">
+      <button data-r="1280x720" class="akt">Компьютер</button>
+      <button data-r="800x500">Окно на сайте</button>
+      <button data-r="390x720">Телефон</button>
+    </span>
+    <span class="pustota"></span>
+    <label class="vstavka">Код вставки <input id="kod-vstavki" readonly></label>
+    <button id="b-zakryt">Закрыть</button>
+  </div>
+  <div class="okno-telo"><iframe id="ramka" title="Предпросмотр"></iframe></div>
+</div>
+
+<script type="module" src="redaktor.js"></script>
+</body>
+</html>
