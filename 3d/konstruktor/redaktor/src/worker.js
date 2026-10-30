@@ -10,7 +10,12 @@ const limity = (env) => ({
   limit: chislo(env.DAILY_LIMIT, 30),
   maxPhotos: chislo(env.MAX_PHOTOS, 8),
   maxPhotoMb: chislo(env.MAX_PHOTO_MB, 5),
+  maxStored: chislo(env.MAX_STORED_PHOTOS, 40),
 });
+// Внешний ИИ работает, только если явно включён настройкой и есть ключ.
+// На этом этапе выключен: платных запросов быть не может, даже если ключ появится.
+const iiVklyuchen = (env) => env.AI_ENABLED === '1' && !!env.ANTHROPIC_API_KEY;
+const II_VYKLYUCHEN = 'Создание через внешний ИИ выключено. Модель делается в «Проектах», готовый файл загружается в редактор.';
 
 const json = (dannye, status = 200) => new Response(JSON.stringify(dannye), {
   status,
@@ -70,7 +75,7 @@ async function api(request, env, ctx, put, vhod) {
   const m = request.method;
 
   if (put === 'status' && m === 'GET') {
-    return json({ ai: !!env.ANTHROPIC_API_KEY, used: await ispolzovanoSegodnya(env), ...L, email: vhod.email, viewerUrl: env.VIEWER_URL || null });
+    return json({ ai: iiVklyuchen(env), used: await ispolzovanoSegodnya(env), ...L, email: vhod.email, viewerUrl: env.VIEWER_URL || null });
   }
 
   if (put === 'models' && m === 'GET') {
@@ -107,7 +112,65 @@ async function api(request, env, ctx, put, vhod) {
     if (m === 'DELETE') {
       const z = await zapis(env, id);
       for (const f of z?.source?.photos || []) await env.HRAN.delete(`photo:${id}:${f.n}`);
+      await env.HRAN.delete('export:' + id);
       await env.HRAN.delete('model:' + id);
+      return json({ ok: true });
+    }
+  }
+
+  // Фото и схемы, сохранённые к модели: только хранение, без обращения к ИИ.
+  r = put.match(/^models\/([^/]+)\/materialy$/);
+  if (r && m === 'POST') {
+    const id = decodeURIComponent(r[1]);
+    if (!ID.test(id)) return oshibka('Неправильный id модели.');
+    const z = await zapis(env, id);
+    if (!z) return oshibka('Сначала сохраните модель.', 404);
+    const t = await request.json().catch(() => null);
+    const novye = [];
+    for (const f of t?.photos || []) {
+      const s = await env.HRAN.getWithMetadata(`photo:${id}:${+f.n}`, 'stream');
+      if (!s.value) return oshibka(`Фото №${+f.n + 1} не дошло до сервера — загрузите ещё раз.`);
+      await s.value.cancel();
+      novye.push({ n: +f.n, view: s.metadata?.view || 'вид не указан' });
+    }
+    const bylo = z.source?.photos || [];
+    z.source = {
+      ...(z.source || {}),
+      mode: t?.mode || z.source?.mode,
+      size: t?.size || z.source?.size,
+      photos: [...bylo.filter((f) => !novye.some((x) => x.n === f.n)), ...novye],
+    };
+    return json(await sohranitZapis(env, z));
+  }
+
+  // Готовые просмотрщики: по одному последнему на модель.
+  if (put === 'exports' && m === 'GET') {
+    const spisok = [];
+    let cursor;
+    do {
+      const o = await env.HRAN.list({ prefix: 'export:', cursor });
+      for (const k of o.keys) spisok.push({ id: k.name.slice(7), ...k.metadata });
+      cursor = o.list_complete ? null : o.cursor;
+    } while (cursor);
+    spisok.sort((a, b) => String(b.updated).localeCompare(String(a.updated)));
+    return json({ exports: spisok });
+  }
+  r = put.match(/^exports\/([^/]+)$/);
+  if (r) {
+    const id = decodeURIComponent(r[1]);
+    if (!ID.test(id)) return oshibka('Неправильный id модели.');
+    if (m === 'GET') {
+      const f = await env.HRAN.get('export:' + id, 'stream');
+      if (!f) return oshibka('Экспорт не найден.', 404);
+      // Только скачиванием: чтобы страница не открывалась на закрытом адресе.
+      return new Response(f, { headers: { 'content-type': 'application/octet-stream', 'content-disposition': `attachment; filename="${id}.html"`, 'cache-control': 'no-store' } });
+    }
+    if (m === 'PUT') {
+      if (!/^text\/html/.test(request.headers.get('content-type') || '')) return oshibka('Экспорт — это страница HTML.');
+      const razmer = +request.headers.get('content-length') || 0;
+      if (!razmer || razmer > 10 * 1024 * 1024) return oshibka('Экспорт больше 10 МБ — так быть не должно.');
+      const name = (new URL(request.url).searchParams.get('name') || id).slice(0, 200);
+      await env.HRAN.put('export:' + id, request.body, { metadata: { name, size: razmer, updated: new Date().toISOString() } });
       return json({ ok: true });
     }
   }
@@ -123,7 +186,7 @@ async function api(request, env, ctx, put, vhod) {
       return new Response(f.value, { headers: { 'content-type': f.metadata?.type || 'image/jpeg', 'cache-control': 'private, max-age=86400' } });
     }
     if (m === 'PUT') {
-      if (n >= L.maxPhotos) return oshibka(`За один раз — не больше ${L.maxPhotos} фото.`);
+      if (n >= L.maxStored) return oshibka(`К одной модели — не больше ${L.maxStored} фото.`);
       const tip = request.headers.get('content-type') || '';
       if (!/^image\/(jpeg|png|webp|gif)$/.test(tip)) return oshibka('Можно загружать только картинки: JPEG, PNG, WebP.');
       const razmer = +request.headers.get('content-length') || 0;
@@ -136,7 +199,7 @@ async function api(request, env, ctx, put, vhod) {
   }
 
   if (put === 'generate' && m === 'POST') {
-    if (!env.ANTHROPIC_API_KEY) return oshibka('ИИ не подключён: ключ доступа ещё не внесён в настройки.');
+    if (!iiVklyuchen(env)) return oshibka(II_VYKLYUCHEN);
     const t = await request.json().catch(() => null);
     if (!t || !ID.test(t.id || '')) return oshibka('Нет id модели.');
     const foto = (t.photos || []).slice(0, L.maxPhotos);
@@ -176,7 +239,7 @@ async function api(request, env, ctx, put, vhod) {
   }
 
   if (put === 'refine' && m === 'POST') {
-    if (!env.ANTHROPIC_API_KEY) return oshibka('ИИ не подключён: ключ доступа ещё не внесён в настройки.');
+    if (!iiVklyuchen(env)) return oshibka(II_VYKLYUCHEN);
     const t = await request.json().catch(() => null);
     if (!t || !ID.test(t.id || '')) return oshibka('Нет id модели.');
     const pros = String(t.instruction || '').trim().slice(0, 1000);

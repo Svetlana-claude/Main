@@ -26,8 +26,10 @@
   - `worker.js` — хранилище моделей и фото (KV), лимиты, обращения к ИИ;
   - `ii.js` — запросы к Claude: фото уходят как файлы (Files API, 90 дней),
     ответ — описание модели, проверяется `format.js`, при ошибках — одна попытка исправить.
-- Ключ ИИ — только секрет Cloudflare `ANTHROPIC_API_KEY`. Модель и усилие —
-  переменные `AI_MODEL`, `AI_EFFORT` в `redaktor/wrangler.jsonc`.
+- Внешний ИИ выключен: `AI_ENABLED` в `redaktor/wrangler.jsonc` равно `0`, сервер отказывает
+  даже при наличии ключа, кнопки скрыты. Модели составляет Claude в «Проектах».
+  Если включать: ключ — только секрет Cloudflare `ANTHROPIC_API_KEY`; модель и усилие —
+  `AI_MODEL`, `AI_EFFORT`.
 
 ## Формат описания (кратко)
 
@@ -64,13 +66,20 @@ npx wrangler dev --port 8787 --ip 127.0.0.1
 - `prosmotrshchik-test.mjs` — просмотрщик по ссылке и внутри чужой страницы;
 - `sravnenie-test.mjs` — предпросмотр и выложенный файл совпадают байт в байт;
 - `dostup-test.mjs` — пропуск Access: настоящий, поддельный, чужой, просроченный;
-- `fayly-test.mjs` — GLB и видео.
+- `fayly-test.mjs` — GLB и видео;
+- `bez-ii-test.mjs` — ИИ выключен: нет кнопок, сервер отказывает, запросов к ИИ нет;
+  фото и экспорты хранятся. `redaktor-test.mjs` — при `AI_ENABLED=1` в `.dev.vars`.
 
-## Размещение (когда будет ключ Cloudflare)
+## Размещение
 
-1. KV: `npx wrangler kv namespace create HRAN` → id в `redaktor/wrangler.jsonc`.
-2. Zero Trust → Access → приложение на `3d.mokeevasky.ru`, политика «почта из списка»;
+Нужны: включённый Zero Trust, идентификатор аккаунта (`CLOUDFLARE_ACCOUNT_ID`) и ключ с правами:
+аккаунт — Workers Scripts, Workers KV Storage, Access: Apps and Policies, Access: Organizations,
+Identity Providers, and Groups (все Edit), Account Settings (Read); зона mokeevasky.ru —
+Workers Routes (Edit), Zone (Read).
+
+1. `npx wrangler kv namespace create HRAN` → id в `redaktor/wrangler.jsonc`.
+2. Access: вход по коду на почту, приложение на `3d.mokeevasky.ru`, политика «почта из списка»;
    адрес команды и AUD → `ACCESS_TEAM_DOMAIN`, `ACCESS_AUD`.
 3. `npx wrangler deploy` в `redaktor/` и в `prosmotrshchik/`.
-4. Ключ ИИ вносит владелец: `npx wrangler secret put ANTHROPIC_API_KEY` или в панели.
-5. Проверить вживую: без входа — 403 и страница Access; workers.dev выключен.
+4. Проверить вживую: почта из списка, чужая почта, поддельный и просроченный пропуски;
+   запрос без входа, служебный адрес workers.dev выключен; приём фото и экспортов в хранилище.

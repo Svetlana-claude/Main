@@ -25,6 +25,7 @@ let vybrannaya = null;     // id выбранной части
 let server = null;         // ответ /api/status или null, если сервера нет
 let fotoNaZagruzku = [];   // [{ vid, data, type, prevyu }]
 let izmeneno = false;
+let zapisModeli = null;     // запись из хранилища: модель и её материалы
 
 const VIDY = ['спереди', 'сзади', 'слева', 'справа', 'сверху', 'снизу', 'сбоку', 'три четверти', 'деталь крупно'];
 const LOKALNYE = 'konstruktor3d:modeli';
@@ -66,9 +67,10 @@ async function uznatServer() {
 
 function obnovitLimity() {
   const l = $('#g-limity');
-  if (!server) { l.textContent = 'Серверная часть не запущена — создание по фото недоступно.'; return; }
-  if (!server.ai) { l.textContent = 'ИИ не подключён: ключ доступа ещё не внесён в настройки.'; return; }
-  l.textContent = `Запросов к ИИ сегодня: ${server.used} из ${server.limit}. За раз — до ${server.maxPhotos} фото.`;
+  $('#blok-ii').hidden = !server?.ai;
+  if (!server) l.textContent = 'Серверная часть не запущена: фото и экспорты здесь не хранятся.';
+  else if (server.ai) l.textContent = `Запросов к ИИ сегодня: ${server.used} из ${server.limit}. За раз — до ${server.maxPhotos} фото.`;
+  else l.textContent = '';
 }
 
 // ---------- Список моделей ----------
@@ -433,9 +435,32 @@ $('#kod-vstavki').onclick = (e) => e.target.select();
 $('#b-eksport').onclick = async () => {
   if (proverit(model).length) { soobshchit('Сначала исправьте ошибки в описании.', true); return; }
   const html = await sobratVBrauzere(model);
-  skachat(new Blob([html], { type: 'text/html' }), `${model.id || 'model'}.html`);
-  soobshchit('Готов файл просмотрщика. Его выкладывают на открытый адрес как главную страницу (index.html).', false, true);
+  const fayl = new Blob([html], { type: 'text/html' });
+  skachat(fayl, `${model.id || 'model'}.html`);
+  let tekst = 'Готов файл просмотрщика. Его выкладывают на открытый адрес как главную страницу (index.html).';
+  if (server) {
+    try {
+      const r = await fetch(`/api/exports/${encodeURIComponent(model.id)}?name=${encodeURIComponent(model.name || '')}`, { method: 'PUT', headers: { 'content-type': 'text/html' }, body: fayl });
+      if (!r.ok) throw new Error((await r.json().catch(() => null))?.error || `ошибка ${r.status}`);
+      await pokazatEksporty();
+      tekst += ' Копия сохранена в «Материалах».';
+    } catch (e) { tekst += ' Копию сохранить не удалось: ' + e.message; }
+  }
+  soobshchit(tekst, false, true);
 };
+
+async function pokazatEksporty() {
+  const ul = $('#eksporty');
+  ul.innerHTML = '';
+  if (!server) return;
+  const { exports: spisok } = await api('exports');
+  if (!spisok.length) ul.append(el('li', {}, 'Пока нет ни одного.'));
+  for (const e of spisok) {
+    ul.append(el('li', {},
+      el('a', { href: `/api/exports/${encodeURIComponent(e.id)}`, download: `${e.id}.html` }, e.name || e.id),
+      el('span', { class: 'id' }, new Date(e.updated).toLocaleString('ru-RU', { timeZone: 'Europe/Moscow', dateStyle: 'short', timeStyle: 'short' }) + ' МСК')));
+  }
+}
 
 // ---------- Видео и GLB ----------
 $('#b-video').onclick = async () => {
@@ -520,7 +545,7 @@ function narisovatFoto() {
 $('#f-foto').onchange = async (e) => {
   const fayly = [...e.target.files];
   e.target.value = '';
-  const maks = server?.maxPhotos ?? 8;
+  const maks = server?.ai ? server.maxPhotos : (server?.maxStored ?? 8);
   for (const f of fayly) {
     if (fotoNaZagruzku.length >= maks) { soobshchit(`За один раз — не больше ${maks} фото.`, true); break; }
     try {
@@ -532,6 +557,7 @@ $('#f-foto').onchange = async (e) => {
 };
 
 function pokazatIstochniki(zapis) {
+  zapisModeli = zapis;
   const box = $('#istochniki');
   box.innerHTML = '';
   const foto = zapis?.source?.photos || [];
@@ -542,6 +568,41 @@ function pokazatIstochniki(zapis) {
       el('div', { class: 'podskazka' }, f.view)));
   }
 }
+
+$('#b-foto-sohranit').onclick = async () => {
+  if (!server) { soobshchit('Серверная часть не запущена — фото здесь не хранятся.', true); return; }
+  if (!fotoNaZagruzku.length) { soobshchit('Добавьте хотя бы одно фото или схему.', true); return; }
+  const b = $('#b-foto-sohranit');
+  b.disabled = true;
+  try {
+    if (!istochnik || istochnik.gde !== 'server') await sohranit();
+    const id = model.id;
+    const svezhaya = await api('models/' + encodeURIComponent(id));
+    const nachalo = Math.max(-1, ...(svezhaya.source?.photos || []).map((f) => f.n)) + 1;
+    const novye = [];
+    for (const [i, f] of fotoNaZagruzku.entries()) {
+      const n = nachalo + i;
+      b.textContent = `Загружаю ${i + 1} из ${fotoNaZagruzku.length}…`;
+      const r = await fetch(`/api/photos/${encodeURIComponent(id)}/${n}?view=${encodeURIComponent(f.vid)}`, { method: 'PUT', headers: { 'content-type': f.type }, body: f.blob });
+      if (!r.ok) throw new Error((await r.json().catch(() => null))?.error || 'Фото не загрузилось.');
+      novye.push({ n });
+    }
+    const zapis = await api(`models/${encodeURIComponent(id)}/materialy`, { method: 'POST', body: {
+      photos: novye,
+      size: $('#g-size').value.trim(),
+      mode: document.querySelector('[name=g-mode]:checked').value,
+    } });
+    pokazatIstochniki(zapis);
+    fotoNaZagruzku = [];
+    narisovatFoto();
+    soobshchit('Фото сохранены к модели.');
+  } catch (e) {
+    soobshchit(e.message, true);
+  } finally {
+    b.disabled = false;
+    b.textContent = 'Сохранить к модели';
+  }
+};
 
 $('#b-sozdat').onclick = async () => {
   if (!server) { soobshchit('Серверная часть не запущена — создание по фото недоступно.', true); return; }
@@ -616,3 +677,4 @@ await zagruzitSpisok();
 const pervaya = $('#spisok-modeley').querySelector('option[value="vstroennaya:parashyut"]') ? 'vstroennaya:parashyut' : $('#spisok-modeley').value;
 $('#spisok-modeley').value = pervaya;
 await otkryt(pervaya);
+await pokazatEksporty().catch((e) => soobshchit(e.message, true));

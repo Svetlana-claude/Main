@@ -33,7 +33,7 @@
     <nav class="vkladki">
       <button data-v="detali" class="akt">Детали</button>
       <button data-v="animacii">Анимации</button>
-      <button data-v="foto">По фото</button>
+      <button data-v="foto">Материалы</button>
       <button data-v="tekst">Описание</button>
     </nav>
 
@@ -55,24 +55,32 @@
     </div>
 
     <div class="vkladka" id="v-foto">
-      <p class="podskazka">Загрузите фото или схемы и для каждого укажите вид. ИИ составит описание модели, потом его можно поправить словами.</p>
+      <p class="podskazka">Модель по фото и схемам составляет Claude в «Проектах»: положите материалы туда, подпишите виды и укажите один реальный размер. Готовый файл загружается кнопкой «Открыть файл», правки — тоже через Claude.</p>
+      <div class="zag">Фото и схемы этой модели</div>
+      <p class="podskazka">Здесь они только хранятся рядом с моделью, чтобы к ним можно было вернуться.</p>
       <label class="knopka-fayl">Добавить фото или схемы
         <input type="file" id="f-foto" accept="image/*" multiple hidden>
       </label>
       <div id="foto-spisok" class="foto-spisok"></div>
-      <div class="ryad"><label>Название <input id="g-name" placeholder="например, Парашютная система"></label></div>
       <div class="ryad"><label>Один реальный размер <input id="g-size" placeholder="например, размах купола 8 м"></label></div>
       <div class="ryad rezhim">
         <label><input type="radio" name="g-mode" value="shema" checked> По схеме — точнее</label>
         <label><input type="radio" name="g-mode" value="foto"> По фото — приблизительно</label>
       </div>
-      <button id="b-sozdat" class="glavnaya shirokaya">Создать модель</button>
-      <div class="zag">Правка словами</div>
-      <div class="ryad"><input id="g-pravka" placeholder="например: купол выше, стропы тоньше"></div>
-      <button id="b-pravka" class="shirokaya">Поправить</button>
-      <div id="g-limity" class="podskazka"></div>
+      <button id="b-foto-sohranit" class="shirokaya">Сохранить к модели</button>
       <div id="istochniki" class="foto-spisok"></div>
-      <p class="podskazka">Если ИИ не подключён, описание можно подготовить отдельно и загрузить кнопкой «Открыть файл».</p>
+      <div id="g-limity" class="podskazka"></div>
+
+      <div id="blok-ii" hidden>
+        <div class="zag">Внешний ИИ</div>
+        <div class="ryad"><label>Название <input id="g-name" placeholder="например, Парашютная система"></label></div>
+        <button id="b-sozdat" class="glavnaya shirokaya">Создать модель</button>
+        <div class="ryad"><input id="g-pravka" placeholder="например: купол выше, стропы тоньше"></div>
+        <button id="b-pravka" class="shirokaya">Поправить</button>
+      </div>
+
+      <div class="zag">Готовые просмотрщики</div>
+      <ul id="eksporty" class="derevo"></ul>
     </div>
 
     <div class="vkladka" id="v-tekst">

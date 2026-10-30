@@ -14,11 +14,14 @@
     { "binding": "HRAN", "id": "00000000000000000000000000000000" }
   ],
   "vars": {
+    // Внешний ИИ выключен: включается только при открытии для других, вместе с ключом и защитой.
+    "AI_ENABLED": "0",
     "AI_MODEL": "claude-opus-5-5",
     "AI_EFFORT": "high",
     "DAILY_LIMIT": "30",
     "MAX_PHOTOS": "8",
     "MAX_PHOTO_MB": "5",
+    "MAX_STORED_PHOTOS": "40",
     "VIEWER_URL": "https://model.mokeevasky.ru/",
     // Заполняются при настройке Access: адрес команды и метка приложения.
     "ACCESS_TEAM_DOMAIN": "",
