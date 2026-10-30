@@ -23,19 +23,38 @@
   <button id="b-eksport" class="glavnaya">Экспорт для сайта</button>
   <button id="b-video">Видео</button>
   <button id="b-glb">GLB</button>
+  <button id="b-spisok" hidden title="Скрыть или показать панель рядом с моделью">Скрыть список</button>
   <span class="pustota"></span>
   <span id="kto" class="kto"></span>
+  <a id="na-sayt" class="na-sayt" href="../" hidden>На сайт</a>
 </header>
 
 <main class="rabochee">
   <section id="scena" class="scena"></section>
   <aside class="bok">
     <nav class="vkladki">
+      <button data-v="chat" id="vkl-chat" hidden>Чат</button>
       <button data-v="detali" class="akt">Детали</button>
       <button data-v="animacii">Анимации</button>
       <button data-v="foto">Материалы</button>
       <button data-v="tekst">Описание</button>
     </nav>
+
+    <div class="vkladka" id="v-chat">
+      <div id="chat-lenta" class="chat-lenta" aria-live="polite"></div>
+      <div id="chat-prilozheno" class="chat-prilozheno"></div>
+      <p id="chat-oshibka" class="chat-oshibka" hidden></p>
+      <form id="chat-forma" class="chat-forma">
+        <textarea id="chat-tekst" rows="3" placeholder="Что поправить или сделать? Например: купол выше. Ctrl+Enter — отправить"></textarea>
+        <div class="chat-knopki">
+          <label class="knopka-malaya" title="Приложить фото или схему">Приложить фото
+            <input type="file" id="f-chat" accept="image/*" multiple hidden>
+          </label>
+          <span class="podskazka"></span>
+          <button type="submit" id="b-chat" class="glavnaya">Отправить</button>
+        </div>
+      </form>
+    </div>
 
     <div class="vkladka akt" id="v-detali">
       <div class="ryad">

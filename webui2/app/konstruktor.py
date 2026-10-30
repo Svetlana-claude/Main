@@ -8,26 +8,34 @@
 import json
 import os
 import re
+import shutil
+import subprocess
 from datetime import datetime, timezone
 from pathlib import Path
 
 from fastapi import APIRouter, Request
 from fastapi.responses import FileResponse, JSONResponse, RedirectResponse, Response
 
-from . import config
+from . import chat, claude, config, db, projects
 from .web import current, here, page, same_origin, to
 
 PUBLIC = (config.PROJECT_DIR.parent / "3d/konstruktor/redaktor/public").resolve()
-DATA = Path(os.environ.get("KONSTRUKTOR3D_DIR", Path.home() / ".local/share/konstruktor3d"))
+MEMO = PUBLIC.parent.parent / "pamyatka-modeli.md"
+# Хранилище — папка проекта «3D-модели»: так Claude в окне чата правит те же файлы,
+# что показывает редактор. modeli/ — описания, foto/ — материалы, eksporty/ — просмотрщики,
+# .meta/ — служебное редактора (материалы, история, разговор модели).
+DATA = config.PROJECTS_DIR / config.MODELS_SLUG
 VIEWER_URL = "https://mokeevasky.ru/glavpryg/model-3d/parashyutnaya-sistema/"
 
 MAX_PHOTO = 5 * 1024 * 1024
 MAX_STORED = 40
 MAX_EXPORT = 10 * 1024 * 1024
 MAX_MODEL = 2 * 1024 * 1024
-PHOTO_TYPES = {"image/jpeg", "image/png", "image/webp", "image/gif"}
+PHOTO_TYPES = {"image/jpeg": "jpg", "image/png": "png", "image/webp": "webp", "image/gif": "gif"}
 ID = re.compile(r"^[a-z0-9][a-z0-9-]{0,63}$")
 AI_OFF = "Создание через внешний ИИ выключено. Модель делается в «Проектах», готовый файл загружается в редактор."
+SAMPLES = ("parashyut", "samolet")
+IGNORE = "# Тяжёлое и служебное редактора\nfoto/\neksporty/\n.meta/\n"
 
 router = APIRouter(prefix="/3d")
 
@@ -64,7 +72,61 @@ def _read_json(path: Path):
 
 
 def _model_file(mid: str) -> Path:
-    return DATA / "models" / f"{mid}.json"
+    return DATA / "modeli" / f"{mid}.json"
+
+
+def _meta_file(mid: str) -> Path:
+    return DATA / ".meta" / f"{mid}.json"
+
+
+def _meta(mid: str) -> dict:
+    return _read_json(_meta_file(mid)) or {"source": None, "history": []}
+
+
+def _version(mid: str) -> int:
+    try:
+        return _model_file(mid).stat().st_mtime_ns
+    except OSError:
+        return 0
+
+
+def _record(mid: str, model: dict | None = None) -> dict | None:
+    model = model if model is not None else _read_json(_model_file(mid))
+    if not isinstance(model, dict):
+        return None
+    return {**_meta(mid), "model": model, "version": _version(mid)}
+
+
+def ensure_project() -> dict:
+    """Проект «3D-модели»: заводится сам, памятка в нём всегда свежая."""
+    row = db.one("SELECT * FROM projects WHERE slug = ?", (config.MODELS_SLUG,))
+    if not row:
+        if (config.PROJECTS_DIR / config.MODELS_SLUG).exists():
+            stamp = db.now()
+            db.insert("INSERT INTO projects (name, slug, path, created_at, updated_at) VALUES (?, ?, ?, ?, ?)",
+                      ("3D-модели", config.MODELS_SLUG, str(config.PROJECTS_DIR / config.MODELS_SLUG), stamp, stamp))
+        else:
+            projects.create_project("3D-модели")
+            _seed(config.PROJECTS_DIR / config.MODELS_SLUG)
+        row = db.one("SELECT * FROM projects WHERE slug = ?", (config.MODELS_SLUG,))
+    memo = Path(row["path"]) / "PAMYATKA.md"
+    text = MEMO.read_text(encoding="utf-8")
+    if not memo.is_file() or memo.read_text(encoding="utf-8") != text:
+        memo.write_text(text, encoding="utf-8")
+    return row
+
+
+def _seed(path: Path) -> None:
+    (path / "modeli").mkdir()
+    for name in SAMPLES:
+        shutil.copyfile(PUBLIC / "modeli" / f"{name}.json", path / "modeli" / f"{name}.json")
+    with (path / ".gitignore").open("a", encoding="utf-8") as f:
+        f.write(IGNORE)
+    with (path / "CLAUDE.md").open("a", encoding="utf-8") as f:
+        f.write("\n## Этот проект\nЗдесь делаются 3D-модели. Перед работой прочитай `PAMYATKA.md`.\n")
+    env = claude.child_env()
+    for cmd in (["add", "-A"], ["-c", "commit.gpgsign=false", "commit", "-q", "-m", "Образцы моделей"]):
+        subprocess.run(["git", "-C", str(path), *cmd], check=True, capture_output=True, env=env)
 
 
 def _denied(request: Request, write: bool = False) -> JSONResponse | None:
@@ -113,7 +175,8 @@ def bare(request: Request):
 def status(request: Request):
     if bad := _denied(request):
         return bad
-    return _ok({"ai": False, "used": 0, "limit": 0, "maxPhotos": MAX_STORED, "maxPhotoMb": MAX_PHOTO >> 20,
+    ensure_project()
+    return _ok({"ai": False, "chat": True, "used": 0, "limit": 0, "maxPhotos": MAX_STORED, "maxPhotoMb": MAX_PHOTO >> 20,
                 "maxStored": MAX_STORED, "email": "", "viewerUrl": VIEWER_URL})
 
 
@@ -122,11 +185,11 @@ def models(request: Request):
     if bad := _denied(request):
         return bad
     found = []
-    for path in (DATA / "models").glob("*.json"):
-        z = _read_json(path)
-        if z:
-            found.append({"id": path.stem, "name": z["model"].get("name"), "updated": z.get("updated")})
-    found.sort(key=lambda m: str(m["updated"]), reverse=True)
+    for path in (DATA / "modeli").glob("*.json"):
+        m = _read_json(path)
+        name = m.get("name") if isinstance(m, dict) else None
+        found.append({"id": path.stem, "name": name or path.stem, "updated": path.stat().st_mtime})
+    found.sort(key=lambda m: m["updated"], reverse=True)
     return _ok({"models": found})
 
 
@@ -134,8 +197,17 @@ def models(request: Request):
 def model_get(request: Request, mid: str):
     if bad := _denied(request):
         return bad
-    z = _read_json(_model_file(mid)) if ID.match(mid) else None
-    return _ok(z) if z else _error("Модель не найдена.", 404)
+    if not ID.match(mid) or not _model_file(mid).is_file():
+        return _error("Модель не найдена.", 404)
+    z = _record(mid)
+    return _ok(z) if z else _error("Файл модели сейчас не читается — в нём ошибка.", 409)
+
+
+@router.get("/api/models/{mid}/versiya")
+def model_version(request: Request, mid: str):
+    if bad := _denied(request):
+        return bad
+    return _ok({"v": _version(mid) if ID.match(mid) else 0})
 
 
 @router.put("/api/models/{mid}")
@@ -150,12 +222,11 @@ async def model_put(request: Request, mid: str):
     if not isinstance(model, dict) or not model.get("name") or not isinstance(model.get("parts"), list):
         return _error("Это не описание модели.")
     model["id"] = mid
-    z = _read_json(_model_file(mid)) or {"source": None, "history": []}
-    z["model"] = model
-    z["updated"] = _now()
-    z["history"] = [*z.get("history", []), {"at": z["updated"], "kind": "save"}][-50:]
-    _write_json(_model_file(mid), z)
-    return _ok(z)
+    _write(_model_file(mid), json.dumps(model, ensure_ascii=False, indent=2).encode("utf-8"))
+    meta = _meta(mid)
+    meta["history"] = [*meta.get("history", []), {"at": _now(), "kind": "save"}][-50:]
+    _write_json(_meta_file(mid), meta)
+    return _ok(_record(mid, model))
 
 
 @router.delete("/api/models/{mid}")
@@ -165,11 +236,54 @@ def model_delete(request: Request, mid: str):
     if not ID.match(mid):
         return _error("Неправильный id модели.")
     _model_file(mid).unlink(missing_ok=True)
-    for path in (DATA / "photos" / mid).glob("*") if (DATA / "photos" / mid).is_dir() else ():
-        path.unlink()
+    _meta_file(mid).unlink(missing_ok=True)
+    shutil.rmtree(DATA / "foto" / mid, ignore_errors=True)
     for name in (f"{mid}.html", f"{mid}.json"):
-        (DATA / "exports" / name).unlink(missing_ok=True)
+        (DATA / "eksporty" / name).unlink(missing_ok=True)
     return _ok({"ok": True})
+
+
+# ── Окно чата ────────────────────────────────────────────────────────────
+
+def _conv_of(mid: str) -> dict | None:
+    conv_id = _meta(mid).get("conv")
+    conv = chat.conversation(conv_id) if conv_id else None
+    return conv if conv and conv["project_id"] else None
+
+
+@router.get("/api/chat/{mid}")
+def chat_state(request: Request, mid: str):
+    if bad := _denied(request):
+        return bad
+    if not ID.match(mid):
+        return _error("Неправильный id модели.")
+    conv = _conv_of(mid)
+    return _ok({"conv": conv["id"] if conv else None, "csrf": current(request)["csrf"],
+                "root": config.ROOT_PATH, "running": bool(conv and conv["id"] in chat.RUNS)})
+
+
+@router.post("/api/chat/{mid}/start")
+def chat_start(request: Request, mid: str):
+    """Разговор модели заводится при первом сообщении: пустые сайт не хранит."""
+    if bad := _denied(request, write=True):
+        return bad
+    if not ID.match(mid) or not _model_file(mid).is_file():
+        return _error("Сначала сохраните модель.", 404)
+    conv = _conv_of(mid)
+    if conv:
+        empty = not db.one("SELECT 1 FROM messages WHERE conv_id = ? LIMIT 1", (conv["id"],))
+        return _ok({"conv": conv["id"], "first": empty})
+    model = _read_json(_model_file(mid))
+    title = (model.get("name") if isinstance(model, dict) else None) or mid
+    stamp = db.now()
+    # Напрямую, а не chat.new_conversation: тот убирает пустые темы, а пустой может
+    # быть разговор другой модели, ещё не получивший первое сообщение
+    conv_id = db.insert("INSERT INTO conversations (model, project_id, title, created_at, updated_at) "
+                        "VALUES (?, ?, ?, ?, ?)", (config.TOPIC_MODEL, ensure_project()["id"], title, stamp, stamp))
+    meta = _meta(mid)
+    meta["conv"] = conv_id
+    _write_json(_meta_file(mid), meta)
+    return _ok({"conv": conv_id, "first": True})
 
 
 # ── Фото и схемы ─────────────────────────────────────────────────────────
@@ -180,8 +294,7 @@ async def materials(request: Request, mid: str):
         return bad
     if not ID.match(mid):
         return _error("Неправильный id модели.")
-    z = _read_json(_model_file(mid))
-    if not z:
+    if not _model_file(mid).is_file():
         return _error("Сначала сохраните модель.", 404)
     body = await _json_body(request)
     if not isinstance(body, dict):
@@ -191,28 +304,28 @@ async def materials(request: Request, mid: str):
         n = item.get("n") if isinstance(item, dict) else None
         if not isinstance(n, int):
             return _error("Неправильный номер фото.")
-        meta = _read_json(DATA / "photos" / mid / f"{n}.json")
+        meta = _read_json(DATA / "foto" / mid / f"{n}.json")
         if not meta:
             return _error(f"Фото №{n + 1} не дошло до сервера — загрузите ещё раз.")
-        fresh.append({"n": n, "view": meta.get("view") or "вид не указан"})
-    source = z.get("source") or {}
+        fresh.append({"n": n, "view": meta.get("view") or "вид не указан", "file": f"foto/{mid}/{meta['file']}"})
+    meta = _meta(mid)
+    source = meta.get("source") or {}
     numbers = {f["n"] for f in fresh}
-    z["source"] = {**source, "mode": body.get("mode") or source.get("mode"), "size": body.get("size") or source.get("size"),
-                   "photos": [*(f for f in source.get("photos", []) if f["n"] not in numbers), *fresh]}
-    z["updated"] = _now()
-    _write_json(_model_file(mid), z)
-    return _ok(z)
+    meta["source"] = {**source, "mode": body.get("mode") or source.get("mode"), "size": body.get("size") or source.get("size"),
+                      "photos": [*(f for f in source.get("photos", []) if f["n"] not in numbers), *fresh]}
+    _write_json(_meta_file(mid), meta)
+    return _ok(_record(mid) or meta)
 
 
 @router.get("/api/photos/{mid}/{n}")
 def photo_get(request: Request, mid: str, n: int):
     if bad := _denied(request):
         return bad
-    folder = DATA / "photos" / mid
+    folder = DATA / "foto" / mid
     meta = _read_json(folder / f"{n}.json") if ID.match(mid) and n >= 0 else None
-    if not meta or meta.get("type") not in PHOTO_TYPES or not (folder / str(n)).is_file():
+    if not meta or meta.get("type") not in PHOTO_TYPES or not (folder / meta["file"]).is_file():
         return _error("Фото не найдено.", 404)
-    return FileResponse(folder / str(n), media_type=meta["type"], headers={"Cache-Control": "private, no-cache"})
+    return FileResponse(folder / meta["file"], media_type=meta["type"], headers={"Cache-Control": "private, no-cache"})
 
 
 @router.put("/api/photos/{mid}/{n}")
@@ -231,9 +344,10 @@ async def photo_put(request: Request, mid: str, n: int, view: str = ""):
         return _error(f"Фото больше {MAX_PHOTO >> 20} МБ — уменьшите его.")
     if not data:
         return _error("Пустой файл.")
-    folder = DATA / "photos" / mid
-    _write(folder / str(n), data)
-    _write_json(folder / f"{n}.json", {"type": kind, "view": view[:40] or "вид не указан"})
+    folder = DATA / "foto" / mid
+    name = f"{n}.{PHOTO_TYPES[kind]}"
+    _write(folder / name, data)
+    _write_json(folder / f"{n}.json", {"type": kind, "file": name, "view": view[:40] or "вид не указан"})
     return _ok({"ok": True})
 
 
@@ -244,7 +358,7 @@ def exports(request: Request):
     if bad := _denied(request):
         return bad
     found = []
-    for path in (DATA / "exports").glob("*.json"):
+    for path in (DATA / "eksporty").glob("*.json"):
         meta = _read_json(path)
         if meta:
             found.append({"id": path.stem, **meta})
@@ -256,7 +370,7 @@ def exports(request: Request):
 def export_get(request: Request, mid: str):
     if bad := _denied(request):
         return bad
-    path = DATA / "exports" / f"{mid}.html"
+    path = DATA / "eksporty" / f"{mid}.html"
     if not ID.match(mid) or not path.is_file():
         return _error("Экспорт не найден.", 404)
     # Только скачиванием: чужая страница не должна открываться на адресе сайта
@@ -275,8 +389,8 @@ async def export_put(request: Request, mid: str, name: str = ""):
     data = await _body(request, MAX_EXPORT)
     if not data:
         return _error("Экспорт пустой или больше 10 МБ.")
-    _write(DATA / "exports" / f"{mid}.html", data)
-    _write_json(DATA / "exports" / f"{mid}.json", {"name": name[:200] or mid, "size": len(data), "updated": _now()})
+    _write(DATA / "eksporty" / f"{mid}.html", data)
+    _write_json(DATA / "eksporty" / f"{mid}.json", {"name": name[:200] or mid, "size": len(data), "updated": _now()})
     return _ok({"ok": True})
 
 

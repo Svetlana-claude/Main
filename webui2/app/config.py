@@ -71,6 +71,7 @@ QUIET_HOURS = 6                       # …и через сколько часо
 # Проекты: папки с темами. Claude в теме работает полноценно, в папке проекта
 PROJECTS_DIR = Path(_env.get("PROJECTS_DIR", Path.home() / "projects"))
 TOPIC_MODEL = "opus"
+MODELS_SLUG = "3d-modeli"              # проект конструктора 3D: Claude в нём правит только модели
 # Подпись сохранений в новых проектах; не задана — берётся из git самого сайта
 GIT_NAME = _env.get("GIT_NAME", "")
 GIT_EMAIL = _env.get("GIT_EMAIL", "")

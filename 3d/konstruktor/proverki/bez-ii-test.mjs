@@ -9,7 +9,7 @@ const KUKA = process.env.KUKA; // для проверки на сайте: пр�
 rmSync('/tmp/zaglushka-ii.log', { force: true });
 const b = await chromium.launch({ executablePath: chrome, args: ['--use-gl=angle', '--use-angle=swiftshader', '--enable-unsafe-swiftshader'] });
 const k = await b.newContext({ viewport: { width: 1440, height: 900 }, acceptDownloads: true });
-if (KUKA) await k.addCookies([{ name: 'v2_session', value: KUKA, url: ADRES }]);
+if (KUKA) await k.addCookies([{ name: 'v2_session', value: KUKA, url: new URL(ADRES).origin }]);
 const s = await k.newPage();
 const oshibki = [];
 s.on('pageerror', (e) => oshibki.push(String(e)));
@@ -29,6 +29,7 @@ for (const [put, telo] of [['generate', { id: 'proba', size: '1 м', photos: [{ 
 }
 await s.click('#b-sohranit');
 await s.waitForTimeout(600);
+await s.click('.vkladki button[data-v="foto"]');
 await s.setInputFiles('#f-foto', ['/tmp/foto-test.png', '/tmp/foto-test.png']);
 await s.waitForSelector('#foto-spisok .foto img');
 await s.locator('#foto-spisok select').nth(1).selectOption('сбоку');

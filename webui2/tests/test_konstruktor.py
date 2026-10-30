@@ -8,7 +8,6 @@ import pytest
 from common import TMP, client, db, inside  # noqa: F401
 from test_chat import csrf_of
 
-os.environ.setdefault("KONSTRUKTOR3D_DIR", str(TMP / "k3d"))
 from app import konstruktor  # noqa: E402
 
 MODEL = {"name": "Проба", "parts": [{"id": "a", "name": "А", "shape": {"type": "group"}}]}
@@ -24,7 +23,7 @@ ADDRESSES = [("get", "/3d/"), ("get", "/3d/redaktor.js"), ("get", "/3d/api/statu
              ("get", "/3d/api/models/a"), ("put", "/3d/api/models/a"), ("delete", "/3d/api/models/a"),
              ("get", "/3d/api/exports"), ("get", "/3d/api/exports/a"), ("put", "/3d/api/exports/a"),
              ("get", "/3d/api/photos/a/0"), ("put", "/3d/api/photos/a/0"), ("post", "/3d/api/models/a/materialy"),
-             ("post", "/3d/api/generate"), ("post", "/3d/api/refine"), ("get", "/3d/api/nesushchestvuet")]
+             ("get", "/3d/api/chat/a"), ("post", "/3d/api/chat/a/start"), ("get", "/3d/api/models/a/versiya"), ("post", "/3d/api/generate"), ("post", "/3d/api/refine"), ("get", "/3d/api/nesushchestvuet")]
 
 
 def test_closed_without_login(client):
@@ -63,12 +62,15 @@ def test_model_photo_export(inside):
     assert c.put("/3d/api/models/proba", json={"model": {"x": 1}}).status_code == 400
     assert c.put("/3d/api/models/Плохой", json={"model": MODEL}).status_code == 400
     assert [m["id"] for m in c.get("/3d/api/models").json()["models"]] == ["proba"]
+    (konstruktor.DATA / "modeli" / "slomana.json").write_text("{", encoding="utf-8")
+    assert c.get("/3d/api/models/slomana").status_code == 409
+    (konstruktor.DATA / "modeli" / "slomana.json").unlink()
 
     h = {"content-type": "image/png"}
     assert c.put("/3d/api/photos/proba/0?view=сбоку", content=PNG, headers=h).status_code == 200
     assert c.post("/3d/api/models/proba/materialy", json={"photos": [{"n": 1}]}).status_code == 400
     z = c.post("/3d/api/models/proba/materialy", json={"photos": [{"n": 0}], "size": "1 м"}).json()
-    assert z["source"]["photos"] == [{"n": 0, "view": "сбоку"}] and z["source"]["size"] == "1 м"
+    assert z["source"]["photos"] == [{"n": 0, "view": "сбоку", "file": "foto/proba/0.png"}] and z["source"]["size"] == "1 м"
     r = c.get("/3d/api/photos/proba/0")
     assert r.content == PNG and r.headers["content-type"] == "image/png"
     assert c.put("/3d/api/photos/proba/1", content=b"<b>", headers={"content-type": "text/html"}).status_code == 400
@@ -94,3 +96,30 @@ def test_ai_is_off(inside):
     for url in ("/3d/api/generate", "/3d/api/refine"):
         r = inside.post(url, json={})
         assert r.status_code == 400 and "выключено" in r.json()["error"]
+
+
+def test_project_and_chat(inside, monkeypatch):
+    c = inside
+    assert c.get("/3d/api/status").json()["chat"] is True
+    row = db.one("SELECT * FROM projects WHERE slug = '3d-modeli'")
+    folder = Path(row["path"])
+    assert (folder / "PAMYATKA.md").is_file() and (folder / "modeli/parashyut.json").is_file()
+    assert "foto/" in (folder / ".gitignore").read_text(encoding="utf-8")
+    monkeypatch.setattr(konstruktor, "DATA", folder)
+    st = c.get("/3d/api/chat/parashyut").json()
+    assert st["conv"] is None
+    assert c.post("/3d/api/chat/net-takoy/start").status_code == 404
+    first = c.post("/3d/api/chat/parashyut/start").json()
+    assert first["first"] is True
+    again = c.post("/3d/api/chat/parashyut/start").json()
+    assert again == {"conv": first["conv"], "first": True}   # сообщений ещё нет
+    other = c.post("/3d/api/chat/samolet/start").json()
+    assert other["conv"] != first["conv"]
+
+
+def test_models_project_is_locked(inside):
+    from app import claude, config
+    project = {"slug": config.MODELS_SLUG, "full_access": 1, "allow_commands": 1, "path": "/x"}
+    cmd = claude.project_argv("opus", None, project)
+    assert cmd[cmd.index("--tools") + 1] == "Read,Write,Edit,Glob,Grep"
+    assert "bypassPermissions" not in cmd and cmd[cmd.index("--permission-prompts") + 1] == "none"

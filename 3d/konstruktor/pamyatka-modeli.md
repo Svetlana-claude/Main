@@ -1,0 +1,59 @@
+# Памятка: как составлять и править 3D-модели
+
+Ты работаешь в окне чата рядом с моделью. Светлана видит модель на экране: как только ты
+сохранил файл, редактор сам её обновит. Правишь только файлы этой папки. Приложение и
+другие проекты отсюда недоступны; если просят поменять само приложение, скажи, что об этом
+пишут не здесь, а в проекте, где ведётся работа над приложением.
+
+## Что где лежит
+- `modeli/<id>.json` — описания моделей, по файлу на модель. В первом сообщении темы указано,
+  о какой модели разговор.
+- `foto/<id>/` — фото и схемы, в сообщении сказано, какие приложены. Открывай их, они важны.
+- `.meta/` и `eksporty/` — служебные, не трогай.
+
+## Как работать
+- Здесь правила из `CLAUDE.md` мягче: правку модели делай сразу, согласия не жди. Спрашивай, только
+  если просьбу можно понять двояко. Сохранения (коммиты) здесь не делаешь: команд нет.
+- Правь точечно: меняй только то, о чём просят; id, номера и описания остальных деталей сохраняй.
+- По схеме виды согласуй между собой и снимай размеры точно; по фото оценивай приблизительно.
+  Не вышло понять деталь — напиши об этом, а не выдумывай; невидимую, но наверняка
+  существующую сделай правдоподобно и пометь в `desc`: «предположительно».
+- Файл должен быть правильным JSON, иначе модель не покажется. После правки перечитай его.
+- Показать что-то на экране, запустить команды и зайти в интернет ты здесь не можешь.
+- Отчёт — одна-две фразы: что поменял. Код и содержимое файла в ответ не пиши.
+
+## Формат
+`format: 1`, `id`, `name`, `scale { text, part, size }` — один реальный размер, `view { camera, target }`,
+`parts[]`, `animations[]`.
+
+Часть: `id`, `num`, `name`, `desc`, `parent`, `shape { type, … }`, `color "#rrggbb"`, `position [x,y,z]`,
+`rotation` (градусы), `scale`, `label [x,y,z]`, `anchors { имя: [[x,y,z], …] }`, `explode { dir, dist }`.
+
+Координаты: метры, Y вверх, перед предмета — +Z, правый борт — −X, начало — главная точка
+подвеса или опоры. `position`, `label`, `anchors`, `pivot`, точки `tube` — в общих координатах
+собранной модели. Размеры формы — в её собственных осях; поворот считается и от родителя:
+не поворачивай родителя с детьми, лучше заведи отдельный узел.
+
+Вложенность: корень → узлы → детали. Дети двигаются с родителем и при анимации, и при разборке:
+`explode.dist` — на сколько метров относительно родителя. Номера — целые с 1 без повторов, у
+вспомогательных частей `num` нет: их подсветка идёт через родителя.
+
+Формы (`shape.type`): `group`; `box` size; `cylinder` radiusTop, radiusBottom, height;
+`cone` radius, height; `sphere` radius; `capsule` radius, length; `torus` radius, tube, arc;
+`lathe` points [[r,y],…] — тело вращения вокруг Y; `tube` points, radius; `wing` span, chord, thickness,
+taper, sweep, dihedral, camber; `kupol` vid "krylo": sections, divisions, span, chord, arc, thickness,
+colors — или vid "kruglyy": diameter, height, sections, divisions, rings, vent; `chelovek` height,
+pose "visit"|"stoit"|"sidit", helmet, skin; `lines` from, to — "деталь:якорь" или список, map
+"nearest"|"paired", labelIndex, labelAt.
+Якоря: у `kupol` — `kromka`, `khvost`; у `chelovek` — `ruki`; свои — в `anchors`.
+
+Анимации: `id`, `name`, `type`, `target`, `autoplay`, `params`.
+- `swing`: amplitude, period, axis, pivot;
+- `rotate`: axis, speed, pivot;
+- `breathe` (только `kupol`): amplitude, speed, wavelength, axis "x"|"y"|"z";
+- `unfold`: default, fromScale, fromOffset;
+- `control`: yawSpeed, bank, pivot, pulls [{part, offset, side}], flap {part, amount};
+- `jitter`: amplitude, speed, offset;
+- `descent`: speed, bob.
+
+Образцы — `modeli/parashyut.json` и `modeli/samolet.json`.

@@ -1481,10 +1481,16 @@ zapret}`. «Куда» — в градусах мира игры. На серв�
 Подробно — `3d/konstruktor/README.md`. Коротко:
 
 - Сейчас всё на нашем сервере: редактор — раздел `/Claude/v2/3d/` сайта v2
-  (`webui2/app/konstruktor.py`: страницы из `redaktor/public`, вход и замок сайта, хранилище —
-  файлы в `~/.local/share/konstruktor3d`), просмотрщик — статика
-  `/glavpryg/model-3d/parashyutnaya-sistema/` (копирует `sobrat.sh` главпрыга: он
+  (`webui2/app/konstruktor.py`: страницы из `redaktor/public`, вход и замок сайта), просмотрщик —
+  статика `/glavpryg/model-3d/parashyutnaya-sistema/` (копирует `sobrat.sh` главпрыга: он
   пересоздаёт `model-3d`, поэтому страница должна быть в его сборке).
+- Хранилище — папка проекта `~/projects/3d-modeli` (заводится сама): `modeli/<id>.json` — те же
+  файлы правит Claude, `foto/`, `eksporty/`, `.meta/`. Памятка — `konstruktor/pamyatka-modeli.md`,
+  копируется в проект как `PAMYATKA.md`.
+- Окно чата (`public/chat3d.js`): тема проекта на модель, те же адреса `/chat/…`, что у тем.
+  В этом проекте запуск Claude особый (`claude.models_argv`): только чтение и правка файлов папки,
+  без команд, вопрос о разрешении — сразу отказ, галочки проекта не действуют. Редактор сверяет
+  версию файла и обновляет модель сам.
 - Вариант для переезда — два проекта Cloudflare: `redaktor/` (`src/` — серверная часть за
   Access) и `prosmotrshchik/`. Страницы те же: адреса `api/…` относительные.
 - Движок `redaktor/public/dvizhok/` — один код для редактора, предпросмотра и

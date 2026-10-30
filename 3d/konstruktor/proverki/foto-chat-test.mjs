@@ -1,0 +1,23 @@
+// Фото из окна чата доходит до настоящего Claude.
+import { chromium } from 'playwright-core';
+import { readdirSync } from 'node:fs';
+const kesh = process.env.HOME + '/.cache/ms-playwright/chromium-1234/';
+const chrome = kesh + readdirSync(kesh).find((d) => d.startsWith('chrome-')) + '/chrome';
+const { ADRES, KUKA } = process.env;
+const b = await chromium.launch({ executablePath: chrome, args: ['--use-gl=angle', '--use-angle=swiftshader', '--enable-unsafe-swiftshader'] });
+const k = await b.newContext({ viewport: { width: 1440, height: 900 } });
+await k.addCookies([{ name: 'v2_session', value: KUKA, url: new URL(ADRES).origin }]);
+const s = await k.newPage();
+await s.goto(ADRES);
+await s.waitForSelector('.dv-tabl tr[data-id]');
+await s.selectOption('#spisok-modeley', 'server:samolet');
+await s.waitForTimeout(1500);
+await s.setInputFiles('#f-chat', '/tmp/foto-test.png');
+await s.waitForSelector('#chat-prilozheno img');
+await s.fill('#chat-tekst', 'Что изображено на приложенном фото? Ответь одним-двумя словами, модель не меняй.');
+await s.click('#b-chat');
+await s.waitForFunction(() => document.querySelector('#chat-lenta .msg-assistant:not(.live)') && !document.querySelector('#chat-lenta .live'), null, { timeout: 200000 });
+const o = await s.locator('#chat-lenta .msg-assistant').last().innerText();
+console.log(/парашют/i.test(o) ? 'OK   фото дошло: ' : 'FAIL фото: ', o.slice(0, 120));
+await s.screenshot({ path: '/tmp/c3.png' });
+await b.close();

@@ -2,11 +2,13 @@
 
 **Сейчас (с 30.10.2026) работает на нашем сервере:** редактор —
 https://mokeevasky.ru/Claude/v2/3d/ (вкладка «3D» сайта, его вход и замок, код —
-`webui2/app/konstruktor.py`, хранилище — `~/.local/share/konstruktor3d`), просмотрщик —
+`webui2/app/konstruktor.py`, хранилище и модели — папка проекта `~/projects/3d-modeli`,
+окно чата с Claude — `redaktor/public/chat3d.js`), просмотрщик —
 https://mokeevasky.ru/glavpryg/model-3d/parashyutnaya-sistema/. Выложить новый просмотрщик:
 экспорт в `prosmotrshchik/public/index.html`, копия с `.gz` в каталог сайта
 (права файлов 0640, каталогу chmod не делать). Проверка под входом — `proverki/sayt-stend.py`
-(временный сайт, настоящий не трогает) и `bez-ii-test.mjs` с `ADRES` и `KUKA`.
+(временный сайт, настоящий не трогает) и `bez-ii-test.mjs`, `chat-test.mjs`, `foto-chat-test.mjs`
+с `ADRES` и `KUKA`; `chat-test` запускает настоящего Claude и проверяет запреты. ТЗ — `tz.md`.
 
 Ниже — устройство и вариант для переезда в Cloudflare, когда убедимся, что всё работает.
 

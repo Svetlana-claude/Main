@@ -4,6 +4,7 @@
 import { sozdatProsmotr } from './dvizhok/dvizhok.js';
 import { proverit, FORMY, ANIMACII } from './dvizhok/format.js';
 import { sobratVBrauzere } from './dvizhok/eksport.js';
+import { sozdatChat } from './chat3d.js';
 
 const $ = (s) => document.querySelector(s);
 const el = (teg, attrs = {}, ...deti) => {
@@ -26,6 +27,8 @@ let server = null;         // ответ /api/status или null, если се�
 let fotoNaZagruzku = [];   // [{ vid, data, type, prevyu }]
 let izmeneno = false;
 let zapisModeli = null;     // запись из хранилища: модель и её материалы
+let versiya = 0;           // какую версию файла модели показываем
+let chatOkno = null;       // окно разговора: только на нашем сервере
 
 const VIDY = ['спереди', 'сзади', 'слева', 'справа', 'сверху', 'снизу', 'сбоку', 'три четверти', 'деталь крупно'];
 const LOKALNYE = 'konstruktor3d:modeli';
@@ -95,9 +98,12 @@ async function zagruzitSpisok(vybrat) {
       for (const [id, m] of Object.entries(l)) g.append(el('option', { value: 'brauzer:' + id }, m.name || id));
     }
   }
-  const vstr = await (await fetch('modeli/spisok.json')).json();
-  const g = gruppa('Образцы');
-  for (const m of vstr) g.append(el('option', { value: 'vstroennaya:' + m.id }, m.name));
+  // С чатом образцы лежат среди сохранённых: Claude правит те же файлы.
+  if (!server?.chat) {
+    const vstr = await (await fetch('modeli/spisok.json')).json();
+    const g = gruppa('Образцы');
+    for (const m of vstr) g.append(el('option', { value: 'vstroennaya:' + m.id }, m.name));
+  }
   if (vybrat) sel.value = vybrat;
 }
 
@@ -109,13 +115,14 @@ async function otkryt(klyuch) {
   const [gde, id] = klyuch.split(/:(.*)/s);
   let m;
   let zapis = null;
-  if (gde === 'server') { zapis = await api('models/' + encodeURIComponent(id)); m = zapis.model; }
+  if (gde === 'server') { zapis = await api('models/' + encodeURIComponent(id)); m = zapis.model; versiya = zapis.version; }
   else if (gde === 'brauzer') m = lokalnye()[id];
   else m = await (await fetch(`modeli/${id}.json`)).json();
   istochnik = { gde, id };
   ustanovitModel(m, { sbrosKamery: true });
   pokazatIstochniki(zapis);
   izmeneno = false;
+  chatOkno?.pokazat(gde === 'server' ? id : null);
 }
 
 // ---------- Модель и показ ----------
@@ -385,17 +392,45 @@ $('#f-otkryt').onchange = async (e) => {
   soobshchit('Файл открыт. Нажмите «Сохранить», чтобы он остался в списке.');
 };
 
-async function sohranit() {
+async function sohranit({ tikho = false } = {}) {
   const osh = proverit(model);
   if (osh.length) { soobshchit('Сначала исправьте ошибки:\n' + osh.slice(0, 6).join('\n'), true); return; }
   // Образцы не перезаписываем — сохраняем копию.
   if (!istochnik || istochnik.gde === 'vstroennaya') istochnik = { gde: server ? 'server' : 'brauzer', id: model.id || 'model-' + Date.now().toString(36) };
   model.id = istochnik.id;
-  if (server) await api('models/' + encodeURIComponent(model.id), { method: 'PUT', body: { model } });
+  if (server) versiya = (await api('models/' + encodeURIComponent(model.id), { method: 'PUT', body: { model } })).version;
   else { const l = lokalnye(); l[model.id] = model; localStorage.setItem(LOKALNYE, JSON.stringify(l)); }
   izmeneno = false;
   await zagruzitSpisok(`${istochnik.gde}:${istochnik.id}`);
-  soobshchit('Сохранено.');
+  if (!tikho) soobshchit('Сохранено.');
+  if (server?.chat) chatOkno?.pokazat(model.id);
+}
+
+// Claude поправил файл модели — показываем его версию, с тем же поворотом камеры.
+let sveryaem = false;
+async function sverit() {
+  if (sveryaem || !server?.chat || istochnik?.gde !== 'server' || istochnik.novaya) return;
+  sveryaem = true;
+  try {
+    const { v } = await api(`models/${encodeURIComponent(istochnik.id)}/versiya`);
+    if (!v || v === versiya) return;
+    if (izmeneno && !confirm('Claude поправил эту модель, а у вас есть несохранённые правки. Показать его версию? Ваши правки пропадут.')) {
+      versiya = v;
+      return;
+    }
+    let zapis;
+    try {
+      zapis = await api('models/' + encodeURIComponent(istochnik.id));
+    } catch (e) { versiya = v; soobshchit(e.message, true); return; }
+    versiya = zapis.version;
+    const osh = proverit(zapis.model);
+    if (osh.length) { soobshchit('Новая версия модели с ошибками, показываю прежнюю:\n' + osh.slice(0, 6).join('\n'), true); return; }
+    if (vybrannaya && !zapis.model.parts.some((p) => p.id === vybrannaya)) vybrannaya = null;
+    ustanovitModel(zapis.model);
+    izmeneno = false;
+    await zagruzitSpisok(`server:${istochnik.id}`);
+    soobshchit('Модель обновлена.');
+  } catch { /* связь пропала — проверим в следующий раз */ } finally { sveryaem = false; }
 }
 $('#b-sohranit').onclick = () => sohranit().catch((e) => soobshchit('Не сохранилось: ' + e.message, true));
 
@@ -674,7 +709,32 @@ $('#b-pravka').onclick = async () => {
 // ---------- Запуск ----------
 await uznatServer();
 await zagruzitSpisok();
-const pervaya = $('#spisok-modeley').querySelector('option[value="vstroennaya:parashyut"]') ? 'vstroennaya:parashyut' : $('#spisok-modeley').value;
+const pervaya = ['server:parashyut', 'vstroennaya:parashyut'].find((k) => $('#spisok-modeley').querySelector(`option[value="${k}"]`)) || $('#spisok-modeley').value;
 $('#spisok-modeley').value = pervaya;
+if (server?.chat) {
+  $('#vkl-chat').hidden = false;
+  $('#b-spisok').hidden = false;
+  $('#na-sayt').hidden = false;
+  chatOkno = sozdatChat({
+    szhat,
+    soobshchit,
+    sverit,
+    pokazatIstochniki,
+    // Перед сообщением всё сохраняем, чтобы Claude видел то же, что и вы.
+    gotovaModel: async () => {
+      if (izmeneno || !istochnik || istochnik.gde !== 'server' || istochnik.novaya) {
+        await sohranit({ tikho: true });
+        if (istochnik) delete istochnik.novaya;
+      }
+      return model.id;
+    },
+  });
+  $('#vkl-chat').click();
+  $('#b-spisok').onclick = (e) => {
+    const skryt = document.body.classList.toggle('skryt-spisok');
+    e.target.textContent = skryt ? 'Показать список' : 'Скрыть список';
+  };
+  setInterval(sverit, 8000);
+}
 await otkryt(pervaya);
 await pokazatEksporty().catch((e) => soobshchit(e.message, true));

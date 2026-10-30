@@ -76,6 +76,8 @@ def project_argv(model: str, session_id: str | None, project: dict) -> list[str]
     Что сверх разрешённого, Claude спрашивает у сайта (control_request в
     потоке), сайт — у хозяйки на странице «Разрешения». Безопасные команды
     только для чтения Claude выполняет сам, без вопроса."""
+    if project["slug"] == config.MODELS_SLUG:
+        return models_argv(model, session_id, project)
     cmd = _base(model)
     if project["full_access"]:
         cmd += ["--permission-mode", "bypassPermissions",
@@ -85,6 +87,28 @@ def project_argv(model: str, session_id: str | None, project: dict) -> list[str]
         if project["allow_commands"]:
             cmd += ["--allowed-tools", *BASH_FAMILY]
         cmd += ["--disallowed-tools", *NO_ASK_TOOLS, *secret_deny()]
+    if session_id:
+        cmd += ["--resume", session_id]
+    return cmd
+
+
+# Окно чата в редакторе 3D: только файлы этой папки. Команд нет, спросить не у кого
+# (вопрос — сразу отказ), галочки проекта здесь не действуют. Чужие настройки не
+# подхватываются, рабочая папка всего хозяйства закрыта отдельным запретом.
+MODELS_TOOLS = ["Read", "Write", "Edit", "Glob", "Grep"]
+
+
+def models_argv(model: str, session_id: str | None, project: dict) -> list[str]:
+    cmd = _base(model) + [
+        "--tools", ",".join(MODELS_TOOLS),
+        "--setting-sources", "project",
+        "--strict-mcp-config",
+        "--disable-slash-commands",
+        "--permission-mode", "acceptEdits",
+        "--permission-prompts", "none",
+        "--disallowed-tools", *NO_ASK_TOOLS, *secret_deny(),
+        *[f"{tool}(/{config.PROJECT_DIR.parent}/**)" for tool in MODELS_TOOLS],
+    ]
     if session_id:
         cmd += ["--resume", session_id]
     return cmd
