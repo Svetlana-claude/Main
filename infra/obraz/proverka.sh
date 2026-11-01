@@ -6,7 +6,7 @@
 set -uo pipefail
 umask 077
 H=/home/mokeeva
-ARCH=$H/main/glavpryg-sayt/downloads/obraz-sayta.tar.gpg
+VYDACHA=$H/main/glavpryg-sayt/downloads
 T=$H/.obraz-proverka
 LOG=$H/backups/obraz.log
 log() { echo "$(date -u +'%d.%m.%Y %H:%M') UTC  проверка: $*" >> "$LOG"; }
@@ -14,7 +14,7 @@ log() { echo "$(date -u +'%d.%m.%Y %H:%M') UTC  проверка: $*" >> "$LOG";
 rm -rf "$T"; mkdir -p "$T"
 trap 'kill "${PID:-0}" 2>/dev/null; rm -rf "$T"' EXIT
 log "начало"
-gpg --batch --quiet --pinentry-mode loopback --passphrase-file "$H/.config/obraz-parol" -d "$ARCH" \
+cat "$VYDACHA"/obraz-chast-* | gpg --batch --quiet --pinentry-mode loopback --passphrase-file "$H/.config/obraz-parol" -d \
   | tar -C "$T" -xf - home/mokeeva/.obraz-staging home/mokeeva/.config/webui2 home/mokeeva/main/webui2 \
        home/mokeeva/main/.git home/mokeeva/main/CLAUDE.md || { log "архив не распаковался"; exit 1; }
 R=$T/home/mokeeva

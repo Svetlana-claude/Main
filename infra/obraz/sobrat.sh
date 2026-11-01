@@ -42,7 +42,7 @@ if [ ! -s "$PAROL" ]; then
       echo; cat "$PAROL"; } > "$VYDACHA/PAROL-OBRAZA-zapishi-i-udali.txt"
 fi
 
-rm -f "$ARCH"
+rm -f "$ARCH" "$VYDACHA"/obraz-chast-* "$VYDACHA/obraz-chasti.sha256"
 rm -rf "$STAGE"; mkdir -p "$STAGE"
 python3 - "$SITE_DB" "$STAGE/site.db" <<'PY' || fail "не снята копия базы сайта"
 import sqlite3, sys
@@ -106,20 +106,20 @@ for nuzhno in home/mokeeva/.obraz-staging/site.db home/mokeeva/.obraz-staging/gl
               home/mokeeva/main/CLAUDE.md etc/nginx/nginx.conf; do
     grep -qx "$nuzhno" <<<"$SPISOK" || { rm -f "$ARCH"; fail "в архиве нет $nuzhno"; }
 done
-sha256sum "$ARCH" | cut -d' ' -f1 > "$VYDACHA/obraz-sayta.sha256"
-rm -f "$OSHIBKA"
+# Части по 200 МБ: при обрыве скачивается заново одна часть, а не всё
+( cd "$VYDACHA" && split -b 200M -d -a 2 obraz-sayta.tar.gpg obraz-chast- \
+    && sha256sum obraz-chast-* > obraz-chasti.sha256 ) || fail "архив не разбит на части"
+rm -f "$ARCH" "$OSHIBKA"
 log "образ готов: $(( RAZMER / 1048576 )) МБ, записей $(wc -l <<<"$SPISOK")"
 
-# Яндекс Диск: частями по 1 ГБ, чтобы обрыв не губил всю загрузку
+# Яндекс Диск: те же части. Ошибка части не губит копию на сервере
 if [ -s "$YA_NETRC" ]; then
     ya() { curl -sS --netrc-file "$YA_NETRC" --retry 5 --max-time 14400 "$@"; }
     ya -o /dev/null -X MKCOL https://webdav.yandex.ru/obraz-sayta/ || true
     cd "$VYDACHA" || fail "нет папки выдачи"
-    split -b 1G -d "$ARCH" "$STAGE-chast-"
-    for f in "$STAGE"-chast-*; do
-        KOD=$(ya -o /dev/null -w '%{http_code}' -T "$f" "https://webdav.yandex.ru/obraz-sayta/$(basename "$f" | sed 's/.*chast-/chast-/')")
-        case "$KOD" in 201|204) rm -f "$f" ;; *) rm -f "$STAGE"-chast-*; fail "Яндекс Диск: код $KOD" ;; esac
+    for f in obraz-chast-* obraz-chasti.sha256 vosstanovit.sh PAMYATKA.md; do
+        KOD=$(ya -o /dev/null -w '%{http_code}' -T "$f" "https://webdav.yandex.ru/obraz-sayta/$f")
+        case "$KOD" in 201|204) ;; *) fail "Яндекс Диск: код $KOD" ;; esac
     done
-    for f in obraz-sayta.sha256 vosstanovit.sh PAMYATKA.md; do ya -o /dev/null -T "$f" "https://webdav.yandex.ru/obraz-sayta/$f"; done
     log "образ на Яндекс Диске"
 fi

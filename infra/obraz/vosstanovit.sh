@@ -1,10 +1,16 @@
 #!/bin/bash
 # Разворачивает образ на чистом Ubuntu 24.04. Запуск под root:
+#   bash vosstanovit.sh            (в папке с частями obraz-chast-*)
 #   bash vosstanovit.sh obraz-sayta.tar.gpg
 # Спросит пароль архива. PROVERKA=1 — стенд: только распаковка и окружение сайта,
 # службы не ставятся и не запускаются.
 set -euo pipefail
-ARCH=${1:?укажите файл obraz-sayta.tar.gpg}
+ARCH=${1:-obraz-sayta.tar.gpg}
+if [ ! -f "$ARCH" ]; then
+    ls obraz-chast-* >/dev/null 2>&1 || { echo "Нет частей obraz-chast-* в этой папке"; exit 1; }
+    sha256sum -c obraz-chasti.sha256 || { echo "Часть повреждена: скачай её заново"; exit 1; }
+    cat obraz-chast-* > "$ARCH"
+fi
 H=/home/mokeeva
 PROVERKA=${PROVERKA:-0}
 export DEBIAN_FRONTEND=noninteractive
