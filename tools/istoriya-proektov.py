@@ -23,6 +23,11 @@ OUT = Path(sys.argv[1]) if len(sys.argv) > 1 else MAIN / "exchange" / "istoriya-
 LOGS = [MAIN / "log.md", MAIN / "log-arhiv-2026.md"]
 MSK = timedelta(hours=3)
 
+# Проекты из списка на сайте; прочие (архивные) в выдачу не идут.
+# Свежего списка в файлах нет: это девять перенесённых 29.10.2026 (журнал, этап 8).
+KEEP = {"sc-parashyuty", "glavpryg-sayt", "logotip", "griby", "3d", "letalki",
+        "viza-italiya", "tunel", "novyy-proekt"}
+
 TITLES = {
     "glavpryg-sayt": "Главпрыг: сайт", "glavpryg-dop": "Главпрыг: дополнительно",
     "sc-parashyuty": "SkyCenter: парашюты", "webui": "Веб-интерфейс, старый сайт",
@@ -32,14 +37,14 @@ TITLES = {
     "vpn": "VPN", "vpn-server": "VPN-сервер", "tunel": "Туннель",
     "kompyuter": "Компьютер", "logotip": "Логотип", "illyustrator": "Иллюстратор",
     "optimizaciya": "Оптимизация", "knigi": "Книги", "samolet": "Самолёт",
-    "novyy-proekt": "Новый проект", "infra": "Инфраструктура сервера", "tools": "Инструменты",
+    "novyy-proekt": "Новый проект (новый сайт)", "infra": "Инфраструктура сервера", "tools": "Инструменты",
     "obshchee": "Общее: сервер, правила, прочее", "chat-sayta": "Чат сайта",
     "proby": "Пробные запуски и стенды",
 }
 # Журнал делится по заголовку записи: первое совпадение решает
 LOG_RULES = [
     (r"главпрыг|игра «|точно в круг", "glavpryg-sayt"), (r"skycenter|скайцентр", "sc-parashyuty"),
-    (r"сайт v2|новый сайт", "webui2"), (r"aevit|календар|гриб", "griby"),
+    (r"сайт v2|новый сайт", "novyy-proekt"), (r"aevit|календар|гриб", "griby"),
     (r"безопасн|кнопка доступа|аудит", "bezopasnost"), (r"3d|конструктор", "3d"),
     (r"лодк|тримаран|судно|рейс", "lodka"), (r"леталк", "letalki"), (r"виза", "viza-italiya"),
     (r"тату", "tatu"), (r"телеграм", "telegram-bot"), (r"туннел", "tunel"),
@@ -151,8 +156,6 @@ def dir_project(name: str) -> str:
         return "chat-sayta"
     if name.endswith("projects-lodka"):
         return "lodka"
-    if name.endswith("-novyy-proekt"):   # тема, в которой строился новый сайт
-        return "webui2"
     return name.removeprefix("-home-mokeeva-main-") if name != "-home-mokeeva-main" else "obshchee"
 
 
@@ -253,7 +256,9 @@ def main():
 
     log = read_log()
     totals = {}
-    for project in sorted(set(sessions) | set(log)):
+    for old in (OUT / "проекты").glob("*.md"):
+        old.unlink()
+    for project in sorted(KEEP):
         lines = [f"# {TITLES.get(project, project)}", "",
                  f"Папка проекта: `{project}`. Время — московское. Пароли и ключи заменены "
                  "метками вида ⟦К-номер⟧, значения — в папке «ключи».", ""]
