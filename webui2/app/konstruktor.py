@@ -5,19 +5,25 @@
 (3d/konstruktor/redaktor/src/worker.js) — переезд не трогает страницы.
 Внешнего ИИ здесь нет: модели составляет Claude в «Проектах», готовый файл
 загружается в редактор. Хранилище — обычные файлы, вне папки проекта."""
+import asyncio
 import json
-import os
 import re
 import shutil
 import subprocess
+import time
+import zipfile
 from datetime import datetime, timezone
 from pathlib import Path
 
 from fastapi import APIRouter, Request
 from fastapi.responses import FileResponse, JSONResponse, RedirectResponse, Response
+from PIL import Image, ImageOps
+from pillow_heif import register_heif_opener
 
 from . import chat, claude, config, db, projects
 from .web import current, here, page, same_origin, to
+
+register_heif_opener()
 
 PUBLIC = (config.PROJECT_DIR.parent / "3d/konstruktor/redaktor/public").resolve()
 MEMO = PUBLIC.parent.parent / "pamyatka-modeli.md"
@@ -28,13 +34,24 @@ DATA = config.PROJECTS_DIR / config.MODELS_SLUG
 VIEWER_URL = "https://mokeevasky.ru/glavpryg/model-3d/parashyutnaya-sistema/"
 
 MAX_PHOTO = 5 * 1024 * 1024
-MAX_STORED = 40
+MAX_STORED = 100
 MAX_EXPORT = 10 * 1024 * 1024
 MAX_MODEL = 2 * 1024 * 1024
 PHOTO_TYPES = {"image/jpeg": "jpg", "image/png": "png", "image/webp": "webp", "image/gif": "gif"}
 ID = re.compile(r"^[a-z0-9][a-z0-9-]{0,63}$")
 AI_OFF = "Создание через внешний ИИ выключено. Модель делается в «Проектах», готовый файл загружается в редактор."
 SAMPLES = ("parashyut", "samolet")
+TMP = DATA / ".meta" / "zagruzka"
+TOKEN = re.compile(r"^[a-z0-9]{8,32}$")
+CHUNK = 32 * 1024 * 1024
+MAX_UPLOAD = 8 * 1024 * 1024 * 1024
+DISK_RESERVE = 512 * 1024 * 1024         # столько оставляем серверу свободным
+SIDE = 1568                              # длинная сторона снимка: больше Claude всё равно не увидит
+FRAMES = 12                              # кадров из одного видео
+FFMPEG_SEC = 1500
+STILLS = {".jpg", ".jpeg", ".png", ".webp", ".gif", ".bmp", ".tif", ".tiff", ".heic", ".heif"}
+VIDEOS = {".mp4", ".mov", ".m4v", ".avi", ".mkv", ".webm", ".3gp", ".mts", ".m2ts", ".wmv"}
+KNOWN = STILLS | VIDEOS
 IGNORE = "# Тяжёлое и служебное редактора\nfoto/\neksporty/\n.meta/\n"
 
 router = APIRouter(prefix="/3d")
@@ -352,6 +369,174 @@ async def photo_put(request: Request, mid: str, n: int, view: str = ""):
 
 
 # ── Готовые просмотрщики ─────────────────────────────────────────────────
+
+# ── Архивы, видео и снимки, которые браузер сам не откроет ───────────────
+#
+# Файл приходит кусками: так проходит и архив больше предела одного запроса.
+# Разбирает сервер: архивы всех видов сжатия, HEIC с телефона, видео любых кодеков.
+
+@router.put("/api/arhiv/{mid}/{token}")
+async def archive_chunk(request: Request, mid: str, token: str, offset: int = 0):
+    if bad := _denied(request, write=True):
+        return bad
+    if not ID.match(mid) or not TOKEN.match(token):
+        return _error("Неправильный запрос.")
+    TMP.mkdir(parents=True, exist_ok=True)
+    for old in TMP.iterdir():
+        if time.time() - old.stat().st_mtime > 86400:
+            shutil.rmtree(old, ignore_errors=True) if old.is_dir() else old.unlink(missing_ok=True)
+    path = TMP / token
+    have = path.stat().st_size if path.exists() else 0
+    if offset != have:
+        return _error("Загрузка сбилась — приложите файл ещё раз.", 409)
+    data = await _body(request, CHUNK)
+    if data is None:
+        return _error("Слишком большой кусок файла.")
+    room = shutil.disk_usage(TMP).free - DISK_RESERVE
+    if have + len(data) > MAX_UPLOAD or len(data) > room:
+        path.unlink(missing_ok=True)
+        return _error(f"Файл слишком большой: на сервере есть место примерно на {max(room, 0) >> 30} ГБ.")
+    with path.open("ab") as f:
+        f.write(data)
+    return _ok({"have": have + len(data)})
+
+
+def _save_jpeg(mid: str, n: int, jpeg: Path, view: str) -> dict:
+    folder = DATA / "foto" / mid
+    folder.mkdir(parents=True, exist_ok=True)
+    name = f"{n}.jpg"
+    shutil.move(str(jpeg), folder / name)
+    view = view[:40]
+    _write_json(folder / f"{n}.json", {"type": "image/jpeg", "file": name, "view": view})
+    return {"n": n, "view": view, "file": f"foto/{mid}/{name}"}
+
+
+def _image_to_jpeg(src: Path, out: Path) -> bool:
+    try:
+        with Image.open(src) as im:
+            im = ImageOps.exif_transpose(im).convert("RGB")
+            im.thumbnail((SIDE, SIDE))
+            im.save(out, "JPEG", quality=85)
+        return True
+    except (OSError, ValueError, Image.DecompressionBombError):
+        return False
+
+
+def _duration(src: Path) -> float:
+    r = subprocess.run(["ffprobe", "-v", "error", "-show_entries", "format=duration", "-of", "csv=p=0", str(src)],
+                       capture_output=True, text=True, timeout=120)
+    try:
+        return float(r.stdout.strip())
+    except ValueError:
+        return 0.0
+
+
+def _video_frames(src: Path, out: Path, count: int) -> list[Path]:
+    """Кадры равномерно по длине видео. Claude смотрит снимки, видео ему не показать."""
+    out.mkdir()
+    length = _duration(src)
+    if length <= 0:
+        return []
+    size = f"scale='if(gt(iw,ih),min({SIDE},iw),-2)':'if(gt(iw,ih),-2,min({SIDE},ih))'"
+    subprocess.run(["nice", "-n", "15", "ffmpeg", "-v", "error", "-nostdin", "-threads", "2", "-i", str(src),
+                    "-vf", f"fps={count / length:.6f},{size}", "-frames:v", str(count), "-q:v", "3",
+                    str(out / "k%03d.jpg")], capture_output=True, timeout=FFMPEG_SEC)
+    return sorted(out.glob("k*.jpg"))
+
+
+def _unpack(path: Path, out: Path) -> list[Path]:
+    """Из архива — только снимки и видео, без папок: имя с «../» никуда не уведёт."""
+    with zipfile.ZipFile(path) as z:
+        wanted = [i for i in z.infolist() if not i.is_dir() and not i.filename.startswith("__MACOSX/")
+                  and Path(i.filename).suffix.lower() in KNOWN]
+        if any(i.flag_bits & 1 for i in wanted):
+            raise ValueError("Архив с паролем: снимите пароль и загрузите снова.")
+        need = sum(i.file_size for i in wanted)
+    if need > shutil.disk_usage(TMP).free - DISK_RESERVE:
+        raise ValueError(f"Для распаковки не хватает места на сервере: нужно {need >> 30} ГБ. Разбейте архив на части.")
+    out.mkdir()
+    keep = [f"-ir!*{ext}" for ext in KNOWN] + [f"-ir!*{ext.upper()}" for ext in KNOWN]
+    subprocess.run(["nice", "-n", "15", "7z", "e", "-y", "-aou", "-p-", f"-o{out}", str(path), *keep, "-xr!__MACOSX"],
+                   capture_output=True, timeout=FFMPEG_SEC)
+    return sorted(out.iterdir(), key=lambda p: p.name)
+
+
+def _parse(mid: str, path: Path, name: str, first: int) -> dict:
+    """Разложить файл на снимки для модели. first — первый свободный номер."""
+    work = TMP / f"{path.name}.d"
+    shutil.rmtree(work, ignore_errors=True)
+    work.mkdir()
+    skipped: list[str] = []
+    try:
+        if zipfile.is_zipfile(path):
+            try:
+                files = _unpack(path, work / "a")
+            except zipfile.BadZipFile as exc:
+                raise ValueError("Архив повреждён или это не ZIP.") from exc
+            with zipfile.ZipFile(path) as z:
+                skipped = [Path(i.filename).name for i in z.infolist() if not i.is_dir()
+                           and not i.filename.startswith("__MACOSX/") and not Path(i.filename).name.startswith(".")
+                           and Path(i.filename).suffix.lower() not in KNOWN]
+        else:
+            local = work / Path(name).name
+            shutil.move(str(path), local)
+            if local.suffix.lower() not in KNOWN:
+                raise ValueError(f"«{name}» — не снимок, не видео и не архив ZIP.")
+            files = [local]
+        photos: list[dict] = []
+        n = first
+        for src in (f for f in files if f.suffix.lower() in STILLS):
+            if n >= MAX_STORED:
+                skipped.append(src.name)
+                continue
+            jpeg = work / f"o{n}.jpg"
+            if _image_to_jpeg(src, jpeg):
+                photos.append(_save_jpeg(mid, n, jpeg, src.stem))
+                n += 1
+            else:
+                skipped.append(src.name)
+        for src in (f for f in files if f.suffix.lower() in VIDEOS):
+            room = min(FRAMES, MAX_STORED - n)
+            frames = _video_frames(src, work / f"v{n}", room) if room > 0 else []
+            if not frames:
+                skipped.append(src.name)
+            for i, frame in enumerate(frames, 1):
+                photos.append(_save_jpeg(mid, n, frame, f"{src.stem[:28]}, кадр {i}"))
+                n += 1
+            src.unlink(missing_ok=True)                  # место на диске нужно следующим видео
+        return {"photos": photos, "skipped": skipped}
+    finally:
+        shutil.rmtree(work, ignore_errors=True)
+        path.unlink(missing_ok=True)
+
+
+@router.post("/api/arhiv/{mid}/{token}/razobrat")
+async def archive_parse(request: Request, mid: str, token: str, name: str = ""):
+    if bad := _denied(request, write=True):
+        return bad
+    if not ID.match(mid) or not TOKEN.match(token) or not (TMP / token).is_file():
+        return _error("Файл не дошёл до сервера — приложите его ещё раз.")
+    if not _model_file(mid).is_file():
+        return _error("Сначала сохраните модель.", 404)
+    meta = _meta(mid)
+    source = meta.get("source") or {}
+    used = [f["n"] for f in source.get("photos", [])]
+    first = max(used, default=-1) + 1
+    if first >= MAX_STORED:
+        (TMP / token).unlink(missing_ok=True)
+        return _error(f"К одной модели — не больше {MAX_STORED} фото.")
+    try:
+        done = await asyncio.to_thread(_parse, mid, TMP / token, name or "файл", first)
+    except ValueError as exc:
+        return _error(str(exc))
+    except (OSError, subprocess.SubprocessError):
+        return _error("Не получилось разобрать файл.")
+    meta = _meta(mid)
+    source = meta.get("source") or {}
+    meta["source"] = {**source, "photos": [*source.get("photos", []), *done["photos"]]}
+    _write_json(_meta_file(mid), meta)
+    return _ok({**done, "zapis": _record(mid)})
+
 
 @router.get("/api/exports")
 def exports(request: Request):

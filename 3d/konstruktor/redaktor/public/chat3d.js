@@ -1,8 +1,6 @@
 // Окно разговора с Claude рядом с моделью. У каждой модели своя тема в проекте
 // «3D-модели»; лента, отправка и поток ответа — те же адреса, что у тем на сайте.
 
-import { fotoIzZip } from './zip3d.js';
-
 const $ = (s) => document.querySelector(s);
 
 export function sozdatChat({ szhat, soobshchit, sverit, pokazatIstochniki, gotovaModel }) {
@@ -123,43 +121,66 @@ export function sozdatChat({ szhat, soobshchit, sverit, pokazatIstochniki, gotov
     }
   }
 
+  // Браузер сам сожмёт только обычные снимки; архив, видео и HEIC разбирает сервер.
+  const prostoeFoto = (f) => /^image\/(jpeg|png|webp|gif)$/.test(f.type);
+  const hod = (t) => { const h = $('#chat-hod'); h.textContent = t || ''; h.hidden = !t; };
+
+  async function naServer(mid, f) {
+    const token = Array.from(crypto.getRandomValues(new Uint8Array(12)), (x) => x.toString(16).padStart(2, '0')).join('');
+    const SHAG = 16 * 1024 * 1024;
+    for (let at = 0; at < f.size; at += SHAG) {
+      hod(`Загружаю «${f.name}»: ${Math.round((at / f.size) * 100)}%`);
+      const r = await fetch(`api/arhiv/${encodeURIComponent(mid)}/${token}?offset=${at}`, { method: 'PUT', headers: { 'content-type': 'application/octet-stream' }, body: f.slice(at, at + SHAG) });
+      if (!r.ok) throw new Error((await r.json().catch(() => null))?.error || 'Файл не загрузился.');
+    }
+    hod(`Разбираю «${f.name}»: видео может занять несколько минут…`);
+    const r = await fetch(`api/arhiv/${encodeURIComponent(mid)}/${token}/razobrat?name=${encodeURIComponent(f.name)}`, { method: 'POST' });
+    const d = await r.json().catch(() => null);
+    if (!r.ok) throw new Error(d?.error || 'Файл не разобрался.');
+    return d;
+  }
+
   async function prilozhit(fayly) {
     pokazatOshibku('');
-    let dobavleno = 0;
+    knopka.disabled = true;
     const propusheno = [];
+    let dobavleno = 0;
     try {
       const mid = await gotovaModel();
-      const spisok = [];
       for (const f of fayly) {
-        if (!/\.zip$/i.test(f.name) && f.type !== 'application/zip') { spisok.push({ fayl: f, imya: f.name, vid: 'из чата' }); continue; }
-        const iz = await fotoIzZip(f);
-        spisok.push(...iz.foto);
-        propusheno.push(...iz.propusheno);
-      }
-      const z = await (await fetch(`api/models/${encodeURIComponent(mid)}`, { cache: 'no-store' })).json();
-      let n = Math.max(-1, ...(z.source?.photos || []).map((f) => f.n)) + 1;
-      for (const [i, f] of spisok.entries()) {
-        soobshchit(`Загружаю фото ${i + 1} из ${spisok.length}…`);
-        let s;
-        try { s = await szhat(f.fayl); } catch { propusheno.push(f.imya); continue; }
-        const r = await fetch(`api/photos/${encodeURIComponent(mid)}/${n}?view=${encodeURIComponent(f.vid)}`, { method: 'PUT', headers: { 'content-type': s.type }, body: s.blob });
-        if (!r.ok) throw new Error((await r.json().catch(() => null))?.error || 'Фото не загрузилось.');
-        const m = await fetch(`api/models/${encodeURIComponent(mid)}/materialy`, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ photos: [{ n }] }) });
-        const zapis = await m.json();
-        if (!m.ok) throw new Error(zapis.error);
-        pokazatIstochniki(zapis);
-        const put = zapis.source.photos.at(-1).file;
-        prilozheno.push({ put: f.vid === 'из чата' ? put : `${put} (${f.vid})`, prevyu: s.prevyu });
-        n += 1;
-        dobavleno += 1;
+        if (prostoeFoto(f)) {
+          hod(`Загружаю «${f.name}»…`);
+          const z = await (await fetch(`api/models/${encodeURIComponent(mid)}`, { cache: 'no-store' })).json();
+          const n = Math.max(-1, ...(z.source?.photos || []).map((x) => x.n)) + 1;
+          const s = await szhat(f);
+          const r = await fetch(`api/photos/${encodeURIComponent(mid)}/${n}?view=${encodeURIComponent('из чата')}`, { method: 'PUT', headers: { 'content-type': s.type }, body: s.blob });
+          if (!r.ok) throw new Error((await r.json().catch(() => null))?.error || 'Фото не загрузилось.');
+          const m = await fetch(`api/models/${encodeURIComponent(mid)}/materialy`, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ photos: [{ n }] }) });
+          const zapis = await m.json();
+          if (!m.ok) throw new Error(zapis.error);
+          pokazatIstochniki(zapis);
+          prilozheno.push({ put: zapis.source.photos.at(-1).file, prevyu: s.prevyu });
+          dobavleno += 1;
+        } else {
+          const d = await naServer(mid, f);
+          pokazatIstochniki(d.zapis);
+          propusheno.push(...d.skipped);
+          for (const x of d.photos) {
+            prilozheno.push({ put: `${x.file} (${x.view})`, prevyu: `api/photos/${encodeURIComponent(mid)}/${x.n}` });
+            dobavleno += 1;
+          }
+        }
         narisovatPrilozheno();
       }
-      if (fayly.length) soobshchit(`Приложено фото: ${dobavleno}.`);
+      if (propusheno.length) pokazatOshibku(`Приложено: ${dobavleno}. Пропущено: ${propusheno.slice(0, 5).join(', ')}${propusheno.length > 5 ? ` и ещё ${propusheno.length - 5}` : ''}.`);
+      else if (!dobavleno) pokazatOshibku('В этом файле не нашлось ни снимков, ни видео.');
+      else soobshchit(`Приложено: ${dobavleno}.`);
     } catch (e) {
       pokazatOshibku(dobavleno ? `Приложено ${dobavleno}, дальше не вышло: ${e.message}` : e.message);
-      return;
+    } finally {
+      hod('');
+      knopka.disabled = false;
     }
-    if (propusheno.length) pokazatOshibku(`Не фото или формат не читается, пропущено: ${propusheno.slice(0, 5).join(', ')}${propusheno.length > 5 ? ` и ещё ${propusheno.length - 5}` : ''}.`);
   }
 
   async function otpravit() {

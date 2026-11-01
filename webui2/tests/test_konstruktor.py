@@ -1,6 +1,6 @@
 """Конструктор 3D: всё закрыто входом и замком, хранилище, ИИ выключен."""
-import os
-import re
+import io
+import zipfile
 from pathlib import Path
 
 import pytest
@@ -17,13 +17,14 @@ PNG = b"\x89PNG\r\n\x1a\n" + b"0" * 100
 @pytest.fixture(autouse=True)
 def place(tmp_path, monkeypatch):
     monkeypatch.setattr(konstruktor, "DATA", tmp_path)
+    monkeypatch.setattr(konstruktor, "TMP", tmp_path / ".meta" / "zagruzka")
 
 
 ADDRESSES = [("get", "/3d/"), ("get", "/3d/redaktor.js"), ("get", "/3d/api/status"), ("get", "/3d/api/models"),
              ("get", "/3d/api/models/a"), ("put", "/3d/api/models/a"), ("delete", "/3d/api/models/a"),
              ("get", "/3d/api/exports"), ("get", "/3d/api/exports/a"), ("put", "/3d/api/exports/a"),
              ("get", "/3d/api/photos/a/0"), ("put", "/3d/api/photos/a/0"), ("post", "/3d/api/models/a/materialy"),
-             ("get", "/3d/api/chat/a"), ("post", "/3d/api/chat/a/start"), ("get", "/3d/api/models/a/versiya"), ("post", "/3d/api/generate"), ("post", "/3d/api/refine"), ("get", "/3d/api/nesushchestvuet")]
+             ("put", "/3d/api/arhiv/a/abcdefgh"), ("post", "/3d/api/arhiv/a/abcdefgh/razobrat"), ("get", "/3d/api/chat/a"), ("post", "/3d/api/chat/a/start"), ("get", "/3d/api/models/a/versiya"), ("post", "/3d/api/generate"), ("post", "/3d/api/refine"), ("get", "/3d/api/nesushchestvuet")]
 
 
 def test_closed_without_login(client):
@@ -123,3 +124,47 @@ def test_models_project_is_locked(inside):
     cmd = claude.project_argv("opus", None, project)
     assert cmd[cmd.index("--tools") + 1] == "Read,Write,Edit,Glob,Grep"
     assert "bypassPermissions" not in cmd and cmd[cmd.index("--permission-prompts") + 1] == "none"
+
+
+def _upload(c, data: bytes, token="abcdefgh12", name="a.zip", step=1000):
+    for at in range(0, len(data), step):
+        r = c.put(f"/3d/api/arhiv/proba/{token}?offset={at}", content=data[at:at + step])
+        assert r.status_code == 200
+    return c.post(f"/3d/api/arhiv/proba/{token}/razobrat", params={"name": name})
+
+
+def _jpeg() -> bytes:
+    from PIL import Image
+    b = io.BytesIO()
+    Image.new("RGB", (3000, 2000), "red").save(b, "JPEG")
+    return b.getvalue()
+
+
+def test_archive(inside):
+    c = inside
+    assert c.put("/3d/api/models/proba", json={"model": MODEL}).status_code == 200
+    b = io.BytesIO()
+    with zipfile.ZipFile(b, "w") as z:
+        z.writestr("папка/спереди.JPG", _jpeg())
+        z.writestr("../../vzlom.jpg", _jpeg())
+        z.writestr("заметка.txt", "x")
+        z.writestr("битое.png", "не картинка")
+        z.writestr("__MACOSX/._a.jpg", "x")
+    r = _upload(c, b.getvalue()).json()
+    views = sorted(p["view"] for p in r["photos"])
+    assert views == ["vzlom", "спереди"]
+    assert sorted(r["skipped"]) == ["битое.png", "заметка.txt"]
+    assert not (konstruktor.DATA.parent / "vzlom.jpg").exists()
+    img = c.get(f"/3d/api/photos/proba/{r['photos'][0]['n']}")
+    assert img.headers["content-type"] == "image/jpeg" and len(img.content) < 200000
+    assert not list(konstruktor.TMP.iterdir())
+
+
+def test_archive_refusals(inside):
+    c = inside
+    c.put("/3d/api/models/proba", json={"model": MODEL})
+    assert c.put("/3d/api/arhiv/proba/abcdefgh12?offset=5", content=b"x").status_code == 409
+    r = _upload(c, b"neponyatno", name="a.txt")
+    assert r.status_code == 400 and "не снимок" in r.json()["error"]
+    assert c.post("/3d/api/arhiv/proba/abcdefgh12/razobrat").status_code == 400
+    assert c.put("/3d/api/arhiv/proba/plohoy!/x").status_code in (400, 404, 405)
