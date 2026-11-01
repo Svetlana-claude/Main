@@ -1,6 +1,8 @@
 // Окно разговора с Claude рядом с моделью. У каждой модели своя тема в проекте
 // «3D-модели»; лента, отправка и поток ответа — те же адреса, что у тем на сайте.
 
+import { fotoIzZip } from './zip3d.js';
+
 const $ = (s) => document.querySelector(s);
 
 export function sozdatChat({ szhat, soobshchit, sverit, pokazatIstochniki, gotovaModel }) {
@@ -123,23 +125,41 @@ export function sozdatChat({ szhat, soobshchit, sverit, pokazatIstochniki, gotov
 
   async function prilozhit(fayly) {
     pokazatOshibku('');
+    let dobavleno = 0;
+    const propusheno = [];
     try {
       const mid = await gotovaModel();
+      const spisok = [];
+      for (const f of fayly) {
+        if (!/\.zip$/i.test(f.name) && f.type !== 'application/zip') { spisok.push({ fayl: f, imya: f.name, vid: 'из чата' }); continue; }
+        const iz = await fotoIzZip(f);
+        spisok.push(...iz.foto);
+        propusheno.push(...iz.propusheno);
+      }
       const z = await (await fetch(`api/models/${encodeURIComponent(mid)}`, { cache: 'no-store' })).json();
       let n = Math.max(-1, ...(z.source?.photos || []).map((f) => f.n)) + 1;
-      for (const f of fayly) {
-        const s = await szhat(f);
-        const r = await fetch(`api/photos/${encodeURIComponent(mid)}/${n}?view=${encodeURIComponent('из чата')}`, { method: 'PUT', headers: { 'content-type': s.type }, body: s.blob });
+      for (const [i, f] of spisok.entries()) {
+        soobshchit(`Загружаю фото ${i + 1} из ${spisok.length}…`);
+        let s;
+        try { s = await szhat(f.fayl); } catch { propusheno.push(f.imya); continue; }
+        const r = await fetch(`api/photos/${encodeURIComponent(mid)}/${n}?view=${encodeURIComponent(f.vid)}`, { method: 'PUT', headers: { 'content-type': s.type }, body: s.blob });
         if (!r.ok) throw new Error((await r.json().catch(() => null))?.error || 'Фото не загрузилось.');
         const m = await fetch(`api/models/${encodeURIComponent(mid)}/materialy`, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ photos: [{ n }] }) });
         const zapis = await m.json();
         if (!m.ok) throw new Error(zapis.error);
         pokazatIstochniki(zapis);
-        prilozheno.push({ put: zapis.source.photos.at(-1).file, prevyu: s.prevyu });
+        const put = zapis.source.photos.at(-1).file;
+        prilozheno.push({ put: f.vid === 'из чата' ? put : `${put} (${f.vid})`, prevyu: s.prevyu });
         n += 1;
+        dobavleno += 1;
+        narisovatPrilozheno();
       }
-      narisovatPrilozheno();
-    } catch (e) { pokazatOshibku(e.message); }
+      if (fayly.length) soobshchit(`Приложено фото: ${dobavleno}.`);
+    } catch (e) {
+      pokazatOshibku(dobavleno ? `Приложено ${dobavleno}, дальше не вышло: ${e.message}` : e.message);
+      return;
+    }
+    if (propusheno.length) pokazatOshibku(`Не фото или формат не читается, пропущено: ${propusheno.slice(0, 5).join(', ')}${propusheno.length > 5 ? ` и ещё ${propusheno.length - 5}` : ''}.`);
   }
 
   async function otpravit() {
