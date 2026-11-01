@@ -75,7 +75,7 @@ def test_model_photo_export(inside):
     r = c.get("/3d/api/photos/proba/0")
     assert r.content == PNG and r.headers["content-type"] == "image/png"
     assert c.put("/3d/api/photos/proba/1", content=b"<b>", headers={"content-type": "text/html"}).status_code == 400
-    assert c.put("/3d/api/photos/proba/40", content=PNG, headers=h).status_code == 400
+    assert c.put("/3d/api/photos/proba/100", content=PNG, headers=h).status_code == 400
     assert c.put("/3d/api/photos/proba/1", content=b"0" * (5 * 1024 * 1024 + 1), headers=h).status_code == 400
 
     assert c.put("/3d/api/exports/proba?name=Проба", content=b"<html>", headers={"content-type": "text/html"}).status_code == 200
