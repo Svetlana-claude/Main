@@ -5,11 +5,11 @@
   var site = window.SITE || {};
   var body = document.body;
 
-  // Подтверждение для форм с вопросом (удаление)
-  document.querySelectorAll("form[data-confirm]").forEach(function (form) {
-    form.addEventListener("submit", function (e) {
-      if (!confirm(form.dataset.confirm)) e.preventDefault();
-    });
+  // Подтверждение для форм с вопросом (удаление). Слушаем документ целиком:
+  // список файлов перерисовывается, и у новых форм своих обработчиков нет
+  document.addEventListener("submit", function (e) {
+    var form = e.target;
+    if (form.matches && form.matches("form[data-confirm]") && !confirm(form.dataset.confirm)) e.preventDefault();
   });
 
   // Телефон: из разговора — к списку

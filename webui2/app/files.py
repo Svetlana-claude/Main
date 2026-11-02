@@ -1,4 +1,4 @@
-"""Файлы проекта: папка downloads/ — список, загрузка, просмотр, скачивание.
+"""Файлы проекта: папка downloads/ — список, загрузка, просмотр, скачивание, удаление.
 
 Отдаётся только то, что лежит прямо в downloads/: без скрытых файлов, ссылок
 и выхода из папки. Скачивание — с Content-Security-Policy: sandbox, чтобы
@@ -7,7 +7,7 @@ import os
 import secrets
 from datetime import datetime, timezone
 from pathlib import Path
-from urllib.parse import quote
+from urllib.parse import quote, urlsplit
 
 from fastapi import Request
 from fastapi.responses import FileResponse, JSONResponse, RedirectResponse
@@ -24,7 +24,7 @@ TEXT_EXT = {".md", ".txt", ".csv", ".tsv", ".json", ".xml", ".yml", ".yaml", ".t
 SANDBOX = {"Content-Security-Policy": "sandbox", "X-Content-Type-Options": "nosniff",
            "Cache-Control": "no-store"}
 MESSAGES = {"ok": "Загружено", "big": "Файл больше 512 МБ — не загружен", "none": "Файл не выбран",
-            "fail": "Не загрузилось — попробуй ещё раз"}
+            "fail": "Не загрузилось — попробуй ещё раз", "del": "Удалено", "gone": "Такого файла уже нет"}
 
 templates.env.globals["fname_url"] = lambda name: quote(name, safe="")
 
@@ -111,7 +111,7 @@ def place(tmp: Path, name: str) -> str:
 def files_ctx(proj: dict, request: Request) -> dict:
     code = request.query_params.get("f", "")
     return {"project": proj, "files": list_files(proj), "files_msg": MESSAGES.get(code, ""),
-            "files_ok": code == "ok"}
+            "files_ok": code in ("ok", "del")}
 
 
 @router.get("/projects/{pid}/files", name="files")
@@ -219,3 +219,24 @@ def file_get(request: Request, pid: int, name: str):
         return JSONResponse({"error": "нет такого файла"}, status_code=404, headers=SANDBOX)
     return FileResponse(path, filename=name, headers=SANDBOX,
                         media_type="application/octet-stream")
+
+
+@router.post("/projects/{pid}/files/delete/{name}", name="file_delete")
+async def file_delete(request: Request, pid: int, name: str):
+    """Удалить файл насовсем — только прямо из downloads/, как и всё остальное здесь."""
+    sess = current(request)
+    proj = project(pid)
+    if not sess or sess["locked"] or not proj or not same_origin(request):
+        return JSONResponse({"error": "нет доступа"}, status_code=403)
+    form = await request.form()
+    if not csrf_ok(request, sess, str(form.get("csrf") or "")):
+        return JSONResponse({"error": "нет доступа"}, status_code=403)
+    back = urlsplit(request.headers.get("referer") or "").path
+    path = find(proj, name)
+    if not path:
+        return _back(pid, back, "gone", request)
+    try:
+        path.unlink()
+    except OSError:
+        return _back(pid, back, "gone", request)
+    return _back(pid, back, "del", request)

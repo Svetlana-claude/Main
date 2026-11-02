@@ -19,6 +19,13 @@
     <a href="{{ root }}/projects/{{ project.id }}/files/get/{{ fname_url(f.name) }}" class="icon dl" download
        title="Скачать" aria-label="Скачать {{ f.name }}">
       <svg viewBox="0 0 24 24" width="22" height="22" aria-hidden="true" focusable="false"><path d="M12 4v11M7 10l5 5 5-5M5 20h14"/></svg></a>
+    <form method="post" action="{{ root }}/projects/{{ project.id }}/files/delete/{{ fname_url(f.name) }}"
+          class="del" data-confirm="Удалить файл «{{ f.name }}»? Насовсем: вернуть можно только из ночной копии.">
+      <input type="hidden" name="csrf" value="{{ sess.csrf }}">
+      <button type="submit" class="icon" title="Удалить" aria-label="Удалить {{ f.name }}">
+        <svg viewBox="0 0 24 24" width="22" height="22" aria-hidden="true" focusable="false"><path d="M4 7h16M10 11v6M14 11v6M6 7l1 13h10l1-13M9 7V4h6v3"/></svg>
+      </button>
+    </form>
   </li>
   {% else %}
   <li class="muted small">Файлов пока нет. Сюда попадает папка downloads проекта: то, что загрузишь ты, и то, что положит Claude.</li>

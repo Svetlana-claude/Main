@@ -241,12 +241,13 @@ textarea {
 .upload .small { margin: 0; }
 .file-list { list-style: none; margin: 0; padding: 0; }
 .file-list li {
-  display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: center;
+  display: grid; grid-template-columns: minmax(0, 1fr) auto auto; align-items: center;
   column-gap: .3rem; padding: .45rem 0; border-bottom: 1px solid var(--line);
 }
 .file-list .fname { overflow-wrap: anywhere; grid-column: 1; }
 .file-list .muted { grid-column: 1; }
 .file-list .dl { grid-column: 2; grid-row: 1 / span 2; }
+.file-list .del { grid-column: 3; grid-row: 1 / span 2; margin: 0; }
 .file-list li.muted { display: block; border: 0; }
 .view-head { display: flex; align-items: center; gap: 1rem; flex-wrap: wrap; margin-bottom: 1rem; }
 .fname-big { flex: 1; margin: 0; overflow-wrap: anywhere; }

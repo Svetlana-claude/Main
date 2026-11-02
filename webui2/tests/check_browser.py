@@ -336,6 +336,25 @@ def project_flow(page, name: str, mobile: bool) -> None:
     expect(page.locator("#talk-title")).to_have_text("медленно глянь файлы")
     sample.unlink()
 
+    # Удаление файла: «Отмена» в вопросе — файл на месте; «ОК» — исчез
+    topic_url = page.url
+    if mobile:
+        page.click("#files-btn")
+        expect(page.locator(".files-title")).to_be_visible()
+    row = page.locator(".file-list li", has_text="план поездки.md")
+    page.once("dialog", lambda d: d.dismiss())
+    row.locator("form.del button").click()
+    expect(row).to_be_visible()
+    page.once("dialog", lambda d: d.accept())
+    row.locator("form.del button").click()
+    expect(page.locator("#upload-msg")).to_have_text("Удалено", timeout=10000)
+    expect(page.locator(".file-list")).not_to_contain_text("план поездки.md")
+    no_side_scroll(page, "файлы после удаления")
+    page.screenshot(path=SHOTS / f"{name}-p3c-udaleno.png")
+    if mobile:
+        page.goto(topic_url)
+    expect(page.locator("#talk-title")).to_have_text("медленно глянь файлы")
+
     # Разрешение: Claude просит — кружок оранжевый, на щите 1; «Разрешить» —
     # Claude продолжает, ответ дописан
     ask(page, "спроси разрешения")

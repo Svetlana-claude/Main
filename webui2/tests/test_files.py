@@ -123,3 +123,40 @@ def test_clean_name():
     assert files.clean_name("a\x00b\n.txt") == "ab.txt"
     long = files.clean_name("я" * 300 + ".pdf")
     assert long.endswith(".pdf") and len(long.encode()) <= 200
+
+
+def delete(c, pid, name, csrf=None, **kw):
+    from urllib.parse import quote
+    return c.post(f"/projects/{pid}/files/delete/{quote(name, safe='')}",
+                  data={"csrf": csrf or csrf_of(c)}, follow_redirects=False, **kw)
+
+
+def test_delete_file(inside):
+    pid, down = setup_project(inside)
+    upload(inside, pid, [("лишний.txt", b"x"), ("нужный.txt", b"y")])
+    page = inside.get(f"/projects/{pid}/files").text
+    assert "Удалить лишний.txt" in page and "data-confirm" in page
+    r = delete(inside, pid, "лишний.txt", headers={"referer": f"http://testserver/projects/{pid}"})
+    assert r.status_code == 303 and r.headers["location"].endswith(f"/projects/{pid}?f=del#files")
+    assert sorted(p.name for p in down.iterdir()) == ["нужный.txt"]
+    r = delete(inside, pid, "лишний.txt")
+    assert r.status_code == 303 and r.headers["location"].endswith("/files?f=gone#files")
+
+
+def test_delete_only_plain_files_in_downloads(inside):
+    pid, down = setup_project(inside)
+    (down / ".скрытый").write_text("s")
+    (down / "папка").mkdir()
+    (down.parent / "рядом.txt").write_text("r")
+    for name in (".скрытый", "папка", "../рядом.txt", "..%2Fрядом.txt"):
+        delete(inside, pid, name)
+    assert (down / ".скрытый").exists() and (down / "папка").is_dir() and (down.parent / "рядом.txt").exists()
+
+
+def test_delete_needs_login_and_token(client, inside):
+    pid, down = setup_project(inside)
+    upload(inside, pid, [("a.txt", b"x")])
+    assert client.post(f"/projects/{pid}/files/delete/a.txt", data={"csrf": "x"}).status_code == 403
+    assert delete(inside, pid, "a.txt", csrf="подделка").status_code == 403
+    assert delete(inside, pid, "a.txt", headers={"origin": "https://evil.example"}).status_code == 403
+    assert (down / "a.txt").exists()
