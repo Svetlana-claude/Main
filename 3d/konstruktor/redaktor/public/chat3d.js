@@ -2,6 +2,7 @@
 // «3D-модели»; лента, отправка и поток ответа — те же адреса, что у тем на сайте.
 
 const $ = (s) => document.querySelector(s);
+const chislo = (n, a, b, c) => `${n} ${n % 10 === 1 && n % 100 !== 11 ? a : n % 10 >= 2 && n % 10 <= 4 && (n % 100 < 10 || n % 100 >= 20) ? b : c}`;
 
 export function sozdatChat({ szhat, soobshchit, sverit, pokazatIstochniki, gotovaModel }) {
   const lenta = $('#chat-lenta');
@@ -113,11 +114,13 @@ export function sozdatChat({ szhat, soobshchit, sverit, pokazatIstochniki, gotov
   function narisovatPrilozheno() {
     const box = $('#chat-prilozheno');
     box.innerHTML = '';
+    // Снимки — справочный материал для Claude: здесь только строка «что приложено».
     for (const f of prilozheno) {
-      const img = document.createElement('img');
-      img.src = f.prevyu;
-      img.alt = f.put;
-      box.append(img);
+      const c = document.createElement('span');
+      c.className = 'chip';
+      c.textContent = f.podpis;
+      c.title = f.puti.join(', ');
+      box.append(c);
     }
   }
 
@@ -159,15 +162,23 @@ export function sozdatChat({ szhat, soobshchit, sverit, pokazatIstochniki, gotov
           const zapis = await m.json();
           if (!m.ok) throw new Error(zapis.error);
           pokazatIstochniki(zapis);
-          prilozheno.push({ put: zapis.source.photos.at(-1).file, prevyu: s.prevyu });
+          prilozheno.push({ podpis: `Фото «${f.name}»`, puti: [zapis.source.photos.at(-1).file], opis: `фото «${f.name}» — ${zapis.source.photos.at(-1).file}` });
           dobavleno += 1;
         } else {
           const d = await naServer(mid, f);
           pokazatIstochniki(d.zapis);
           propusheno.push(...d.skipped);
-          for (const x of d.photos) {
-            prilozheno.push({ put: `${x.file} (${x.view})`, prevyu: `api/photos/${encodeURIComponent(mid)}/${x.n}` });
-            dobavleno += 1;
+          if (d.photos.length) {
+            const nomera = d.photos.map((x) => x.n);
+            const papka = `foto/${mid}/`;
+            const kadry = d.photos.filter((x) => /кадр \d+$/.test(x.view)).length;
+            const sut = [d.photos.length - kadry ? chislo(d.photos.length - kadry, 'снимок', 'снимка', 'снимков') : '', kadry ? chislo(kadry, 'кадр', 'кадра', 'кадров') + ' из видео' : ''].filter(Boolean).join(' и ');
+            prilozheno.push({
+              podpis: `«${f.name}»: ${sut}`,
+              puti: d.photos.map((x) => x.file),
+              opis: `«${f.name}» — ${sut}: ${papka}${Math.min(...nomera)}.jpg … ${Math.max(...nomera)}.jpg (подпись каждого — в ${papka}<номер>.json)`,
+            });
+            dobavleno += d.photos.length;
           }
         }
         narisovatPrilozheno();
@@ -185,7 +196,7 @@ export function sozdatChat({ szhat, soobshchit, sverit, pokazatIstochniki, gotov
 
   async function otpravit() {
     let t = tekst.value.trim();
-    if (!t && prilozheno.length) t = 'Посмотри приложенные фото.';
+    if (!t && prilozheno.length) t = 'Учти приложенные материалы.';
     if (!t) return;
     knopka.disabled = true;
     pokazatOshibku('');
@@ -196,7 +207,7 @@ export function sozdatChat({ szhat, soobshchit, sverit, pokazatIstochniki, gotov
       const d0 = await r0.json();
       if (!r0.ok) throw new Error(d0.error);
       conv = d0.conv;
-      if (prilozheno.length) t += '\n\nПриложено: ' + prilozheno.map((f) => f.put).join(', ');
+      if (prilozheno.length) t += '\n\nПриложено (справочный материал): ' + prilozheno.map((f) => f.opis).join('; ');
       if (d0.first) t = `Модель: ${mid}, файл modeli/${mid}.json.\n\n${t}`;
       const forma = new URLSearchParams({ text: t, csrf: sost.csrf });
       const r = await fetch(adres('/send'), { method: 'POST', credentials: 'same-origin', body: forma });
