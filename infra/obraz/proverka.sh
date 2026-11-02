@@ -1,12 +1,12 @@
 #!/bin/bash
-# Проверка образа на этом сервере: распаковать главное во временную папку, сверить
+# Проверка образа на этом сервере: распаковать главное из последнего снимка во временную папку, сверить
 # базу с рабочей и запустить копию сайта на 127.0.0.1:18081. В журнал идут только
 # числа и коды ответа, содержимое не выводится. Полную проверку заменяет только
 # разворачивание на чистом сервере.
 set -uo pipefail
 umask 077
 H=/home/mokeeva
-VYDACHA=$H/main/glavpryg-sayt/downloads
+export RESTIC_REPOSITORY=$H/backups/obraz-repo RESTIC_PASSWORD_FILE=$H/.config/obraz-parol
 T=$H/.obraz-proverka
 LOG=$H/backups/obraz.log
 log() { echo "$(date -u +'%d.%m.%Y %H:%M') UTC  проверка: $*" >> "$LOG"; }
@@ -14,7 +14,7 @@ log() { echo "$(date -u +'%d.%m.%Y %H:%M') UTC  проверка: $*" >> "$LOG";
 rm -rf "$T"; mkdir -p "$T"
 trap 'kill "${PID:-0}" 2>/dev/null; rm -rf "$T"' EXIT
 log "начало"
-cat "$VYDACHA"/obraz-chast-* | gpg --batch --quiet --pinentry-mode loopback --passphrase-file "$H/.config/obraz-parol" -d \
+$H/tools/restic/restic --quiet dump --tag obraz latest /obraz.tar \
   | tar -C "$T" -xf - home/mokeeva/.obraz-staging home/mokeeva/.config/webui2 home/mokeeva/main/webui2 \
        home/mokeeva/main/.git home/mokeeva/main/CLAUDE.md || { log "архив не распаковался"; exit 1; }
 R=$T/home/mokeeva
@@ -38,7 +38,11 @@ print(f"таблиц {len(names)}, записей в копии {rows}, расх
 PY
 
 git --git-dir="$R/main/.git" log --oneline -1 >> "$LOG" 2>&1
-log "Beget: таблиц $(gunzip -c "$R/.obraz-staging/beget-baza.sql.gz" | grep -c 'CREATE TABLE'), файл сайта $(tar -tzf "$R/.obraz-staging/beget-sayt.tgz" | wc -l) записей"
+if [ -f "$R/.obraz-staging/beget-baza.sql" ]; then
+    log "Beget: таблиц $(grep -c 'CREATE TABLE' "$R/.obraz-staging/beget-baza.sql"), файл сайта $(tar -tf "$R/.obraz-staging/beget-sayt.tar" | wc -l) записей"
+else
+    log "Beget: в последнем снимке копии нет"
+fi
 log "Главпрыг, копия со старого сервера: $(tar -tf "$R/.obraz-staging/glavpryg-rezerv.tar" | wc -l) частей"
 
 ENVF=$R/.config/webui2/webui2.env

@@ -12,7 +12,8 @@
 #   pochta.tar.gz   — ящик glavpryg@mokeevasky.ru, ключ DKIM, настройки Postfix/Dovecot
 #   VOSSTANOVLENIE.txt — как развернуть
 #
-# Хранение: 14 копий в /home/mokeeva/backups/glavpryg/, последняя — ещё и в
+# Хранение: 2 последние копии в /home/mokeeva/backups/glavpryg/ (история за 14 дней
+# и по копии на месяц — в хранилище образа сервера), последняя — ещё и в
 # «Файлах проекта» (glavpryg-sayt/downloads/rezerv/), чтобы забрать её с сервера:
 # копия на том же диске от отказа сервера не спасает. Вне сервера — Яндекс
 # Диск, папка glavpryg-rezerv/, 7 последних (если есть ~/.config/yandex-disk.netrc).
@@ -29,7 +30,8 @@ set -uo pipefail
 SAYT=/var/www/glavpryg
 DEST=/home/mokeeva/backups/glavpryg
 SHARE=/home/mokeeva/main/glavpryg-sayt/downloads/rezerv
-KEEP=14
+# История копий (14 дней и по одной на месяц) живёт в хранилище образа — infra/obraz/
+KEEP=2
 LOG="$DEST/rezerv.log"
 
 STAMP=$(date +%Y%m%d-%H%M%S)
