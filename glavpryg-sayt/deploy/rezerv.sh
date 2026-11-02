@@ -136,6 +136,12 @@ log "--- готово: копий $(ls -1 "$DEST"/glavpryg-rezerv-*.tar | wc -l)
 YA_NETRC=$HOME/.config/yandex-disk.netrc
 YA_URL=https://webdav.yandex.ru/%D0%9A%D0%9B%D0%9E%D0%94/glavpryg-rezerv   # КЛОД/glavpryg-rezerv
 YA_KEEP=7
+# С 02.11.2026 на Диск идёт только зашифрованная копия (deploy/na-disk.sh, папка приложения
+# «Claude Главпрыг»): в этой копии .env и база открытым текстом
+if true; then
+    log "Яндекс Диск: эту копию не загружаем, зашифрованная уходит через na-disk.sh"
+    exit 0
+fi
 if [ ! -r "$YA_NETRC" ]; then
     log "Яндекс Диск не настроен ($YA_NETRC нет) — копия только на сервере"
     exit 0

@@ -21,3 +21,5 @@ PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
 7 */2 * * * /usr/bin/python3 /home/mokeeva/main/glavpryg-sayt/igra/tools/pogoda-dnya.py /var/www/glavpryg/public/igra-app/pogoda-dnya.json >> /tmp/pogoda-dnya.log 2>&1
 # Образ сервера для восстановления
 30 5 * * * /bin/bash /home/mokeeva/main/infra/obraz/sobrat.sh
+# Главпрыг на Яндекс Диск
+0 7 * * * /bin/bash /home/mokeeva/main/glavpryg-sayt/deploy/na-disk.sh
