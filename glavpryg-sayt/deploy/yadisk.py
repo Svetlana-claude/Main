@@ -14,10 +14,15 @@ import fnmatch
 import hashlib
 import json
 import os
+import socket
 import sys
 import time
 import urllib.parse
 import urllib.request
+
+# Только IPv4: по IPv6 Диск тянет загрузку еле-еле (02.11.2026: 140 КБ/с против мегабайт)
+_gai = socket.getaddrinfo
+socket.getaddrinfo = lambda host, port, family=0, *a, **k: _gai(host, port, socket.AF_INET, *a, **k)
 
 API = "https://cloud-api.yandex.net/v1/disk/resources"
 TOKEN = open(os.path.expanduser("~/.config/yandex-app-token")).read().strip()
