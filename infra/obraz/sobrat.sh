@@ -42,7 +42,6 @@ if [ ! -s "$PAROL" ]; then
       echo; cat "$PAROL"; } > "$VYDACHA/PAROL-OBRAZA-zapishi-i-udali.txt"
 fi
 
-rm -f "$ARCH" "$VYDACHA"/obraz-chast-* "$VYDACHA/obraz-chasti.sha256"
 rm -rf "$STAGE"; mkdir -p "$STAGE"
 python3 - "$SITE_DB" "$STAGE/site.db" <<'PY' || fail "не снята копия базы сайта"
 import sqlite3, sys
@@ -56,10 +55,13 @@ cp "$(ls -t $H/backups/glavpryg/glavpryg-rezerv-*.tar | head -1)" "$STAGE/glavpr
     || fail "нет резервной копии Главпрыга"
 cp "$(ls -t $H/backups/webui-*.sql.gz | head -1)" "$STAGE/webui.sql.gz"
 sudo -n -u postgres pg_dumpall --roles-only > "$STAGE/roles.sql" 2>/dev/null
-( cd "$H/tools/beget" && .venv/bin/python vygruzit.py "$STAGE" ) >> "$LOG" 2>&1 \
-    || fail "не выгружен сайт с Beget"
+# Beget недоступен — образ всё равно собирается, без свежей копии Главпрыга с хостинга
+( cd "$H/tools/beget" && timeout 1800 .venv/bin/python vygruzit.py "$STAGE" ) >> "$LOG" 2>&1 \
+    || { rm -f "$STAGE"/beget-*; log "ВНИМАНИЕ: сайт с Beget не выгружен, в образе его нет"; }
 cp "$H/main/infra/obraz/vosstanovit.sh" "$H/main/infra/obraz/PAMYATKA.md" "$VYDACHA/"
 
+# Прежний образ убираем только сейчас: до этого места любая ошибка оставляет его целым
+rm -f "$ARCH" "$VYDACHA"/obraz-chast-* "$VYDACHA/obraz-chasti.sha256"
 SVOBODNO=$(df -m --output=avail "$VYDACHA" | tail -1 | tr -d ' ')
 PREDEL=$(( SVOBODNO - ZAPAS_MB ))
 [ "$PREDEL" -gt 500 ] || fail "на диске мало места: $SVOBODNO МБ"
@@ -102,7 +104,7 @@ rm -rf "$STAGE"
 SPISOK=$(gpg --batch --quiet --pinentry-mode loopback --passphrase-file "$PAROL" -d "$ARCH" | tar -tf - ) \
     || { rm -f "$ARCH"; fail "архив не читается"; }
 for nuzhno in home/mokeeva/.obraz-staging/site.db home/mokeeva/.obraz-staging/glavpryg-rezerv.tar \
-              home/mokeeva/.obraz-staging/beget-baza.sql.gz home/mokeeva/.config/webui2/webui2.env \
+              home/mokeeva/.config/webui2/webui2.env \
               home/mokeeva/main/CLAUDE.md etc/nginx/nginx.conf; do
     grep -qx "$nuzhno" <<<"$SPISOK" || { rm -f "$ARCH"; fail "в архиве нет $nuzhno"; }
 done
