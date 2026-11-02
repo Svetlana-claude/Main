@@ -16,7 +16,7 @@
 # и по копии на месяц — в хранилище образа сервера), последняя — ещё и в
 # «Файлах проекта» (glavpryg-sayt/downloads/rezerv/), чтобы забрать её с сервера:
 # копия на том же диске от отказа сервера не спасает. Вне сервера — Яндекс
-# Диск, папка glavpryg-rezerv/, 7 последних (если есть ~/.config/yandex-disk.netrc).
+# Диск, папка КЛОД/glavpryg-rezerv/, 7 последних (если есть ~/.config/yandex-disk.netrc).
 #
 # Сбой не молчит: 16–18.10.2026 копия три ночи падала, и узнали случайно.
 # Теперь при любом выходе с ошибкой — письмо на адреса из
@@ -132,14 +132,15 @@ log "--- готово: копий $(ls -1 "$DEST"/glavpryg-rezerv-*.tar | wc -l)
 # ── Копия вне сервера — Яндекс Диск по WebDAV ─────────────────────────
 # Логин и пароль приложения — в netrc-файле (не в командной строке: её видно
 # в списке процессов): «machine webdav.yandex.ru login … password …».
+# Только IPv4: по IPv6 Диск рвёт соединение (02.11.2026).
 YA_NETRC=$HOME/.config/yandex-disk.netrc
-YA_URL=https://webdav.yandex.ru/glavpryg-rezerv
+YA_URL=https://webdav.yandex.ru/%D0%9A%D0%9B%D0%9E%D0%94/glavpryg-rezerv   # КЛОД/glavpryg-rezerv
 YA_KEEP=7
 if [ ! -r "$YA_NETRC" ]; then
     log "Яндекс Диск не настроен ($YA_NETRC нет) — копия только на сервере"
     exit 0
 fi
-ya() { curl -sS --netrc-file "$YA_NETRC" --retry 3 --max-time 1800 "$@"; }
+ya() { curl -4 -sS --netrc-file "$YA_NETRC" --retry 3 --max-time 10800 "$@"; }
 # Папка: 201 — создана, 405 — уже есть
 KOD=$(ya -o /dev/null -w '%{http_code}' -X MKCOL "$YA_URL/")
 case "$KOD" in 201|405) ;; *) fail "Яндекс Диск: папка не создаётся (код $KOD)" ;; esac

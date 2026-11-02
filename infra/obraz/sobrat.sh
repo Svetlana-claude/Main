@@ -15,7 +15,7 @@
 # создаётся здесь при первом запуске и один раз кладётся в «Файлы проекта»,
 # Светлана записывает его и удаляет файл.
 # Яндекс Диск подключается файлом ~/.config/yandex-disk.netrc: есть файл —
-# хранилище и всё для восстановления повторяются в папке obraz-sayta-repo/.
+# хранилище и всё для восстановления повторяются в папке КЛОД/obraz-sayta-repo/.
 set -uo pipefail
 umask 077
 
@@ -143,12 +143,15 @@ cp "$H/main/infra/obraz/PAMYATKA.md" "$VYDACHA/"
 # Яндекс Диск: хранилище и всё для восстановления. Ошибка Диска не губит копию на сервере
 if [ -s "$YA_NETRC" ]; then
     read -r YA_USER YA_PASS < <(awk '{for(i=1;i<NF;i++){if($i=="login")u=$(i+1);if($i=="password")p=$(i+1)}} END{print u, p}' "$YA_NETRC")
-    export RCLONE_WEBDAV_URL=https://webdav.yandex.ru RCLONE_WEBDAV_VENDOR=other \
+    # Только IPv4: по IPv6 Диск рвёт соединение (02.11.2026). Первая выгрузка идёт часами —
+    # Диск принимает около 100 КБ/с на поток; дальше за ночь уходят мегабайты
+    export RCLONE_BIND=0.0.0.0 RCLONE_TRANSFERS=4 RCLONE_TIMEOUT=15m \
+           RCLONE_WEBDAV_URL=https://webdav.yandex.ru RCLONE_WEBDAV_VENDOR=other \
            RCLONE_WEBDAV_USER=$YA_USER RCLONE_WEBDAV_PASS=$("$BIN/rclone" obscure "$YA_PASS")
     unset YA_PASS
-    if "$BIN/rclone" sync "$RESTIC_REPOSITORY" :webdav:obraz-sayta-repo/hranilishche --retries 5 >> "$LOG" 2>&1 \
-       && "$BIN/rclone" copy "$H/main/infra/obraz" :webdav:obraz-sayta-repo --include '{vosstanovit.sh,PAMYATKA.md}' >> "$LOG" 2>&1 \
-       && "$BIN/rclone" copyto "$BIN/restic" :webdav:obraz-sayta-repo/restic >> "$LOG" 2>&1; then
+    if "$BIN/rclone" sync "$RESTIC_REPOSITORY" :webdav:КЛОД/obraz-sayta-repo/hranilishche --retries 5 >> "$LOG" 2>&1 \
+       && "$BIN/rclone" copy "$H/main/infra/obraz" :webdav:КЛОД/obraz-sayta-repo --include '{vosstanovit.sh,PAMYATKA.md}' >> "$LOG" 2>&1 \
+       && "$BIN/rclone" copyto "$BIN/restic" :webdav:КЛОД/obraz-sayta-repo/restic >> "$LOG" 2>&1; then
         log "образ на Яндекс Диске"
     else
         log "ВНИМАНИЕ: Яндекс Диск не принял образ"
