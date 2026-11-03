@@ -1,0 +1,35 @@
+// Загрузка большого файла обрывается (перезагрузка страницы) — повторное приложение продолжает с места.
+import { chromium } from 'playwright-core';
+import { readdirSync } from 'node:fs';
+const kesh = process.env.HOME + '/.cache/ms-playwright/chromium-1234/';
+const chrome = kesh + readdirSync(kesh).find((d) => d.startsWith('chrome-')) + '/chrome';
+const { ADRES, KUKA } = process.env;
+const b = await chromium.launch({ executablePath: chrome, args: ['--use-gl=angle', '--use-angle=swiftshader', '--enable-unsafe-swiftshader'] });
+const k = await b.newContext({ viewport: { width: 1440, height: 900 } });
+await k.addCookies([{ name: 'v2_session', value: KUKA, url: new URL(ADRES).origin }]);
+const ok = (u, t) => console.log((u ? 'OK   ' : 'FAIL ') + t);
+let s = await k.newPage();
+let kuskov = 0;
+await s.route('**/api/arhiv/**', async (r) => { if (r.request().method() === 'PUT') kuskov++; await new Promise((z) => setTimeout(z, 400)); r.continue(); });
+await s.goto(ADRES);
+await s.waitForSelector('.dv-tabl tr[data-id]');
+await s.setInputFiles('#f-chat', '/tmp/t/bolshoy.zip');
+await s.waitForFunction(() => /МБ/.test(document.querySelector('#chat-hod').innerText), null, { timeout: 20000 });
+console.log('ход:', await s.locator('#chat-hod').innerText());
+await s.fill('#chat-tekst', 'Проверка: ответь одним словом «принято».');
+await s.press('#chat-tekst', 'Control+Enter');
+ok((await s.locator('#chat-lenta .msg-user').count()) === 0, 'во время загрузки сообщение не уходит отдельно');
+await s.waitForTimeout(1500);
+const do_ = kuskov;
+await s.close();                                           // как перезагрузка страницы посреди загрузки
+s = await k.newPage();
+kuskov = 0;
+await s.route('**/api/arhiv/**', (r) => { if (r.request().method() === 'PUT') kuskov++; r.continue(); });
+await s.goto(ADRES);
+await s.waitForSelector('.dv-tabl tr[data-id]');
+await s.setInputFiles('#f-chat', '/tmp/t/bolshoy.zip');
+await s.waitForFunction(() => document.querySelector('#chat-hod').hidden && !document.querySelector('#b-chat').disabled, null, { timeout: 120000 });
+const z = await s.evaluate(() => fetch('api/models/parashyut').then((r) => r.json()));
+console.log('кусков до обрыва', do_, 'после', kuskov, '| ошибка:', await s.locator('#chat-oshibka').innerText());
+ok(z.source.photos.length === 12 && kuskov < 7, 'после обрыва загрузка продолжилась с места и архив разобран');
+await b.close();

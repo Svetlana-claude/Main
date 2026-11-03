@@ -128,13 +128,68 @@ export function sozdatChat({ szhat, soobshchit, sverit, pokazatIstochniki, gotov
   const prostoeFoto = (f) => /^image\/(jpeg|png|webp|gif)$/.test(f.type);
   const hod = (t) => { const h = $('#chat-hod'); h.textContent = t || ''; h.hidden = !t; };
 
+  // Один и тот же файл — один и тот же номер загрузки: оборвалось — продолжим с того же места.
+  function nomerZagruzki(mid, f) {
+    let h1 = 0x811c9dc5;
+    let h2 = 0x01000193;
+    for (const ch of `${mid}|${f.name}|${f.size}|${f.lastModified}`) {
+      h1 = Math.imul(h1 ^ ch.charCodeAt(0), 16777619) >>> 0;
+      h2 = Math.imul(h2 + ch.charCodeAt(0), 2654435761) >>> 0;
+    }
+    return 'z' + h1.toString(16).padStart(8, '0') + h2.toString(16).padStart(8, '0') + f.size.toString(16);
+  }
+
+  const mb = (n) => (n / 1048576).toFixed(n < 10485760 ? 1 : 0).replace('.', ',');
+  const minuty = (sek) => (sek < 90 ? 'меньше двух минут' : `около ${Math.round(sek / 60)} мин`);
+
+  function kusok(url, telo, nachalo, vsego, t0, imya) {
+    return new Promise((ok, net) => {
+      const x = new XMLHttpRequest();
+      x.open('PUT', url);
+      x.setRequestHeader('content-type', 'application/octet-stream');
+      x.upload.onprogress = (e) => {
+        const sdelano = nachalo + e.loaded;
+        const skorost = sdelano > nachalo ? (sdelano - t0.s) / ((performance.now() - t0.t) / 1000) : 0;
+        const ostalos = skorost > 0 ? (vsego - sdelano) / skorost : 0;
+        hod(`Загружаю «${imya}»: ${mb(sdelano)} из ${mb(vsego)} МБ${ostalos > 5 ? `, осталось ${minuty(ostalos)}` : ''}. Страницу не закрывайте.`);
+      };
+      x.onload = () => {
+        let d = null;
+        try { d = JSON.parse(x.responseText); } catch { /* пусто */ }
+        ok({ status: x.status, d });
+      };
+      x.onerror = () => net(new Error('связь'));
+      x.ontimeout = () => net(new Error('связь'));
+      x.send(telo);
+    });
+  }
+
   async function naServer(mid, f) {
-    const token = Array.from(crypto.getRandomValues(new Uint8Array(12)), (x) => x.toString(16).padStart(2, '0')).join('');
-    const SHAG = 16 * 1024 * 1024;
-    for (let at = 0; at < f.size; at += SHAG) {
-      hod(`Загружаю «${f.name}»: ${Math.round((at / f.size) * 100)}%`);
-      const r = await fetch(`api/arhiv/${encodeURIComponent(mid)}/${token}?offset=${at}`, { method: 'PUT', headers: { 'content-type': 'application/octet-stream' }, body: f.slice(at, at + SHAG) });
-      if (!r.ok) throw new Error((await r.json().catch(() => null))?.error || 'Файл не загрузился.');
+    const token = nomerZagruzki(mid, f);
+    const SHAG = 8 * 1024 * 1024;
+    let at = 0;
+    const t0 = { t: performance.now(), s: 0 };
+    let sboi = 0;
+    while (at < f.size) {
+      const url = `api/arhiv/${encodeURIComponent(mid)}/${token}?offset=${at}`;
+      let r;
+      try {
+        r = await kusok(url, f.slice(at, at + SHAG), at, f.size, t0, f.name);
+      } catch {
+        if (++sboi > 20) throw new Error('Связь пропала. Приложите файл ещё раз — загрузка продолжится с того же места.');
+        hod(`Связь прервалась, пробую снова (${sboi})…`);
+        await new Promise((z) => setTimeout(z, Math.min(30000, 2000 * sboi)));
+        continue;
+      }
+      if (r.status === 409 && Number.isInteger(r.d?.have)) {
+        // На сервере уже есть начало файла — продолжаем с него
+        at = r.d.have;
+        if (!t0.s) { t0.s = at; t0.t = performance.now(); }
+        continue;
+      }
+      if (r.status !== 200) throw new Error(r.d?.error || 'Файл не загрузился.');
+      at = r.d.have;
+      sboi = 0;
     }
     hod(`Разбираю «${f.name}»: видео может занять несколько минут…`);
     const r = await fetch(`api/arhiv/${encodeURIComponent(mid)}/${token}/razobrat?name=${encodeURIComponent(f.name)}`, { method: 'POST' });
@@ -143,8 +198,11 @@ export function sozdatChat({ szhat, soobshchit, sverit, pokazatIstochniki, gotov
     return d;
   }
 
+  let gruzim = false;
+
   async function prilozhit(fayly) {
     pokazatOshibku('');
+    gruzim = true;
     knopka.disabled = true;
     let zametka = '';
     const propusheno = [];
@@ -191,6 +249,7 @@ export function sozdatChat({ szhat, soobshchit, sverit, pokazatIstochniki, gotov
     } finally {
       hod('');
       knopka.disabled = false;
+      gruzim = false;
     }
     // Материалы — сразу в работу: с тем, что написано в поле, или с задачей по умолчанию.
     if (prilozheno.length) await otpravit();
@@ -198,6 +257,8 @@ export function sozdatChat({ szhat, soobshchit, sverit, pokazatIstochniki, gotov
   }
 
   async function otpravit() {
+    // Пока грузится файл, сообщение ждёт его и уйдёт вместе с ним
+    if (gruzim) { soobshchit('Сообщение уйдёт вместе с файлом, когда он загрузится.'); return; }
     let t = tekst.value.trim();
     if (!t && prilozheno.length) t = 'Сделай модель по приложенным материалам.';
     if (!t) return;

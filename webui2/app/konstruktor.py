@@ -383,12 +383,14 @@ async def archive_chunk(request: Request, mid: str, token: str, offset: int = 0)
         return _error("Неправильный запрос.")
     TMP.mkdir(parents=True, exist_ok=True)
     for old in TMP.iterdir():
-        if time.time() - old.stat().st_mtime > 86400:
+        if time.time() - old.stat().st_mtime > 3 * 86400:
             shutil.rmtree(old, ignore_errors=True) if old.is_dir() else old.unlink(missing_ok=True)
     path = TMP / token
     have = path.stat().st_size if path.exists() else 0
     if offset != have:
-        return _error("Загрузка сбилась — приложите файл ещё раз.", 409)
+        # Браузер продолжит с того места, где оборвалось: связь, перезагрузка страницы
+        return JSONResponse({"error": "Загрузка сбилась — приложите файл ещё раз.", "have": have}, 409,
+                            headers={"Cache-Control": "no-store"})
     data = await _body(request, CHUNK)
     if data is None:
         return _error("Слишком большой кусок файла.")

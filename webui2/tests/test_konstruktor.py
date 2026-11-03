@@ -163,7 +163,10 @@ def test_archive(inside):
 def test_archive_refusals(inside):
     c = inside
     c.put("/3d/api/models/proba", json={"model": MODEL})
-    assert c.put("/3d/api/arhiv/proba/abcdefgh12?offset=5", content=b"x").status_code == 409
+    r = c.put("/3d/api/arhiv/proba/abcdefgh12?offset=5", content=b"x")
+    assert r.status_code == 409 and r.json()["have"] == 0
+    c.put("/3d/api/arhiv/proba/abcdefgh99?offset=0", content=b"12345")
+    assert c.put("/3d/api/arhiv/proba/abcdefgh99?offset=0", content=b"x").json()["have"] == 5
     r = _upload(c, b"neponyatno", name="a.txt")
     assert r.status_code == 400 and "не снимок" in r.json()["error"]
     assert c.post("/3d/api/arhiv/proba/abcdefgh12/razobrat").status_code == 400
