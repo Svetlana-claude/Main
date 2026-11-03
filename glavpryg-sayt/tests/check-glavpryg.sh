@@ -125,12 +125,13 @@ else
     skazat_ploho "HTTP не увёл на HTTPS (получено «$kuda_ushlo»)"
 fi
 
-# 10. Сайт не задел веб-интерфейс на том же домене
-k=$(kod "$OSNOVA/Claude/login")
+# 10. Сайт не задел веб-интерфейс на том же домене (с 29.10.2026 он на /Claude/v2/,
+#     прежние адреса /Claude/… уводят туда)
+k=$(kod "$OSNOVA/Claude/v2/login")
 if [ "$k" = "200" ]; then
-    skazat_horosho "/Claude/login по-прежнему отвечает 200"
+    skazat_horosho "/Claude/v2/login по-прежнему отвечает 200"
 else
-    skazat_ploho "/Claude/login отдал $k — сайт задел интерфейс"
+    skazat_ploho "/Claude/v2/login отдал $k — сайт задел интерфейс"
 fi
 
 # 11. Наша копия макета админки не отстала от Orchid. Без неё в подкаталоге

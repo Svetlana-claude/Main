@@ -54,6 +54,16 @@ FORMY = {"/certificate/order": "заказ сертификата"}
 NASH_SAYT = "https://mokeevasky.ru/"
 
 beda, oplaty, nuzhno, horosho = [], [], [], []
+# Для админки Главпрыга («Отчёт по платежам»): строки таблицы «Работа сайта» и сроки оплат
+# по кодам услуг (domain-glavprig, domain-rf, hosting, storage). Уходят на оба адреса сайта.
+dlya_sayta: list[dict] = []
+sroki: dict[str, dict] = {}
+ADRESA_PRIEMA = ["https://mokeevasky.ru/glavpryg/kontrol/otchet", "http://glavprig.ru/kontrol/otchet"]
+
+
+def zap(gruppa: str, chto: str, sost: str, tekst: str) -> None:
+    """Строка для админки Главпрыга: sost — ok, warn или bad."""
+    dlya_sayta.append({"gruppa": gruppa, "chto": chto, "sost": sost, "tekst": tekst})
 
 
 def msk(dt: datetime) -> str:
@@ -98,6 +108,8 @@ def domeny() -> None:
             nuzhno.append(f"Домен {imya}: не удалось узнать срок — проверю завтра.")
             continue
         srok(f"Домен {imya}", do, d["gde"])
+        if d.get("kod"):
+            sroki[d["kod"]] = {"do": do.astimezone(MSK).date().isoformat()}
 
 
 def beget() -> None:
@@ -115,6 +127,8 @@ def beget() -> None:
         return
     balans = float(r.get("user_balance", 0))
     dney = int(r.get("user_days_to_block", 0))
+    sroki["hosting"] = {"do": (SEYCHAS + timedelta(days=dney)).astimezone(MSK).date().isoformat(),
+                        "balans": round(balans), "tarif": r.get("plan_name")}
     srok("Хостинг Beget", SEYCHAS + timedelta(days=dney), "beget.com → Финансы → Пополнить",
          f" На счёте {balans:.0f} ₽, тариф {r.get('plan_name', '?')}.")
 
@@ -160,19 +174,26 @@ def ruchnye() -> None:
 # ── Сайты ───────────────────────────────────────────────────────────────────
 def sayt(nazvanie: str, osnova: str) -> None:
     plohie = []
+    adres = osnova.split("//")[1]
     kod, telo, konec = zapros(osnova + "/")
     if kod == 0:
         beda.append(f"{nazvanie}: не открывается — сервер не отвечает.")
+        zap(adres, "Сайт открывается", "bad", "не открывается — сервер не отвечает")
         return
     if konec.split("/")[2] != osnova.split("/")[2]:
         horosho.append(f"{nazvanie}: переадресует на {konec.split('/')[2]} — так и задумано.")
+        zap(adres, "Сайт открывается", "ok", f"переадресует на {konec.split('/')[2]} — так и задумано")
         return
     for put in STRANICY:
         k, t, _ = zapros(osnova + put)
         if k >= 400 or k == 0:
             plohie.append(f"{put} — ошибка {k or 'нет ответа'}")
+            zap(adres, f"Страница {put}", "bad", f"ошибка {k or 'нет ответа'}")
         elif put in FORMY and b"<form" not in t:
             plohie.append(f"{put} — пропала форма «{FORMY[put]}»")
+            zap(adres, f"Форма «{FORMY[put]}»", "bad", "пропала со страницы")
+        else:
+            zap(adres, f"Страница {put}", "ok", "открывается" + (f", форма «{FORMY[put]}» на месте" if put in FORMY else ""))
     # Картинки и видео главной: до 12 штук
     html = telo.decode("utf-8", "replace")
     faily = []
@@ -180,10 +201,14 @@ def sayt(nazvanie: str, osnova: str) -> None:
         u = urllib.parse.urljoin(osnova + "/", m.group(1))
         if u not in faily:
             faily.append(u)
+    ne_gruzyatsya = []
     for u in faily[:12]:
         k, _, _ = zapros(u)
         if k >= 400 or k == 0:
             plohie.append(f"не грузится {urllib.parse.urlparse(u).path}")
+            ne_gruzyatsya.append(urllib.parse.urlparse(u).path)
+    zap(adres, "Картинки и видео главной", "bad" if ne_gruzyatsya else "ok",
+        ("не грузятся: " + ", ".join(ne_gruzyatsya)) if ne_gruzyatsya else f"проверено {min(12, len(faily))}, все грузятся")
     if plohie:
         beda.append(f"{nazvanie}: " + "; ".join(plohie) + ".")
     else:
@@ -200,12 +225,16 @@ def https(host: str) -> None:
             nuzhno.append("glavprig.ru: защищённое соединение (HTTPS) не включено или не отвечает.")
         else:
             beda.append(f"{host}: защищённое соединение не работает ({type(e).__name__}).")
+        zap("Защищённое соединение", host, "warn" if host == "glavprig.ru" else "bad",
+            "не включено или не отвечает" if host == "glavprig.ru" else "не работает")
         return
     dney = (do - SEYCHAS).days
     # Сертификаты продлеваются сами за 30 дней до конца; меньше 14 — продление сломалось
     (beda if dney < 14 else horosho).append(
         f"{host}: замочек в браузере действует до {do.astimezone(MSK):%d.%m.%Y}"
         + (" — САМ НЕ ПРОДЛИЛСЯ." if dney < 14 else "."))
+    zap("Защищённое соединение", host, "bad" if dney < 14 else "ok",
+        f"действует до {do.astimezone(MSK):%d.%m.%Y}" + (" — сам не продлился" if dney < 14 else ", продлевается само"))
 
 
 # ── Свежесть ────────────────────────────────────────────────────────────────
@@ -231,21 +260,29 @@ def svezhest() -> None:
     pogoda = Path("/var/www/glavpryg/public/igra-app/pogoda-dnya.json")
     proverki.append(("Погода в игре", datetime.fromtimestamp(pogoda.stat().st_mtime, timezone.utc) if pogoda.exists() else None, 4))
     for chto, kogda, chasov in proverki:
+        glavpryg = "образ сервера" not in chto
         if kogda is None:
             beda.append(f"{chto}: ни разу не было.")
+            glavpryg and zap("Копии и свежесть", chto, "bad", "ни разу не было")
         elif SEYCHAS - kogda > timedelta(hours=chasov):
             beda.append(f"{chto}: последний раз {msk(kogda)} — устарело.")
+            glavpryg and zap("Копии и свежесть", chto, "bad", f"последний раз {msk(kogda)} — устарело")
         else:
             horosho.append(f"{chto}: {msk(kogda)}.")
+            glavpryg and zap("Копии и свежесть", chto, "ok", msk(kogda))
 
     # Правки, которые ждут выкладки на хостинг (их кладёт ~/tools/beget/obnovit.py по расписанию)
     cron = subprocess.run(["crontab", "-l"], capture_output=True, text=True).stdout
     if "beget && .venv/bin/python obnovit.py" in cron:
         nuzhno.append("На хостинге Beget не хватает последних правок сайта: встанут сами, когда Beget ответит.")
+        zap("Копии и свежесть", "Последние правки на хостинге", "warn", "ждут выкладки — встанут сами, когда хостинг ответит")
+    else:
+        zap("Копии и свежесть", "Последние правки на хостинге", "ok", "выложены")
 
     svobodno = shutil.disk_usage("/").free / 2**30
     (beda if svobodno < 2 else horosho).append(f"Место на диске сервера: свободно {svobodno:.1f} ГБ"
                                                + (" — мало, ночные копии могут не собраться." if svobodno < 2 else "."))
+    zap("Копии и свежесть", "Место на сервере для копий", "bad" if svobodno < 2 else "ok", f"свободно {svobodno:.1f} ГБ")
 
 
 def pochta() -> None:
@@ -258,8 +295,11 @@ def pochta() -> None:
     if net:
         beda.append("Почта с сервера: у mokeevasky.ru нет записей " + " и ".join(net)
                     + " — Gmail и другие почты не принимают письма сайта (сертификаты покупателям, заявки).")
+        zap("Почта", "Письма сайта доходят", "bad", "нет записей " + " и ".join(net)
+            + " у домена — Gmail и другие почты не принимают сертификаты и заявки")
     else:
         horosho.append("Почта с сервера: записи SPF и DKIM на месте.")
+        zap("Почта", "Письма сайта доходят", "ok", "записи SPF и DKIM на месте")
 
 
 # ── Письмо ──────────────────────────────────────────────────────────────────
@@ -287,6 +327,28 @@ def otpravit(tekst: str) -> None:
         print("письмо:", kuda, "—", tema)
 
 
+def v_adminku() -> None:
+    """Итог для «Отчёта по платежам» в админке Главпрыга — на оба адреса сайта.
+    Ключ приёма — ~/.config/kontrol/sayt-token (тот же — KONTROL_TOKEN в .env сайта)."""
+    f = KLYUCHI / "sayt-token"
+    if not f.exists():
+        print("админка: нет ключа приёма")
+        return
+    telo = json.dumps({"proveril": SEYCHAS.isoformat(), "sroki": sroki, "proverki": dlya_sayta},
+                      ensure_ascii=False).encode()
+    for url in ADRESA_PRIEMA:
+        req = urllib.request.Request(url, data=telo, method="POST", headers={
+            "Content-Type": "application/json", "Accept": "application/json",
+            "X-Kontrol-Token": f.read_text().strip(), "User-Agent": "kontrol-mokeevasky/1.0"})
+        try:
+            with urllib.request.urlopen(req, timeout=30) as r:
+                print("админка:", url, r.status)
+        except urllib.error.HTTPError as e:
+            print("админка:", url, "ошибка", e.code)
+        except Exception as e:
+            print("админка:", url, "не ответил", type(e).__name__)
+
+
 def main() -> None:
     for f in (domeny, beget, selectel, ruchnye, svezhest):
         try:
@@ -302,6 +364,7 @@ def main() -> None:
         https(host)
     pochta()
 
+    v_adminku()
     tekst = otchet()
     OTCHET.write_text(tekst + "\n", encoding="utf-8")
     print(tekst)

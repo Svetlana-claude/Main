@@ -6,9 +6,9 @@
         {"chto": "Подписка Claude", "gde": "claude.ai → Settings → Billing", "do": null}
     ],
     "domeny": [
-        {"domen": "glavprig.ru", "gde": "Beget → Домены"},
+        {"domen": "glavprig.ru", "kod": "domain-glavprig", "gde": "Beget → Домены"},
         {"domen": "mokeevasky.ru", "gde": "RU-CENTER (nic.ru)"},
-        {"domen": "xn--80aebc1b0ah2g.xn--p1ai", "imya": "главпрыг.рф", "gde": "RU-CENTER (nic.ru), владелец — заказчик"}
+        {"domen": "xn--80aebc1b0ah2g.xn--p1ai", "kod": "domain-rf", "imya": "главпрыг.рф", "gde": "RU-CENTER (nic.ru), владелец — заказчик"}
     ],
     "kuda": ["mokeeva.fly@gmail.com"]
 }
