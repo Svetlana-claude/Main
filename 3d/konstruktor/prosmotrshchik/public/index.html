@@ -4730,6 +4730,8 @@ export function sozdatProsmotr(koren, model, opts = {}) {
   const kamera = new THREE.PerspectiveCamera(40, 1, 0.05, 500);
   const upr = new OrbitControls(kamera, renderer.domElement);
   upr.enableDamping = true;
+  // Модель всегда в центре: сдвигать сцену нельзя, вращение и приближение — вокруг модели.
+  upr.enablePan = false;
   upr.dampingFactor = 0.08;
   scena.add(new THREE.HemisphereLight(0xffffff, 0x9aa5b1, 1.6));
   const solnce = new THREE.DirectionalLight(0xffffff, 1.9);
@@ -5111,28 +5113,55 @@ export function sozdatProsmotr(koren, model, opts = {}) {
   };
 
   // ---------- Камера ----------
+  // Камера всегда смотрит в середину модели и следит за ней при анимациях и разборке.
+  // Описание задаёт только сторону, с которой смотреть; расстояние подбирается, чтобы
+  // модель целиком помещалась в кадр.
   const ramka = new THREE.Box3().setFromObject(modelKoren);
   const centrModeli = ramka.getCenter(new THREE.Vector3());
+  const radiusModeli = Math.max(0.05, ramka.getBoundingSphere(new THREE.Sphere()).radius);
+  upr.minDistance = radiusModeli * 0.3;
+  upr.maxDistance = radiusModeli * 12;
+  const vpisat = (napr) => {
+    const vfov = kamera.fov * DEG;
+    const hfov = 2 * Math.atan(Math.tan(vfov / 2) * kamera.aspect);
+    return (radiusModeli / Math.sin(Math.min(vfov, hfov) / 2)) * 1.05;
+  };
   const vidPoUmolch = () => {
     const vid = model.view || {};
-    const cel = vid.target ? v3(vid.target) : centrModeli.clone();
-    let poz;
-    if (vid.camera) poz = v3(vid.camera);
-    else {
-      const r = ramka.getSize(new THREE.Vector3()).length() * 0.5;
-      const dist = r / Math.sin((kamera.fov * DEG) / 2) * 0.95;
-      poz = cel.clone().add(new THREE.Vector3(0.55, 0.25, 0.8).normalize().multiplyScalar(dist));
-    }
-    kamera.position.copy(poz);
-    upr.target.copy(cel);
+    const napr = vid.camera ? v3(vid.camera).sub(vid.target ? v3(vid.target) : centrModeli) : new THREE.Vector3(0.55, 0.25, 0.8);
+    if (napr.lengthSq() < 1e-9) napr.set(0.55, 0.25, 0.8);
+    upr.target.copy(tekCentr());
+    kamera.position.copy(upr.target).addScaledVector(napr.normalize(), vpisat());
     upr.update();
   };
-  vidPoUmolch();
-  if (opts.kamera) {
-    kamera.position.fromArray(opts.kamera.poz);
-    upr.target.fromArray(opts.kamera.cel);
-    upr.update();
-  }
+  const tmpRamka = new THREE.Box3();
+  const tekCentr = () => {
+    tmpRamka.setFromObject(modelKoren);
+    return tmpRamka.isEmpty() ? centrModeli.clone() : tmpRamka.getCenter(new THREE.Vector3());
+  };
+  // Каждые несколько кадров плавно подводим середину кадра к середине модели.
+  let schetSlezhki = 0;
+  const sledit = () => {
+    if (++schetSlezhki % 4) return;
+    const sdvig = tekCentr().sub(upr.target);
+    if (sdvig.lengthSq() < 1e-8) return;
+    sdvig.multiplyScalar(0.35);
+    upr.target.add(sdvig);
+    kamera.position.add(sdvig);
+  };
+  // Первый вид — когда известен размер окна: от него зависит, поместится ли модель.
+  let nuzhenVid = true;
+  const pervyyVid = () => {
+    nuzhenVid = false;
+    if (opts.kamera) {
+      // Модель обновилась: сторона и расстояние прежние, середина — новая
+      const napr = new THREE.Vector3().fromArray(opts.kamera.poz).sub(new THREE.Vector3().fromArray(opts.kamera.cel));
+      upr.target.copy(tekCentr());
+      const dist = zazhat(napr.length(), upr.minDistance, upr.maxDistance);
+      kamera.position.copy(upr.target).addScaledVector(napr.normalize(), dist);
+      upr.update();
+    } else vidPoUmolch();
+  };
 
   // ---------- Номера и подсветка ----------
   const detali = spisokDetaley(model);
@@ -5322,7 +5351,7 @@ export function sozdatProsmotr(koren, model, opts = {}) {
   const centrEkr = new THREE.Vector3();
   function obnovitMetki(w, h) {
     if (!nomeraVidny || !metki.size) return;
-    centrEkr.copy(centrModeli).project(kamera);
+    centrEkr.copy(upr.target).project(kamera);
     const cx = (centrEkr.x * 0.5 + 0.5) * w;
     const cy = (-centrEkr.y * 0.5 + 0.5) * h;
     const tochkiMetok = [];
@@ -5404,10 +5433,12 @@ export function sozdatProsmotr(koren, model, opts = {}) {
       panel?._polzV._obnovit();
     }
     razmer();
+    if (nuzhenVid) pervyyVid();
     sbrositPozy();
     primenitAnimacii(vremya, dt);
     modelKoren.updateMatrixWorld(true);
     obnovitLinii();
+    sledit();
     upr.update();
     renderer.render(scena, kamera);
     obnovitMetki(shirina, vysota);
