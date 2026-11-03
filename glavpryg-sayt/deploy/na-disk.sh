@@ -1,8 +1,11 @@
 #!/bin/bash
-# Всё по Главпрыгу — на Яндекс Диск Светланы, папка «Приложения → Claude Главпрыг» (каждую ночь,
-# crontab mokeeva). Доступ — код ~/.config/yandex-app-token, он открывает только эту папку (yadisk.py):
-#   kopii/      — зашифрованная копия сайта: боевой с Beget (база и файлы) и прежний с нашего
-#                 сервера (копия rezerv.sh). 7 последних. Пароль — тот же, что у образа сервера.
+# Всё по Главпрыгу вне сервера, каждую ночь (crontab mokeeva):
+#   копия сайта — в хранилище Selectel S3 (с 03.11.2026 вместо Диска), бакет klod-kopii-mokeeva,
+#                 папка glavpryg-kopii/: зашифрованная копия — боевой с Beget (база и файлы)
+#                 и прежний с нашего сервера (копия rezerv.sh). 7 последних. Пароль — тот же,
+#                 что у образа сервера. Ключ — ~/.config/selectel-s3.json.
+# Остальное — на Яндекс Диск Светланы, папка «Приложения → Claude Главпрыг». Доступ — код
+# ~/.config/yandex-app-token, он открывает только эту папку (yadisk.py):
 #   materialy/  — папка проекта glavpryg-sayt и материалы из exchange, без файлов с паролями.
 #   istoriya/   — задачи и команды по Главпрыгу (tools/istoriya-proektov.py).
 #   PAMYATKA.md — как восстановить сайт из копии.
@@ -23,11 +26,12 @@ fail() { log "ОШИБКА: $*"; rm -rf "$WORK"; exit 1; }
 exec 9>"$H/backups/glavpryg/.na-disk.lock"
 flock -n 9 || exit 0
 log "--- начало ---"
-[ -s "$H/.config/yandex-app-token" ] || fail "нет кода доступа к Яндекс Диску"
 [ -s "$PAROL" ] || fail "нет пароля образа"
 
 YD="python3 $H/main/glavpryg-sayt/deploy/yadisk.py"
 yd() { $YD "$@" >> "$LOG" 2>&1; }
+# Без кода Диска материалы не выгружаются, а копия сайта уходит всё равно
+DISK=da; [ -s "$H/.config/yandex-app-token" ] || { DISK=net; log "ВНИМАНИЕ: нет кода доступа к Яндекс Диску — только копия сайта"; }
 
 rm -rf "$WORK"; mkdir -p "$WORK/kopiya"
 
@@ -44,9 +48,15 @@ tar -C "$WORK/kopiya" -cf - . \
         --cipher-algo AES256 -o "$WORK/$IMYA" || fail "копия не зашифрована"
 gpg --batch --quiet --pinentry-mode loopback --passphrase-file "$PAROL" -d "$WORK/$IMYA" | tar -tf - > /dev/null \
     || fail "зашифрованная копия не читается"
-yd zalit "$WORK/$IMYA" "kopii/$IMYA" || fail "копия не загрузилась на Диск"
-yd ostavit kopii 'glavpryg-kopiya-*' "$HRANIT"
-log "копия на Диске: $IMYA, $(du -m "$WORK/$IMYA" | cut -f1) МБ, Beget: $BEGET"
+[ -s "$H/.config/selectel-s3.json" ] || fail "нет ключа Selectel"
+source "$H/main/infra/obraz/s3-env.sh"
+"$H/tools/restic/rclone" copyto "$WORK/$IMYA" ":s3:$S3_BAKET/glavpryg-kopii/$IMYA" --retries 5 >> "$LOG" 2>&1 \
+    || fail "копия не загрузилась в Selectel"
+"$H/tools/restic/.venv/bin/python" "$H/main/infra/obraz/s3-chistka.py" ostavit glavpryg-kopii/ "$HRANIT" >> "$LOG" 2>&1
+"$H/tools/restic/rclone" copyto "$H/main/glavpryg-sayt/deploy/PAMYATKA-DISK.md" ":s3:$S3_BAKET/glavpryg-kopii/PAMYATKA.md" >> "$LOG" 2>&1
+log "копия в Selectel: $IMYA, $(du -m "$WORK/$IMYA" | cut -f1) МБ, Beget: $BEGET"
+
+[ $DISK = net ] && { rm -rf "$WORK"; log "--- готово ---"; exit 0; }
 
 # ── Материалы ───────────────────────────────────────────────────────────────
 # Файлы с паролями и доступами на Диск не идут

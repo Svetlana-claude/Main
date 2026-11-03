@@ -1,7 +1,7 @@
 #!/bin/bash
 # Разворачивает образ на чистом Ubuntu 24.04. Запуск под root в папке, где лежат
-# vosstanovit.sh, программа restic и папка hranilishche (так они лежат на Яндекс
-# Диске в obraz-sayta-repo/):
+# vosstanovit.sh, программа restic и папка hranilishche (так они лежат в хранилище
+# Selectel, бакет klod-kopii-mokeeva, в obraz-sayta-repo/):
 #   bash vosstanovit.sh                 — последний снимок
 #   bash vosstanovit.sh <номер снимка>  — снимок за другой день; список снимков:
 #                                         ./restic -r hranilishche snapshots

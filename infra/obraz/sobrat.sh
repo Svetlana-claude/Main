@@ -14,8 +14,8 @@
 # Пароль хранилища — ~/.config/obraz-parol (600), тот же, что был у архива;
 # создаётся здесь при первом запуске и один раз кладётся в «Файлы проекта»,
 # Светлана записывает его и удаляет файл.
-# Яндекс Диск подключается файлом ~/.config/yandex-disk.netrc: есть файл —
-# хранилище и всё для восстановления повторяются в папке КЛОД/obraz-sayta-repo/.
+# Вне сервера — хранилище Selectel S3 (ключ ~/.config/selectel-s3.json): хранилище и всё для
+# восстановления повторяются в бакете klod-kopii-mokeeva, папка obraz-sayta-repo/.
 set -uo pipefail
 umask 077
 
@@ -26,7 +26,6 @@ SITE_DB=$H/.local/share/webui2/site.db
 STAGE=$H/.obraz-staging
 LOG=$H/backups/obraz.log
 OSHIBKA=$VYDACHA/OSHIBKA-OBRAZA.txt
-YA_NETRC=$H/.config/yandex-disk.netrc
 BIN=$H/tools/restic
 export RESTIC_REPOSITORY=$H/backups/obraz-repo RESTIC_PASSWORD_FILE=$PAROL
 ZAPAS_MB=1024        # столько оставляем свободным на диске сервера
@@ -140,21 +139,22 @@ log "хранилище: $(du -sm "$RESTIC_REPOSITORY" | cut -f1) МБ, сним
 rm -f "$OSHIBKA"
 cp "$H/main/infra/obraz/PAMYATKA.md" "$VYDACHA/"
 
-# Яндекс Диск: хранилище и всё для восстановления. Ошибка Диска не губит копию на сервере
-if [ -s "$YA_NETRC" ]; then
-    read -r YA_USER YA_PASS < <(awk '{for(i=1;i<NF;i++){if($i=="login")u=$(i+1);if($i=="password")p=$(i+1)}} END{print u, p}' "$YA_NETRC")
-    # Только IPv4: по IPv6 Диск рвёт соединение (02.11.2026). Первая выгрузка идёт часами —
-    # Диск принимает около 100 КБ/с на поток; дальше за ночь уходят мегабайты
-    export RCLONE_BIND=0.0.0.0 RCLONE_TRANSFERS=4 RCLONE_TIMEOUT=15m \
-           RCLONE_WEBDAV_URL=https://webdav.yandex.ru RCLONE_WEBDAV_VENDOR=other \
-           RCLONE_WEBDAV_USER=$YA_USER RCLONE_WEBDAV_PASS=$("$BIN/rclone" obscure "$YA_PASS")
-    unset YA_PASS
-    if "$BIN/rclone" sync "$RESTIC_REPOSITORY" :webdav:КЛОД/obraz-sayta-repo/hranilishche --retries 5 >> "$LOG" 2>&1 \
-       && "$BIN/rclone" copy "$H/main/infra/obraz" :webdav:КЛОД/obraz-sayta-repo --include '{vosstanovit.sh,PAMYATKA.md}' >> "$LOG" 2>&1 \
-       && "$BIN/rclone" copyto "$BIN/restic" :webdav:КЛОД/obraz-sayta-repo/restic >> "$LOG" 2>&1; then
-        log "образ на Яндекс Диске"
+# Хранилище Selectel S3 (бакет klod-kopii-mokeeva, с 03.11.2026 вместо Яндекс Диска): хранилище
+# и всё для восстановления. Уходят только новые куски. Ошибка выгрузки не губит копию на сервере
+S3_KLYUCH=$H/.config/selectel-s3.json
+if [ -s "$S3_KLYUCH" ]; then
+    source "$H/main/infra/obraz/s3-env.sh"
+    S3=:s3:$S3_BAKET/obraz-sayta-repo
+    if "$BIN/rclone" sync "$RESTIC_REPOSITORY" "$S3/hranilishche" --transfers 8 --retries 5 >> "$LOG" 2>&1 \
+       && "$BIN/rclone" copy "$H/main/infra/obraz" "$S3" --include '{vosstanovit.sh,PAMYATKA.md}' >> "$LOG" 2>&1 \
+       && "$BIN/rclone" copyto "$BIN/restic" "$S3/restic" >> "$LOG" 2>&1; then
+        log "образ в хранилище Selectel"
+        "$BIN/.venv/bin/python" "$H/main/infra/obraz/s3-chistka.py" versii 30 >> "$LOG" 2>&1 \
+            || log "ВНИМАНИЕ: прежние версии в Selectel не убраны"
     else
-        log "ВНИМАНИЕ: Яндекс Диск не принял образ"
-        echo "Образ на сервере готов, но на Яндекс Диск не ушёл. Подробности — $LOG" > "$OSHIBKA"
+        log "ВНИМАНИЕ: хранилище Selectel не приняло образ"
+        echo "Образ на сервере готов, но в хранилище Selectel не ушёл. Подробности — $LOG" > "$OSHIBKA"
     fi
+else
+    log "ВНИМАНИЕ: нет ключа Selectel ($S3_KLYUCH) — образ только на сервере"
 fi
