@@ -599,7 +599,7 @@ function pokazatIstochniki(zapis) {
   if (!foto.length) return;
   for (const f of foto) {
     box.append(el('div', { class: 'foto' },
-      el('img', { src: `api/photos/${encodeURIComponent(zapis.model.id)}/${f.n}`, alt: f.view }),
+      el('img', { src: `api/photos/${encodeURIComponent(zapis.model.id)}/${f.n}`, alt: f.view, loading: 'lazy' }),
       el('div', { class: 'podskazka' }, f.view)));
   }
 }

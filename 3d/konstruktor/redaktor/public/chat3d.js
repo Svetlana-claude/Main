@@ -146,6 +146,7 @@ export function sozdatChat({ szhat, soobshchit, sverit, pokazatIstochniki, gotov
   async function prilozhit(fayly) {
     pokazatOshibku('');
     knopka.disabled = true;
+    let zametka = '';
     const propusheno = [];
     let dobavleno = 0;
     try {
@@ -183,20 +184,22 @@ export function sozdatChat({ szhat, soobshchit, sverit, pokazatIstochniki, gotov
         }
         narisovatPrilozheno();
       }
-      if (propusheno.length) pokazatOshibku(`Приложено: ${dobavleno}. Пропущено: ${propusheno.slice(0, 5).join(', ')}${propusheno.length > 5 ? ` и ещё ${propusheno.length - 5}` : ''}.`);
-      else if (!dobavleno) pokazatOshibku('В этом файле не нашлось ни снимков, ни видео.');
-      else soobshchit(`Приложено: ${dobavleno}.`);
+      if (propusheno.length) zametka = (`Приложено: ${dobavleno}. Пропущено: ${propusheno.slice(0, 5).join(', ')}${propusheno.length > 5 ? ` и ещё ${propusheno.length - 5}` : ''}.`);
+      else if (!dobavleno) zametka = 'В этом файле не нашлось ни снимков, ни видео.';
     } catch (e) {
       pokazatOshibku(dobavleno ? `Приложено ${dobavleno}, дальше не вышло: ${e.message}` : e.message);
     } finally {
       hod('');
       knopka.disabled = false;
     }
+    // Материалы — сразу в работу: с тем, что написано в поле, или с задачей по умолчанию.
+    if (prilozheno.length) await otpravit();
+    if (zametka) pokazatOshibku(zametka);
   }
 
   async function otpravit() {
     let t = tekst.value.trim();
-    if (!t && prilozheno.length) t = 'Учти приложенные материалы.';
+    if (!t && prilozheno.length) t = 'Сделай модель по приложенным материалам.';
     if (!t) return;
     knopka.disabled = true;
     pokazatOshibku('');
