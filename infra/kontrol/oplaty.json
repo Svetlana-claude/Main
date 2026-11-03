@@ -1,0 +1,14 @@
+{
+    "_": "Оплаты, которые не узнать автоматически. Дата — ГГГГ-ММ-ДД. null — дата пока неизвестна, напоминание просит её у Светланы.",
+    "ruchnye": [
+        {"chto": "Сервер mokeevasky.ru (FirstByte)", "gde": "личный кабинет FirstByte", "do": null},
+        {"chto": "Яндекс Диск (если платный)", "gde": "Яндекс 360 → Подписки", "do": null},
+        {"chto": "Подписка Claude", "gde": "claude.ai → Settings → Billing", "do": null}
+    ],
+    "domeny": [
+        {"domen": "glavprig.ru", "gde": "Beget → Домены"},
+        {"domen": "mokeevasky.ru", "gde": "RU-CENTER (nic.ru)"},
+        {"domen": "xn--80aebc1b0ah2g.xn--p1ai", "imya": "главпрыг.рф", "gde": "RU-CENTER (nic.ru), владелец — заказчик"}
+    ],
+    "kuda": ["mokeeva.fly@gmail.com"]
+}
