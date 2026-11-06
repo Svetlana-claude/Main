@@ -7,7 +7,7 @@ https://mokeevasky.ru/Claude/v2/3d/ (вкладка «3D» сайта, его в
 https://mokeevasky.ru/glavpryg/model-3d/parashyutnaya-sistema/. Выложить новый просмотрщик:
 экспорт в `prosmotrshchik/public/index.html`, копия с `.gz` в каталог сайта
 (права файлов 0640, каталогу chmod не делать). Проверка под входом — `proverki/sayt-stend.py`
-(временный сайт, настоящий не трогает) и `bez-ii-test.mjs`, `chat-test.mjs`, `foto-chat-test.mjs`
+(временный сайт, настоящий не трогает) и `bez-ii-test.mjs`, `chat-test.mjs`, `foto-chat-test.mjs`, `po-foto-test.mjs` (кнопки «Модель по фото» и «Сверить с фото», Claude не запускает; нужен ещё `FOTO`)
 с `ADRES` и `KUKA`; `chat-test` запускает настоящего Claude и проверяет запреты. ТЗ — `tz.md`.
 
 Ниже — устройство и вариант для переезда в Cloudflare, когда убедимся, что всё работает.

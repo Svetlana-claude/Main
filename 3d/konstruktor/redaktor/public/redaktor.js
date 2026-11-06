@@ -721,6 +721,14 @@ if (server?.chat) {
     sverit,
     pokazatIstochniki,
     // Перед сообщением всё сохраняем, чтобы Claude видел то же, что и вы.
+    snimokModeli: (H) => {
+      const k = prosmotr.kanva;
+      const c = document.createElement('canvas');
+      c.height = H;
+      c.width = Math.round(k.width * H / k.height);
+      prosmotr.narisovatKadr(c.getContext('2d'), c.width, c.height);
+      return c;
+    },
     gotovaModel: async () => {
       if (izmeneno || !istochnik || istochnik.gde !== 'server' || istochnik.novaya) {
         await sohranit({ tikho: true });
@@ -730,6 +738,14 @@ if (server?.chat) {
     },
   });
   $('#vkl-chat').click();
+  $('#b-po-foto').hidden = false;
+  $('#b-po-foto').onclick = () => {
+    const prezhnyaya = model.id;
+    $('#b-novaya').onclick();
+    if (model.id === prezhnyaya) return;                         // отказалась начинать новую
+    $('#vkl-chat').click();
+    chatOkno.poFoto();                                            // выбор файлов — в том же нажатии
+  };
   $('#b-spisok').onclick = (e) => {
     const skryt = document.body.classList.toggle('skryt-spisok');
     e.target.textContent = skryt ? 'Показать список' : 'Скрыть список';

@@ -4,7 +4,7 @@
 const $ = (s) => document.querySelector(s);
 const chislo = (n, a, b, c) => `${n} ${n % 10 === 1 && n % 100 !== 11 ? a : n % 10 >= 2 && n % 10 <= 4 && (n % 100 < 10 || n % 100 >= 20) ? b : c}`;
 
-export function sozdatChat({ szhat, soobshchit, sverit, pokazatIstochniki, gotovaModel }) {
+export function sozdatChat({ szhat, soobshchit, sverit, pokazatIstochniki, gotovaModel, snimokModeli }) {
   const lenta = $('#chat-lenta');
   const tekst = $('#chat-tekst');
   const knopka = $('#b-chat');
@@ -271,7 +271,11 @@ export function sozdatChat({ szhat, soobshchit, sverit, pokazatIstochniki, gotov
       const d0 = await r0.json();
       if (!r0.ok) throw new Error(d0.error);
       conv = d0.conv;
-      if (prilozheno.length) t += '\n\nПриложено (справочный материал): ' + prilozheno.map((f) => f.opis).join('; ');
+      if (prilozheno.length) {
+        t += '\n\nПриложено (справочный материал): ' + prilozheno.map((f) => f.opis).join('; ');
+        const tsifry = await tsifryPoFoto(mid, prilozheno.flatMap((f) => f.puti));
+        if (tsifry) t += '\n\nЦифры по фото (посчитал сайт, примерно; фон отделяется по краям снимка):\n' + tsifry;
+      }
       if (d0.first) t = `Модель: ${mid}, файл modeli/${mid}.json.\n\n${t}`;
       const forma = new URLSearchParams({ text: t, csrf: sost.csrf });
       const r = await fetch(adres('/send'), { method: 'POST', credentials: 'same-origin', body: forma });
@@ -292,6 +296,64 @@ export function sozdatChat({ szhat, soobshchit, sverit, pokazatIstochniki, gotov
     }
   }
 
+
+  async function tsifryPoFoto(mid, puti) {
+    // Лучшие снимки — равномерно из списка, не больше четырёх
+    const shag = Math.max(1, Math.ceil(puti.length / 4));
+    const vybor = puti.filter((_, i) => i % shag === 0).slice(0, 4);
+    try {
+      const r = await fetch(`api/models/${encodeURIComponent(mid)}/analiz`, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ files: vybor }) });
+      const d = await r.json();
+      return r.ok ? d.text : '';
+    } catch { return ''; }
+  }
+
+  // «Модель по фото»: задача с правилами экономной сборки, потом выбор файлов.
+  function poFoto() {
+    tekst.value = 'Сделай модель по фото — экономно, по разделу «Модель по фото» памятки. Реальный размер: ';
+    $('#f-chat').click();
+    soobshchit('Пока файлы загружаются, допишите в поле один реальный размер — например, «высота 55 см». Можно и не писать.');
+  }
+
+  // Сверка: слева первое фото модели, справа модель сейчас — одна картинка, один взгляд.
+  async function sverka() {
+    pokazatOshibku('');
+    try {
+      const mid = await gotovaModel();
+      const z = await (await fetch(`api/models/${encodeURIComponent(mid)}`, { cache: 'no-store' })).json();
+      const foto = (z.source?.photos || []).find((x) => x.view !== 'сверка');
+      if (!foto) throw new Error('У модели ещё нет фото — сверять не с чем.');
+      const img = new Image();
+      img.src = `api/photos/${encodeURIComponent(mid)}/${foto.n}`;
+      await img.decode();
+      const H = 720;
+      const wf = Math.round(img.naturalWidth * H / img.naturalHeight);
+      const model = snimokModeli(H);
+      const c = document.createElement('canvas');
+      c.width = wf + model.width + 12;
+      c.height = H;
+      const ctx = c.getContext('2d');
+      ctx.fillStyle = '#fff';
+      ctx.fillRect(0, 0, c.width, c.height);
+      ctx.drawImage(img, 0, 0, wf, H);
+      ctx.drawImage(model, wf + 12, 0);
+      const blob = await new Promise((ok) => c.toBlob(ok, 'image/jpeg', 0.85));
+      const n = Math.max(-1, ...(z.source?.photos || []).map((x) => x.n)) + 1;
+      const r = await fetch(`api/photos/${encodeURIComponent(mid)}/${n}?view=${encodeURIComponent('сверка')}`, { method: 'PUT', headers: { 'content-type': 'image/jpeg' }, body: blob });
+      if (!r.ok) throw new Error((await r.json().catch(() => null))?.error || 'Сверка не загрузилась.');
+      const m = await fetch(`api/models/${encodeURIComponent(mid)}/materialy`, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ photos: [{ n }] }) });
+      const zapis = await m.json();
+      if (!m.ok) throw new Error(zapis.error);
+      pokazatIstochniki(zapis);
+      const fayl = zapis.source.photos.at(-1).file;
+      prilozheno.push({ podpis: 'Сверка с фото', puti: [], opis: `сверка — ${fayl}` });
+      narisovatPrilozheno();
+      tekst.value = 'Сверка: слева фото, справа модель сейчас. Посмотри эту одну картинку и поправь самое заметное — форму, пропорции, цвета. Больше сверок сам не проси.';
+      await otpravit();
+    } catch (e) { pokazatOshibku(e.message); }
+  }
+  $('#b-sverka').addEventListener('click', sverka);
+
   $('#chat-forma').addEventListener('submit', (e) => { e.preventDefault(); otpravit(); });
   tekst.addEventListener('keydown', (e) => {
     if (e.key === 'Enter' && (e.ctrlKey || e.metaKey) && !e.isComposing) { e.preventDefault(); otpravit(); }
@@ -309,5 +371,5 @@ export function sozdatChat({ szhat, soobshchit, sverit, pokazatIstochniki, gotov
     }
   });
 
-  return { pokazat };
+  return { pokazat, poFoto };
 }

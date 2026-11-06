@@ -368,6 +368,75 @@ async def photo_put(request: Request, mid: str, n: int, view: str = ""):
     return _ok({"ok": True})
 
 
+# ── Цифры по фото: считает сайт, а не Claude ─────────────────────────────
+#
+# Пропорции и главные цвета предмета Claude иначе подбирает на глаз и переделывает.
+# Здесь они считаются сразу и уходят в сообщение готовыми числами — без расхода лимита.
+
+ANALYSIS_MAX = 4                         # больше снимков в сообщение не берём: каждый — лишний текст
+
+
+def _photo_numbers(path: Path) -> str | None:
+    """Пропорции предмета и его главные цвета. Фон — цвет краёв снимка."""
+    try:
+        with Image.open(path) as im:
+            im = ImageOps.exif_transpose(im).convert("RGB")
+            im.thumbnail((160, 160))
+    except OSError:
+        return None
+    w, h = im.size
+    px = im.load()
+    edge = [px[x, y] for x in range(w) for y in (0, h - 1)] + [px[x, y] for y in range(h) for x in (0, w - 1)]
+    bg = tuple(sorted(c[i] for c in edge)[len(edge) // 2] for i in range(3))
+    spread = sorted(sum((c[i] - bg[i]) ** 2 for i in range(3)) ** 0.5 for c in edge)[int(len(edge) * 0.8)]
+    limit = max(60.0, spread * 1.3)
+    inside = [(x, y) for y in range(h) for x in range(w)
+              if sum((px[x, y][i] - bg[i]) ** 2 for i in range(3)) ** 0.5 > limit]
+    share = len(inside) / (w * h)
+    lines = []
+    if 0.05 < share < 0.9:
+        xs = [p[0] for p in inside]
+        ys = [p[1] for p in inside]
+        bw, bh = max(xs) - min(xs) + 1, max(ys) - min(ys) + 1
+        lines.append(f"предмет в кадре: ширина к высоте {bw / bh:.2f}, занимает {share:.0%} снимка")
+    else:
+        lines.append("фон от предмета не отделился — пропорции оцени сам")
+        inside = [(x, y) for y in range(h // 5, h - h // 5) for x in range(w // 5, w - w // 5)]
+    sample = Image.new("RGB", (len(inside), 1))
+    sample.putdata([px[x, y] for x, y in inside])
+    pal = sample.quantize(colors=4, method=Image.Quantize.MEDIANCUT)
+    rgb = pal.getpalette()[:12]
+    counts = sorted(pal.getcolors() or [], reverse=True)
+    total = sum(c for c, _ in counts) or 1
+    colors = [f"#{rgb[i * 3]:02x}{rgb[i * 3 + 1]:02x}{rgb[i * 3 + 2]:02x} {c / total:.0%}"
+              for c, i in counts if c / total >= 0.05]
+    lines.append("главные цвета предмета: " + ", ".join(colors))
+    return "; ".join(lines)
+
+
+@router.post("/api/models/{mid}/analiz")
+async def photo_analysis(request: Request, mid: str):
+    if bad := _denied(request, write=True):
+        return bad
+    if not ID.match(mid):
+        return _error("Неправильный id модели.")
+    body = await _json_body(request)
+    files = body.get("files") if isinstance(body, dict) else None
+    if not isinstance(files, list):
+        return _error("Пустой запрос.")
+    folder = (DATA / "foto" / mid).resolve()
+    picked = [f for f in files if isinstance(f, str) and f.startswith(f"foto/{mid}/")][:ANALYSIS_MAX]
+    out = []
+    for rel in picked:
+        path = (DATA / rel).resolve()
+        if path.parent != folder or not path.is_file():
+            continue
+        numbers = await asyncio.to_thread(_photo_numbers, path)
+        if numbers:
+            out.append(f"{rel}: {numbers}")
+    return _ok({"text": "\n".join(out)})
+
+
 # ── Готовые просмотрщики ─────────────────────────────────────────────────
 
 # ── Архивы, видео и снимки, которые браузер сам не откроет ───────────────

@@ -23,7 +23,7 @@ def place(tmp_path, monkeypatch):
 ADDRESSES = [("get", "/3d/"), ("get", "/3d/redaktor.js"), ("get", "/3d/api/status"), ("get", "/3d/api/models"),
              ("get", "/3d/api/models/a"), ("put", "/3d/api/models/a"), ("delete", "/3d/api/models/a"),
              ("get", "/3d/api/exports"), ("get", "/3d/api/exports/a"), ("put", "/3d/api/exports/a"),
-             ("get", "/3d/api/photos/a/0"), ("put", "/3d/api/photos/a/0"), ("post", "/3d/api/models/a/materialy"),
+             ("get", "/3d/api/photos/a/0"), ("put", "/3d/api/photos/a/0"), ("post", "/3d/api/models/a/materialy"), ("post", "/3d/api/models/a/analiz"),
              ("put", "/3d/api/arhiv/a/abcdefgh"), ("post", "/3d/api/arhiv/a/abcdefgh/razobrat"), ("get", "/3d/api/chat/a"), ("post", "/3d/api/chat/a/start"), ("get", "/3d/api/models/a/versiya"), ("post", "/3d/api/generate"), ("post", "/3d/api/refine"), ("get", "/3d/api/nesushchestvuet")]
 
 
@@ -171,3 +171,24 @@ def test_archive_refusals(inside):
     assert r.status_code == 400 and "не снимок" in r.json()["error"]
     assert c.post("/3d/api/arhiv/proba/abcdefgh12/razobrat").status_code == 400
     assert c.put("/3d/api/arhiv/proba/plohoy!/x").status_code in (400, 404, 405)
+
+
+def test_photo_numbers(inside):
+    """Пропорции и цвета предмета считает сайт; чужие пути не читаются."""
+    from PIL import Image
+    c = inside
+    assert c.put("/3d/api/models/proba", json={"model": MODEL}).status_code == 200
+    im = Image.new("RGB", (200, 300), "white")
+    for x in range(50, 150):
+        for y in range(50, 250):
+            im.putpixel((x, y), (40, 60, 200) if y < 150 else (150, 240, 100))
+    buf = io.BytesIO()
+    im.save(buf, "PNG")
+    assert c.put("/3d/api/photos/proba/0", content=buf.getvalue(), headers={"content-type": "image/png"}).status_code == 200
+    (konstruktor.DATA / "chuzhoe.png").write_bytes(buf.getvalue())
+    r = c.post("/3d/api/models/proba/analiz", json={"files": ["foto/proba/0.png", "foto/proba/../../chuzhoe.png", "foto/drugaya/0.png"]})
+    text = r.json()["text"]
+    assert r.status_code == 200 and text.count("\n") == 0
+    assert "ширина к высоте 0.5" in text and "#" in text
+    assert c.post("/3d/api/models/proba/analiz", json={}).status_code == 400
+    assert c.post("/3d/api/models/Плохой/analiz", json={"files": []}).status_code == 400

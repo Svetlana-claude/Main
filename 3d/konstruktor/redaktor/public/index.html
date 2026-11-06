@@ -14,6 +14,7 @@
   <strong class="logo">Конструктор 3D</strong>
   <select id="spisok-modeley" title="Модели"></select>
   <button id="b-novaya">Новая</button>
+  <button id="b-po-foto" hidden title="Новая модель по фото, видео или архиву: Claude соберёт её экономно, за один заход">Модель по фото</button>
   <button id="b-otkryt">Открыть файл</button>
   <input type="file" id="f-otkryt" accept=".json,application/json" hidden>
   <button id="b-sohranit" class="glavnaya">Сохранить</button>
@@ -51,6 +52,7 @@
           <label class="knopka-malaya" title="Фото, схемы, видео или архив ZIP с ними">Приложить фото, видео или ZIP
             <input type="file" id="f-chat" accept="image/*,video/*,.zip,.heic,.heif,.mov,.mts,application/zip" multiple hidden>
           </label>
+          <button type="button" id="b-sverka" class="knopka-malaya" title="Снимок модели рядом с первым фото — Claude посмотрит один раз и поправит">Сверить с фото</button>
           <span class="podskazka"></span>
           <button type="submit" id="b-chat" class="glavnaya">Отправить</button>
         </div>
