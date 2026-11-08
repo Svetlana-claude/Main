@@ -317,3 +317,10 @@ def test_new_setup_link_cannot_take_over(site):
     assert new_client().get(f"/setup/{token}").status_code == 303
     assert db.one("SELECT count(*) AS n FROM users WHERE role = 'owner'")["n"] == 1
     db.run("DELETE FROM setup")
+
+
+def test_setup_qr_scales_whole():
+    """QR рисуется целиком при любом размере: без viewBox браузер обрезал его, и камера не читала."""
+    from app import auth
+    svg = auth._qr_svg("A" * 32)
+    assert "viewBox" in svg and 'width="' not in svg.split(">", 1)[0]

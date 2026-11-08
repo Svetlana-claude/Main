@@ -56,13 +56,14 @@ def _setup_ok(token: str) -> bool:
 
 
 def _otp_uri(secret: str) -> str:
-    return (f"otpauth://totp/{quote('Здоровье')}:{quote(config.OWNER_LOGIN)}"
-            f"?secret={secret}&issuer={quote('Здоровье')}")
+    # Латиницей и коротко: QR выходит крупнее и проще, камера айфона читает его увереннее
+    return f"otpauth://totp/Zdorovye:{quote(config.OWNER_LOGIN)}?secret={secret}&issuer=Zdorovye"
 
 
 def _qr_svg(secret: str) -> str:
     buf = io.BytesIO()
-    segno.make(_otp_uri(secret), error="m").save(buf, kind="svg", scale=5, border=2, xmldecl=False, svgns=True)
+    segno.make(_otp_uri(secret), error="l").save(buf, kind="svg", scale=8, border=4, dark="#000", light="#fff", omitsize=True,
+                                                 xmldecl=False, svgns=True)
     return buf.getvalue().decode()
 
 

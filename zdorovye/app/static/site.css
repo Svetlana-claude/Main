@@ -101,7 +101,7 @@ details.add { margin-top: .8rem; }
 .card h1 { text-align: center; }
 .steps { padding-left: 1.2rem; }
 .qr { margin: .5rem 0; }
-.qr svg { width: 200px; height: 200px; display: block; }
+.qr svg { width: 240px; height: 240px; max-width: 100%; display: block; }
 .key { word-break: break-all; }
 
 /* Главная */
