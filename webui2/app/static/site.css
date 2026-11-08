@@ -53,6 +53,19 @@ pre, table { display: block; max-width: 100%; overflow-x: auto; }
 .icon:hover, .icon[aria-current="page"] { background: #eef0f3; color: var(--text); }
 .icon svg { display: block; flex: none; width: 22px; height: 22px; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
 .logout { margin: 0; flex: none; }
+/* Индикатор заполнения диска: полоска и процент, ведёт на «Настройки» с графиком нагрузки */
+.disk {
+  display: inline-flex; align-items: center; gap: .4rem; flex: none;
+  height: 40px; padding: 0 .5rem; border-radius: 8px;
+  color: var(--muted); text-decoration: none; font-size: .85rem; font-variant-numeric: tabular-nums;
+}
+.disk:hover { background: #eef0f3; color: var(--text); }
+.disk-bar { width: 42px; height: 8px; border-radius: 4px; background: #e3e5e8; overflow: hidden; }
+.disk-bar span { display: block; height: 100%; background: var(--ok); }
+.disk--warn { color: #b26a00; }
+.disk--warn .disk-bar span { background: #f08c00; }
+.disk--alarm { color: var(--error); font-weight: 700; }
+.disk--alarm .disk-bar span { background: var(--error); }
 
 /* Содержимое */
 .content { max-width: 1100px; margin: 0 auto; padding: 1.25rem 1rem; }
@@ -106,6 +119,13 @@ button { font: inherit; cursor: pointer; }
     border-radius: 0; font-size: 1rem;
   }
   .content { padding: 1rem .75rem calc(var(--tabbar) + 1rem); }
+  /* На телефоне шапка занята до края. Надпись «Claude» дублирует вкладку «Чат»
+     внизу, поэтому на её месте — процент диска без полоски */
+  .brand { display: none; }
+  .tools { margin-left: 0; flex: 1; }
+  .top { gap: .35rem; }
+  .disk { padding: 0; margin-right: auto; font-size: .78rem; }
+  .disk-bar { display: none; }
 }
 
 /* Только для чтения с экрана */

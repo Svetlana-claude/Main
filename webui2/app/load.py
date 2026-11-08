@@ -7,6 +7,7 @@ import os
 from datetime import datetime, timedelta, timezone
 
 from . import config, db
+from .web import templates
 
 DISK_PATH = "/"
 
@@ -37,10 +38,29 @@ def memory() -> tuple[float, int, int]:
 
 
 def disk() -> tuple[float, int, int]:
+    """(занято %, занято байт, всего байт). Процент — как у df: от того, что
+    доступно, без запаса, который система держит для себя. Иначе сайт
+    показывал бы 75 %, когда на деле осталось 20 %."""
     st = os.statvfs(DISK_PATH)
     total = st.f_blocks * st.f_frsize
     used = total - st.f_bfree * st.f_frsize
-    return (round(100 * used / total, 1) if total else 0.0), used, total
+    usable = used + st.f_bavail * st.f_frsize
+    return (round(100 * used / usable, 1) if usable else 0.0), used, total
+
+
+# Пороги цвета индикатора в шапке
+DISK_WARN, DISK_ALARM = 85, 95
+
+
+def disk_head() -> dict:
+    """Индикатор диска в шапке: процент, свободное место и уровень тревоги."""
+    st = os.statvfs(DISK_PATH)
+    pct = round(disk()[0])
+    level = "alarm" if pct >= DISK_ALARM else "warn" if pct >= DISK_WARN else ""
+    return {"pct": pct, "free": gigabytes(st.f_bavail * st.f_frsize), "level": level}
+
+
+templates.env.globals["disk_head"] = disk_head
 
 
 def gigabytes(size: int) -> str:
