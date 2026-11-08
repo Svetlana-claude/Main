@@ -1,0 +1,41 @@
+<!doctype html>
+<html lang="ru">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="robots" content="noindex, nofollow">
+  <meta name="theme-color" content="#d62839">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-title" content="Здоровье">
+  <meta name="apple-mobile-web-app-status-bar-style" content="default">
+  <title>{% block title %}{{ title or "Здоровье" }}{% endblock %} — Здоровье</title>
+  <link rel="manifest" href="{{ root }}/manifest.webmanifest">
+  <link rel="icon" href="{{ root }}/static/icon.svg" type="image/svg+xml">
+  <link rel="apple-touch-icon" href="{{ root }}/static/icon-180.png">
+  <link rel="stylesheet" href="{{ root }}/static/site.css?v=2">
+</head>
+<body class="{% block body_class %}{% endblock %}">
+{% block body %}
+<header class="top">
+  <a class="brand" href="{{ root }}/"><img src="{{ root }}/static/icon.svg" alt="" width="28" height="28"><span>Здоровье</span></a>
+  {% if sess %}
+  <nav class="tabs" aria-label="Разделы">
+    <a href="{{ root }}/" {% if active == "home" %}aria-current="page"{% endif %}>Семья</a>
+    {% if sess.role == "owner" %}
+    <a href="{{ root }}/access" {% if active == "access" %}aria-current="page"{% endif %}>Доступы{% if asked_total() %} <span class="badge" title="Ждут решения">{{ asked_total() }}</span>{% endif %}</a>
+    {% endif %}
+  </nav>
+  <form method="post" action="{{ root }}/logout" class="logout">
+    <input type="hidden" name="csrf" value="{{ sess.csrf }}">
+    <button type="submit" class="link">Выйти</button>
+  </form>
+  {% endif %}
+</header>
+<main class="content" id="main">
+  {% block content %}{% endblock %}
+</main>
+{% endblock %}
+<script src="{{ root }}/static/app.js?v=1"></script>
+</body>
+</html>

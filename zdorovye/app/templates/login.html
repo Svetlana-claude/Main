@@ -1,0 +1,19 @@
+{% extends "door.html" %}
+{% set title = "Вход" %}
+{% block heading %}Здоровье семьи{% endblock %}
+{% block form %}
+{% if not ready %}
+<p class="muted">Сайт ещё не настроен. Открой ссылку для первой настройки.</p>
+{% else %}
+<form method="post" action="{{ root }}/login" class="stack">
+  <input type="hidden" name="pre" value="{{ pre }}">
+  <label>Логин
+    <input name="login" autocomplete="username" autocapitalize="none" required autofocus>
+  </label>
+  <label>Пароль
+    <input name="password" type="password" autocomplete="current-password" required>
+  </label>
+  <button type="submit" class="primary">Войти</button>
+</form>
+{% endif %}
+{% endblock %}

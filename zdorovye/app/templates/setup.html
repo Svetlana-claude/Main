@@ -1,0 +1,30 @@
+{% extends "door.html" %}
+{% set title = "Первая настройка" %}
+{% block heading %}Первая настройка{% endblock %}
+{% block form %}
+<p class="muted">Логин — <b>{{ login }}</b>. Это главный вход: с него видны все члены семьи.</p>
+<ol class="steps">
+  <li>В приложении для кодов на телефоне добавь новую запись: отсканируй картинку
+    или введи ключ вручную.
+    <div class="qr">{{ qr|safe }}</div>
+    <p class="key">Ключ: <b>{{ secret }}</b></p>
+    <p class="small">Открыла эту страницу на том же телефоне? Нажми
+      <a href="{{ otp_uri }}">добавить в приложение кодов</a> — или введи ключ вручную.</p>
+  </li>
+  <li>Придумай пароль и введи код из новой строки «Здоровье».</li>
+</ol>
+<form method="post" action="{{ root }}/setup/{{ token }}" class="stack">
+  <input type="hidden" name="pre" value="{{ pre }}">
+  <input type="text" name="username" value="{{ login }}" autocomplete="username" hidden>
+  <label>Пароль, не короче 10 знаков
+    <input name="password" type="password" minlength="10" autocomplete="new-password" required>
+  </label>
+  <label>Пароль ещё раз
+    <input name="password2" type="password" minlength="10" autocomplete="new-password" required>
+  </label>
+  <label>Код с телефона
+    <input name="code" inputmode="numeric" pattern="[0-9 ]{6,7}" maxlength="7" autocomplete="one-time-code" required>
+  </label>
+  <button type="submit" class="primary">Сохранить</button>
+</form>
+{% endblock %}

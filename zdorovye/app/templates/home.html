@@ -1,0 +1,34 @@
+{% extends "base.html" %}
+{% set title = "Семья" %}
+{% block content %}
+{% if asked %}
+<p class="note warn"><a href="{{ root }}/access">Запросы доступа ждут решения: {{ asked }}</a></p>
+{% endif %}
+<h1>Семья</h1>
+<div class="cards">
+  {% for c in cards %}
+  <a class="person" href="{{ root }}/m/{{ c.id }}">
+    <span class="person-name">{{ c.name }}</span>
+    <span class="muted small">{{ age(c.birth_date) }}{% if c.allergies %} · аллергия{% endif %}</span>
+    {% if c.out %}<span class="chip out">Вне нормы: {{ c.out|length }}</span>{% endif %}
+    {% for v in c.vac %}<span class="chip warn">Прививка: {{ v.name }} — {{ v.next_due|day }}</span>{% endfor %}
+    {% if not c.out and not c.vac %}<span class="chip ok">Всё спокойно</span>{% endif %}
+  </a>
+  {% else %}
+  <p class="muted">Пока никого нет. Добавь первого члена семьи — например, себя.</p>
+  {% endfor %}
+</div>
+
+<details class="panel add">
+  <summary>Добавить члена семьи</summary>
+  <form method="post" action="{{ root }}/members/new" class="grid2">
+    <input type="hidden" name="csrf" value="{{ sess.csrf }}">
+    <label>Имя <input name="name" required maxlength="80"></label>
+    <label>Дата рождения <input name="birth_date" type="date"></label>
+    <label>Пол
+      <select name="sex"><option value="">—</option><option value="ж">женский</option><option value="м">мужской</option></select>
+    </label>
+    <div class="actions"><button type="submit" class="primary">Добавить</button></div>
+  </form>
+</details>
+{% endblock %}

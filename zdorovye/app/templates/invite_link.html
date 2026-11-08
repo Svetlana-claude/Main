@@ -1,0 +1,14 @@
+{% extends "base.html" %}
+{% set title = "Приглашение" %}
+{% block content %}
+<section class="panel">
+  <h1>Ссылка для: {{ member.name }}</h1>
+  <p>Отправь её этому человеку лично. Она сработает один раз и живёт {{ days }} дней.
+    Больше эту ссылку не покажу — если потеряется, просто сделай новую.</p>
+  <div class="copy">
+    <input id="invite" value="{{ link }}" readonly aria-label="Ссылка-приглашение">
+    <button type="button" class="primary" data-copy="invite">Скопировать</button>
+  </div>
+  <p><a href="{{ root }}/access">Готово</a></p>
+</section>
+{% endblock %}

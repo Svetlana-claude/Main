@@ -1,0 +1,25 @@
+{% extends "door.html" %}
+{% set title = "Приглашение" %}
+{% block heading %}{% if dead %}Ссылка не работает{% else %}Здравствуй!{% endif %}{% endblock %}
+{% block form %}
+{% if dead %}
+<p class="muted">Приглашение уже использовано или устарело. Попроси новое.</p>
+<a href="{{ root }}/login">Ко входу</a>
+{% else %}
+<p class="muted">Это твоя страничка здоровья — <b>{{ name }}</b>. Придумай логин и пароль:
+  по ним ты будешь входить. Ссылка сработает один раз.</p>
+<form method="post" action="{{ root }}/join/{{ token }}" class="stack">
+  <input type="hidden" name="pre" value="{{ pre }}">
+  <label>Логин
+    <input name="login" value="{{ login or '' }}" autocomplete="username" autocapitalize="none" required>
+  </label>
+  <label>Пароль, не короче 10 знаков
+    <input name="password" type="password" minlength="10" autocomplete="new-password" required>
+  </label>
+  <label>Пароль ещё раз
+    <input name="password2" type="password" minlength="10" autocomplete="new-password" required>
+  </label>
+  <button type="submit" class="primary">Готово</button>
+</form>
+{% endif %}
+{% endblock %}

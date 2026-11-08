@@ -1,0 +1,76 @@
+{% extends "base.html" %}
+{% set title = "Бланк анализа" %}
+{% block content %}
+<p><a href="{{ root }}/m/{{ m.id }}#labs">← {{ m.name }}</a></p>
+<h1>Бланк анализа</h1>
+<div class="doc-grid">
+  <section class="panel blank">
+    {% if doc.mime == "application/pdf" %}
+      <p><a href="{{ root }}/m/{{ m.id }}/docs/{{ doc.id }}/file" target="_blank" rel="noopener">Открыть PDF</a></p>
+      <iframe src="{{ root }}/m/{{ m.id }}/docs/{{ doc.id }}/file" title="Бланк"></iframe>
+    {% else %}
+      <a href="{{ root }}/m/{{ m.id }}/docs/{{ doc.id }}/file" target="_blank" rel="noopener"><img src="{{ root }}/m/{{ m.id }}/docs/{{ doc.id }}/file" alt="Снимок бланка"></a>
+    {% endif %}
+  </section>
+
+  <section class="panel">
+  {% if doc.state == "parsing" %}
+    <p class="note" data-reload="5">Разбираю бланк — обычно минута-две. Страница обновится сама.</p>
+  {% else %}
+    {% if doc.state == "error" %}
+      <p class="note err">{{ doc.error }}</p>
+    {% elif doc.state == "review" %}
+      <p class="note warn">Сверь с бланком: всё ли верно разобрано? Поправь, если нужно, и сохрани.</p>
+    {% endif %}
+    {% if edit %}
+    <form method="post" action="{{ root }}/m/{{ m.id }}/docs/{{ doc.id }}/save" class="review">
+      <input type="hidden" name="csrf" value="{{ sess.csrf }}">
+      <div class="grid2">
+        <label>Дата сдачи <input name="taken_on" type="date" required value="{{ doc.taken_on }}"></label>
+        <label>Лаборатория <input name="lab" maxlength="120" value="{{ doc.lab }}"></label>
+      </div>
+      <div class="table-wrap">
+      <table class="edit-table">
+        <thead><tr><th>Показатель</th><th>Значение</th><th>Ед.</th><th>Норма от</th><th>до</th></tr></thead>
+        <tbody>
+        {% for it in items %}
+        <tr class="{{ 'out' if it.flag }}">
+          <td><input name="name" value="{{ it.name }}" aria-label="Показатель"></td>
+          <td><input name="value" value="{{ it.value|num if it.value is not none else it.value_text }}" aria-label="Значение" class="num"></td>
+          <td><input name="unit" value="{{ it.unit }}" aria-label="Единицы" class="unit"></td>
+          <td><input name="low" value="{{ it.low|num }}" aria-label="Норма от" class="num"></td>
+          <td><input name="high" value="{{ it.high|num }}" aria-label="Норма до" class="num">
+              <input type="hidden" name="ref_text" value="{{ it.ref_text }}"></td>
+        </tr>
+        {% endfor %}
+        {% for _ in range(blank_rows) %}
+        <tr>
+          <td><input name="name" aria-label="Показатель" placeholder="добавить"></td>
+          <td><input name="value" aria-label="Значение" class="num"></td>
+          <td><input name="unit" aria-label="Единицы" class="unit"></td>
+          <td><input name="low" aria-label="Норма от" class="num"></td>
+          <td><input name="high" aria-label="Норма до" class="num"><input type="hidden" name="ref_text" value=""></td>
+        </tr>
+        {% endfor %}
+        </tbody>
+      </table>
+      </div>
+      <p class="muted small">Строку без значения сайт пропустит. Красным — вне нормы.</p>
+      <div class="actions"><button type="submit" class="primary">Сохранить</button></div>
+    </form>
+    <div class="btns spaced">
+      <form method="post" action="{{ root }}/m/{{ m.id }}/docs/{{ doc.id }}/parse" data-confirm="Разобрать бланк заново? Несохранённые правки пропадут.">
+        <input type="hidden" name="csrf" value="{{ sess.csrf }}"><button type="submit">Разобрать ещё раз</button></form>
+      <form method="post" action="{{ root }}/m/{{ m.id }}/docs/{{ doc.id }}/delete" data-confirm="Удалить бланк и его показатели?">
+        <input type="hidden" name="csrf" value="{{ sess.csrf }}"><button type="submit" class="danger">Удалить бланк</button></form>
+    </div>
+    {% else %}
+      <table class="results">
+        <thead><tr><th>Показатель</th><th>Значение</th><th>Норма</th></tr></thead>
+        <tbody>{% for it in items %}<tr class="{{ 'out' if it.flag }}"><td>{{ it.name }}</td><td>{{ it.value|num if it.value is not none else it.value_text }} {{ it.unit }}</td><td class="muted">{{ it.ref_text }}</td></tr>{% endfor %}</tbody>
+      </table>
+    {% endif %}
+  {% endif %}
+  </section>
+</div>
+{% endblock %}

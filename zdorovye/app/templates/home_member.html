@@ -1,0 +1,32 @@
+{% extends "base.html" %}
+{% set title = "Семья" %}
+{% block content %}
+<h1>Моя страничка</h1>
+{% if mine %}
+<p><a class="person wide" href="{{ root }}/m/{{ mine.id }}"><span class="person-name">{{ mine.name }}</span>
+  <span class="muted small">Открыть</span></a></p>
+{% endif %}
+{% if others %}
+<h2>Остальные</h2>
+<p class="muted small">Чужую страничку можно посмотреть, если Светлана откроет доступ.</p>
+<ul class="list">
+  {% for o in others %}
+  {% set st = states.get(o.id) %}
+  <li class="row">
+    <span>{{ o.name }}</span>
+    {% if st == "granted" %}
+      <a href="{{ root }}/m/{{ o.id }}">Открыть</a>
+    {% elif st == "asked" %}
+      <span class="muted small">Запрос отправлен, ждёт решения</span>
+    {% else %}
+      <form method="post" action="{{ root }}/access/ask">
+        <input type="hidden" name="csrf" value="{{ sess.csrf }}">
+        <input type="hidden" name="member_id" value="{{ o.id }}">
+        <button type="submit">{% if st == "declined" %}Попросить ещё раз{% else %}Попросить доступ{% endif %}</button>
+      </form>
+    {% endif %}
+  </li>
+  {% endfor %}
+</ul>
+{% endif %}
+{% endblock %}

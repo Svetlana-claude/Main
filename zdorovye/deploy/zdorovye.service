@@ -1,0 +1,23 @@
+[Unit]
+Description=Здоровье семьи (/zdorovye)
+After=network.target
+
+[Service]
+Type=simple
+User=mokeeva
+Group=mokeeva
+WorkingDirectory=/home/mokeeva/main/zdorovye
+ExecStart=/home/mokeeva/main/zdorovye/.venv/bin/uvicorn app.main:app \
+    --host 127.0.0.1 --port 8003 --root-path /zdorovye \
+    --proxy-headers --forwarded-allow-ips 127.0.0.1
+Environment=HOME=/home/mokeeva
+Environment=PATH=/home/mokeeva/.local/bin:/usr/local/bin:/usr/bin:/bin
+# База, бланки и служебные файлы — только для владельца
+UMask=0077
+Restart=on-failure
+RestartSec=3
+StandardOutput=journal
+StandardError=journal
+
+[Install]
+WantedBy=multi-user.target

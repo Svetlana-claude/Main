@@ -1,0 +1,23 @@
+{% extends "base.html" %}
+{% block content %}
+<p><a href="{{ root }}/m/{{ m.id }}#labs">← {{ m.name }}</a></p>
+<h1>{{ title }}</h1>
+<section class="panel">
+  {{ svg }}
+  <p class="muted small">Зелёная полоса — норма по последнему бланку. Красные точки — вне нормы.</p>
+</section>
+<section class="panel">
+  <table class="results">
+    <thead><tr><th>Дата</th><th>Значение</th><th>Норма</th></tr></thead>
+    <tbody>
+    {% for r in rows|reverse %}
+    <tr class="{{ 'out' if r.flag }}">
+      <td>{% if r.doc_id %}<a href="{{ root }}/m/{{ m.id }}/docs/{{ r.doc_id }}">{{ r.taken_on|day }}</a>{% else %}{{ r.taken_on|day }}{% endif %}</td>
+      <td>{{ r.value|num if r.value is not none else r.value_text }} {{ r.unit }}{% if r.flag %} <span class="chip out">{{ r.flag }}</span>{% endif %}</td>
+      <td class="muted">{{ r.ref_text or ((r.low|num) ~ '–' ~ (r.high|num) if r.low is not none or r.high is not none else '') }}</td>
+    </tr>
+    {% endfor %}
+    </tbody>
+  </table>
+</section>
+{% endblock %}

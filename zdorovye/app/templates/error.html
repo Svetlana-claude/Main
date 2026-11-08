@@ -1,0 +1,9 @@
+{% extends "base.html" %}
+{% set title = "Не получилось" %}
+{% block content %}
+<section class="panel">
+  <h1>Не получилось</h1>
+  <p>{{ message }}</p>
+  <p><a href="{{ root }}/" data-back>Назад</a> · <a href="{{ root }}/">На главную</a></p>
+</section>
+{% endblock %}

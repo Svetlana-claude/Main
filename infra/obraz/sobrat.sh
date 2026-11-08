@@ -110,8 +110,9 @@ sudo -n tar -C / --warning=no-file-changed --warning=no-file-removed --ignore-fa
     home/mokeeva/.config/glavpryg-db.pass home/mokeeva/.config/glavpryg-mail.pass \
     home/mokeeva/.config/glavpryg-rezerv.adresa home/mokeeva/.config/glavpryg-beget.json \
     home/mokeeva/.local/share/webui2 home/mokeeva/.obraz-staging \
+    home/mokeeva/.config/zdorovye home/mokeeva/.local/share/zdorovye-kopii-gnupg \
     etc/nginx etc/letsencrypt etc/opendkim etc/postfix etc/dovecot etc/fail2ban etc/amnezia \
-    etc/wireguard etc/php/8.4/fpm/pool.d etc/systemd/system/webui2.service etc/sudoers.d \
+    etc/wireguard etc/php/8.4/fpm/pool.d etc/systemd/system/webui2.service etc/systemd/system/zdorovye.service etc/sudoers.d \
     usr/local/sbin usr/local/lib/webui-vpn opt/secaudit var/lib/secaudit var/mail 2>>"$LOG" \
   | r backup --stdin --stdin-filename obraz.tar --tag obraz --json 2>>"$LOG" > "$STAGE/itog.json"
 KODY=("${PIPESTATUS[@]}")

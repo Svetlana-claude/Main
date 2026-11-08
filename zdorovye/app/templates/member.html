@@ -1,0 +1,166 @@
+{% extends "base.html" %}
+{% set title = m.name %}
+{% block content %}
+<h1>{{ m.name }} <span class="muted small">{{ age(m.birth_date) }}</span></h1>
+<nav class="jump" aria-label="Разделы странички">
+  <a href="#labs">Анализы</a><a href="#ill">Болезни</a><a href="#vac">Прививки</a><a href="#about">Основное</a>
+</nav>
+
+<section class="panel" id="labs">
+  <h2>Анализы</h2>
+  {% if edit %}
+  <form method="post" action="{{ root }}/m/{{ m.id }}/docs" enctype="multipart/form-data" class="upload">
+    <input type="hidden" name="csrf" value="{{ sess.csrf }}">
+    <label class="file">Сфотографируй или выбери бланк (фото или PDF)
+      <input type="file" name="blank" accept="image/*,application/pdf" required>
+    </label>
+    <button type="submit" class="primary">Загрузить и разобрать</button>
+  </form>
+  {% endif %}
+
+  {% if latest %}
+  <h3>Последние значения</h3>
+  <div class="table-wrap">
+  <table class="results">
+    <thead><tr><th>Показатель</th><th>Значение</th><th>Норма</th><th class="col-date">Дата</th></tr></thead>
+    <tbody>
+    {% for r in latest %}
+    <tr class="{{ 'out' if r.flag }}">
+      <td><a href="{{ root }}/m/{{ m.id }}/chart?key={{ r.key|urlencode }}">{{ r.name }}</a>{% if r.count > 1 %} <span class="muted small">· {{ r.count }} изм.</span>{% endif %}</td>
+      <td class="val">{{ r.value|num if r.value is not none else r.value_text }} {{ r.unit }}{% if r.flag %} <span class="chip out">{{ r.flag }}</span>{% endif %}</td>
+      <td class="muted">{{ r.ref_text or ((r.low|num) ~ '–' ~ (r.high|num) if r.low is not none or r.high is not none else '') }}</td>
+      <td class="muted col-date">{{ r.taken_on|day }}</td>
+    </tr>
+    {% endfor %}
+    </tbody>
+  </table>
+  </div>
+  {% endif %}
+
+  {% if docs %}
+  <h3>Бланки</h3>
+  <ul class="list">
+  {% for d in docs %}
+    <li class="row">
+      <a href="{{ root }}/m/{{ m.id }}/docs/{{ d.id }}">{{ d.taken_on|day or "Без даты" }}{% if d.lab %} · {{ d.lab }}{% endif %}</a>
+      <span class="muted small">
+        {% if d.state == "parsing" %}разбирается…{% elif d.state == "review" %}<b class="warn-text">ждёт проверки</b>{% elif d.state == "error" %}<b class="err-text">не разобрался</b>{% else %}{{ d.n }} показ.{% endif %}
+      </span>
+    </li>
+  {% endfor %}
+  </ul>
+  {% elif not latest %}
+  <p class="muted">Анализов пока нет.</p>
+  {% endif %}
+</section>
+
+<section class="panel" id="ill">
+  <h2>Болезни</h2>
+  {% if ill_stats %}
+  <p class="stats">{% for s in ill_stats %}<span><b>{{ s.year }}</b>: {{ s.count }} раз{% if s.days %}, {{ s.days }} дн.{% endif %}</span>{% endfor %}</p>
+  {% endif %}
+  {% for i in ill %}
+  <div class="entry">
+    <div class="entry-head"><b>{{ i.title }}</b> <span class="muted small">{{ i.started|day }}{% if i.ended %} — {{ i.ended|day }}{% endif %}</span></div>
+    {% if i.treatment %}<div>Лечение: {{ i.treatment }}</div>{% endif %}
+    {% if i.notes %}<div class="muted">{{ i.notes }}</div>{% endif %}
+    {% if edit %}
+    <form method="post" action="{{ root }}/m/{{ m.id }}/ill/{{ i.id }}/delete" data-confirm="Удалить запись «{{ i.title }}»?">
+      <input type="hidden" name="csrf" value="{{ sess.csrf }}"><button type="submit" class="link small">удалить</button></form>
+    {% endif %}
+  </div>
+  {% else %}
+  <p class="muted">Записей нет.</p>
+  {% endfor %}
+  {% if edit %}
+  <details class="add">
+    <summary>Записать болезнь</summary>
+    <form method="post" action="{{ root }}/m/{{ m.id }}/ill" class="grid2">
+      <input type="hidden" name="csrf" value="{{ sess.csrf }}">
+      <label>Что было <input name="title" required maxlength="200" placeholder="Например, ОРВИ"></label>
+      <label>Началось <input name="started" type="date" required value="{{ today }}"></label>
+      <label>Закончилось <input name="ended" type="date"></label>
+      <label>Лечение <input name="treatment" maxlength="2000"></label>
+      <label class="span2">Заметки <textarea name="notes" rows="2" maxlength="2000"></textarea></label>
+      <div class="actions"><button type="submit" class="primary">Записать</button></div>
+    </form>
+  </details>
+  {% endif %}
+</section>
+
+<section class="panel" id="vac">
+  <h2>Прививки</h2>
+  {% for v in vac %}
+  <div class="entry {{ v.state }}">
+    <div class="entry-head"><b>{{ v.name }}</b> <span class="muted small">{% if v.done_on %}сделана {{ v.done_on|day }}{% endif %}</span></div>
+    {% if v.next_due %}<div>Следующая: <b>{{ v.next_due|day }}</b>{% if v.state == "late" %} <span class="chip out">пора</span>{% elif v.state == "soon" %} <span class="chip warn">скоро</span>{% endif %}</div>{% endif %}
+    {% if v.notes %}<div class="muted">{{ v.notes }}</div>{% endif %}
+    {% if edit %}
+    <form method="post" action="{{ root }}/m/{{ m.id }}/vac/{{ v.id }}/delete" data-confirm="Удалить прививку «{{ v.name }}»?">
+      <input type="hidden" name="csrf" value="{{ sess.csrf }}"><button type="submit" class="link small">удалить</button></form>
+    {% endif %}
+  </div>
+  {% else %}
+  <p class="muted">Записей нет.</p>
+  {% endfor %}
+  {% if edit %}
+  <details class="add">
+    <summary>Записать прививку</summary>
+    <form method="post" action="{{ root }}/m/{{ m.id }}/vac" class="grid2">
+      <input type="hidden" name="csrf" value="{{ sess.csrf }}">
+      <label>Прививка <input name="name" required maxlength="200" placeholder="Например, грипп"></label>
+      <label>Сделана <input name="done_on" type="date"></label>
+      <label>Следующая <input name="next_due" type="date"></label>
+      <label>Заметки <input name="notes" maxlength="2000"></label>
+      <div class="actions"><button type="submit" class="primary">Записать</button></div>
+    </form>
+  </details>
+  {% endif %}
+</section>
+
+<section class="panel" id="about">
+  <h2>Основное</h2>
+  <dl class="facts">
+    <dt>Дата рождения</dt><dd>{{ m.birth_date|day or "—" }}</dd>
+    <dt>Пол</dt><dd>{{ {"ж": "женский", "м": "мужской"}.get(m.sex, "—") }}</dd>
+    <dt>Группа крови</dt><dd>{{ m.blood or "—" }}</dd>
+    <dt>Хронические болезни</dt><dd>{{ m.chronic or "—" }}</dd>
+    <dt>Аллергии</dt><dd>{{ m.allergies or "—" }}</dd>
+    <dt>Лекарства</dt><dd>{{ m.medicines or "—" }}</dd>
+    <dt>Витамины</dt><dd>{{ m.vitamins or "—" }}</dd>
+    {% if m.notes %}<dt>Заметки</dt><dd>{{ m.notes }}</dd>{% endif %}
+  </dl>
+  {% if edit %}
+  <details class="add">
+    <summary>Изменить</summary>
+    <form method="post" action="{{ root }}/m/{{ m.id }}/profile" class="grid2">
+      <input type="hidden" name="csrf" value="{{ sess.csrf }}">
+      <label>Имя <input name="name" required maxlength="80" value="{{ m.name }}"></label>
+      <label>Дата рождения <input name="birth_date" type="date" value="{{ m.birth_date }}"></label>
+      <label>Пол
+        <select name="sex"><option value="">—</option><option value="ж" {% if m.sex == "ж" %}selected{% endif %}>женский</option><option value="м" {% if m.sex == "м" %}selected{% endif %}>мужской</option></select>
+      </label>
+      <label>Группа крови <input name="blood" maxlength="20" value="{{ m.blood }}" placeholder="Например, A(II) Rh+"></label>
+      <label class="span2">Хронические болезни <textarea name="chronic" rows="2">{{ m.chronic }}</textarea></label>
+      <label class="span2">Аллергии <textarea name="allergies" rows="2">{{ m.allergies }}</textarea></label>
+      <label class="span2">Лекарства (что и как принимает) <textarea name="medicines" rows="2">{{ m.medicines }}</textarea></label>
+      <label class="span2">Витамины <textarea name="vitamins" rows="2">{{ m.vitamins }}</textarea></label>
+      <label class="span2">Заметки <textarea name="notes" rows="2">{{ m.notes }}</textarea></label>
+      <div class="actions"><button type="submit" class="primary">Сохранить</button></div>
+    </form>
+  </details>
+  {% endif %}
+</section>
+
+{% if sess.role == "owner" %}
+<details class="panel danger-zone">
+  <summary>Удалить страничку</summary>
+  <form method="post" action="{{ root }}/m/{{ m.id }}/delete" class="stack">
+    <input type="hidden" name="csrf" value="{{ sess.csrf }}">
+    <p>Удалятся все записи, анализы и бланки этого человека, и его вход. Вернуть можно только из ночной копии.</p>
+    <label class="check"><input type="checkbox" name="sure" value="да" required> Да, удалить насовсем</label>
+    <button type="submit" class="danger">Удалить</button>
+  </form>
+</details>
+{% endif %}
+{% endblock %}

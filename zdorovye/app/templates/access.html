@@ -1,0 +1,82 @@
+{% extends "base.html" %}
+{% set title = "Доступы" %}
+{% block content %}
+<h1>Доступы</h1>
+
+<section class="panel">
+  <h2>Запросы</h2>
+  {% for a in asked %}
+  <div class="row">
+    <span><b>{{ a.login }}</b> просит доступ к страничке «{{ a.name }}» <span class="muted small">{{ a.asked_at|moment }}</span></span>
+    <span class="btns">
+      <form method="post" action="{{ root }}/access/{{ a.id }}/grant"><input type="hidden" name="csrf" value="{{ sess.csrf }}"><button type="submit" class="primary">Принять</button></form>
+      <form method="post" action="{{ root }}/access/{{ a.id }}/decline"><input type="hidden" name="csrf" value="{{ sess.csrf }}"><button type="submit">Отклонить</button></form>
+    </span>
+  </div>
+  {% else %}
+  <p class="muted">Новых запросов нет.</p>
+  {% endfor %}
+</section>
+
+<section class="panel">
+  <h2>Открытые доступы</h2>
+  {% for a in granted %}
+  <div class="row">
+    <span><b>{{ a.login }}</b> видит страничку «{{ a.name }}» <span class="muted small">с {{ a.decided_at|moment }}</span></span>
+    <form method="post" action="{{ root }}/access/{{ a.id }}/end"><input type="hidden" name="csrf" value="{{ sess.csrf }}"><button type="submit" class="danger">Завершить</button></form>
+  </div>
+  {% else %}
+  <p class="muted">Чужие странички никому не открыты.</p>
+  {% endfor %}
+</section>
+
+<section class="panel">
+  <h2>Пригласить</h2>
+  {% if free %}
+  <p class="muted small">Получится разовая ссылка: по ней человек придумает логин и пароль и будет видеть только свою страничку. Ссылка живёт неделю.</p>
+  <form method="post" action="{{ root }}/invites/new" class="inline">
+    <input type="hidden" name="csrf" value="{{ sess.csrf }}">
+    <select name="member_id" aria-label="Чья страничка">{% for m in free %}<option value="{{ m.id }}">{{ m.name }}</option>{% endfor %}</select>
+    <button type="submit" class="primary">Сделать ссылку</button>
+  </form>
+  {% else %}
+  <p class="muted">Пригласить некого: у всех уже есть вход или в семье пока никого нет.</p>
+  {% endif %}
+  {% if invites %}
+  <h3>Ждут, пока по ним войдут</h3>
+  {% for i in invites %}
+  <div class="row"><span>{{ i.name }} <span class="muted small">до {{ i.expires_at|moment }}</span></span>
+    <form method="post" action="{{ root }}/invites/{{ i.id }}/cancel"><input type="hidden" name="csrf" value="{{ sess.csrf }}"><button type="submit">Отменить</button></form></div>
+  {% endfor %}
+  {% endif %}
+</section>
+
+<section class="panel" id="kopii">
+  <h2>Копии</h2>
+  <p>{% if kopii.last %}Последняя копия — {{ kopii.last.when }}, {{ kopii.last.kb }} КБ. Хранятся {{ kopii.count }} последних, на сервере и в хранилище вне сервера.{% else %}Копий пока нет — первая будет этой ночью.{% endif %}
+    Копии заперты: открыть их можно только твоим ключом.</p>
+  {% if kopii.key_waiting %}
+  <div class="note warn">
+    <p><b>Скачай ключ от копий и сохрани его надёжно</b> — в менеджер паролей, на флешку, в своё облако.
+      Без него копии не открыть никому, даже мне. Он показывается только до тех пор, пока ты не подтвердишь, что сохранила.</p>
+    <p><a class="btn" href="{{ root }}/kopii/klyuch">Скачать ключ</a></p>
+    <form method="post" action="{{ root }}/kopii/klyuch/ubrat" class="stack">
+      <input type="hidden" name="csrf" value="{{ sess.csrf }}">
+      <label class="check"><input type="checkbox" name="sure" value="да" required> Ключ сохранён, удалить его с сервера</label>
+      <button type="submit">Подтвердить</button>
+    </form>
+  </div>
+  {% endif %}
+</section>
+
+<section class="panel">
+  <h2>Входы членов семьи</h2>
+  {% for u in users %}
+  <div class="row"><span><b>{{ u.login }}</b> — {{ u.name }}</span>
+    <form method="post" action="{{ root }}/users/{{ u.id }}/delete" data-confirm="Удалить вход {{ u.login }}? Страничка останется, войти по нему будет нельзя.">
+      <input type="hidden" name="csrf" value="{{ sess.csrf }}"><button type="submit" class="danger">Удалить вход</button></form></div>
+  {% else %}
+  <p class="muted">Пока никто, кроме тебя, не входит.</p>
+  {% endfor %}
+</section>
+{% endblock %}
