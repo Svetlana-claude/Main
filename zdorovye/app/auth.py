@@ -1,5 +1,6 @@
 """Первая настройка, вход, выход, приглашения и доступ к чужим страничкам."""
 import io
+import logging
 import secrets
 from datetime import datetime, timedelta, timezone
 from urllib.parse import quote
@@ -12,6 +13,7 @@ from .web import (client_ip, csrf_ok, current, need, need_owner, page, same_orig
                   set_cookie, to)
 
 router = APIRouter()
+log = logging.getLogger("uvicorn.error")
 
 
 def _pre_page(request: Request, name: str, ctx: dict | None = None, status: int = 200):
@@ -86,6 +88,7 @@ def setup(request: Request, token: str, password: str = Form(""), password2: str
     ip = client_ip(request)
 
     def again(error: str):
+        log.warning("первая настройка не прошла: %s", error.split(".")[0])   # для разбора, без секретов
         return _pre_page(request, "setup.html", {**_setup_ctx(token), "error": error}, 400)
 
     if not _pre_ok(request, pre):
@@ -100,7 +103,9 @@ def setup(request: Request, token: str, password: str = Form(""), password2: str
     step = security.totp_step(secret, code, 0)
     if step is None:
         security.note_fail(ip)
-        return again("Код с телефона не подошёл. Проверь, что приложение добавило «Здоровье», и введи свежий код")
+        return again("Код с телефона не подошёл. Нужен код из новой строки «Здоровье», не из старой "
+                     "строки основного сайта. Если ключ вводила вручную: в нём нет цифр 0 и 1 — "
+                     "это буквы O и I. Проще всего удалить строку «Здоровье» и добавить заново")
     db.insert("INSERT INTO users (login, password_hash, role, totp_secret, totp_last, created_at) "
               "VALUES (?, ?, 'owner', ?, ?, ?)",
               (config.OWNER_LOGIN, security.hash_secret(password), secret, step, db.now()))
