@@ -1597,6 +1597,10 @@ G–I — на дизайнерских сетках, J–K — G и H на мо
       `/opt/video2x/torch-venv`);
     - UNet — `rupeshs/sd-turbo-openvino`, пересохранённый с весами fp16, в
       `exchange/aevit/fon/unet-fp16`.
+    - из кэша моделей взяты только токенизатор и text_encoder (`stabilityai/sd-turbo`)
+      и vae_encoder/vae_decoder (`rupeshs/sd-turbo-openvino`). Неиспользуемые веса
+      UNet обеих моделей и VAE от `stabilityai` удалены 08.11.2026 ради места на
+      диске (−5 ГБ); нужно будет — скачаются заново.
   - Память. bfloat16 процессор не умеет, а в OpenVINO веса UNet разворачиваются
     в fp32, это 2,4 ГБ. Поэтому:
     - этапы идут отдельными процессами: tekst, kod, unet, dekod;
