@@ -1139,7 +1139,15 @@ PDF A5 без сторонних библиотек и шлёт два пись�
   меняется при переезде). Шрифты — `public/fonts` + `css/shrifty.css`.
 - **Переезд на главпрыг.рф** — `deploy/nginx-glavpryg-domen.conf` (сайт в корне домена,
   301 со старых адресов Tilda), порядок — `glavpryg-sayt/zapusk/pereezd-na-domen.md`.
-- Проверка — `tests/check-zapusk.py`.
+- **Отдельные галочки (с 08.11.2026).** `partials/soglasie` с `sOfertoy` / `sSoglasheniem`
+  выводит вторую галочку `oferta` / `pravila` — согласие на данные не совмещается с
+  другими документами (ст. 9 152-ФЗ). Сервер требует её в `CertificateOrderController`
+  и `RegisterController`. Имена параметров особые: include видит переменные страницы.
+- **Ничего чужого до согласия (с 08.11.2026).** Tailwind (play-скрипт) и Swiper — с
+  своего сервера, `public/vendor/tailwind`, `public/vendor/swiper`. Яндекс Карта —
+  `partials/karta-po-nazhatiyu`: заглушка, фрейм вставляется по «Показать карту».
+  Новые внешние подключения не добавлять — проверка `exchange/yur/vneshnie2.py`.
+- Проверка — `tests/check-zapusk.py`. Юридическая проверка — `glavpryg-sayt/zapusk/yuridicheskaya-proverka.md`.
 
 ### 3D-модели парашютных систем (`glavpryg-sayt/model-3d/`, с 22.10.2026)
 

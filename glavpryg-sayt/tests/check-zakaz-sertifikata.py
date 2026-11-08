@@ -28,6 +28,7 @@ def oformit(st):
     st.fill('input[name="customer_email"]', "proverka@example.com")
     st.fill('input[name="gift_recipient_name"]', "Проверка Получатель")
     st.check('input[name="consent"]')
+    st.check('input[name="oferta"]')
     st.click("#payBtn")
     st.wait_for_load_state("networkidle")
     m = re.search(r"/certificate/order/(\d+)/thanks", st.url)

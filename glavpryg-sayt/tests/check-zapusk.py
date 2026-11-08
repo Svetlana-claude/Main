@@ -117,6 +117,15 @@ def main() -> int:
             galochka = st.locator(f'{selektor} input[name="soglasie"], {selektor} input[name="consent"]')
             ok = galochka.count() == 1 and galochka.first.evaluate("e => e.required && !e.checked")
             itog(ok, f"/{put}: галочка согласия есть, обязательна и не отмечена заранее")
+            # оферта и соглашение — своей галочкой, не в одной метке с согласием на данные (152-ФЗ, ст. 9, ч. 1)
+            vtoraya = {"certificate/order": "oferta", "register": "pravila"}.get(put)
+            if vtoraya:
+                g2 = st.locator(f'{selektor} input[name="{vtoraya}"]')
+                otdelno = g2.count() == 1 and g2.evaluate("e => e.required && !e.checked") and st.evaluate(
+                    "([a, b]) => { const s = document.querySelector(a).closest('label'), o = document.querySelector(b).closest('label');"
+                    " return s !== o && !/оферт|соглашени/i.test(s.innerText); }",
+                    [f'{selektor} input[name="soglasie"], {selektor} input[name="consent"]', f'{selektor} input[name="{vtoraya}"]'])
+                itog(otdelno, f"/{put}: «{vtoraya}» — отдельная галочка, согласие на данные без других документов")
 
         # 2. Сервер: без согласия — 422, с согласием — заявка принята
         st.goto(f"{osnova}/prices", wait_until="load", timeout=60000)
