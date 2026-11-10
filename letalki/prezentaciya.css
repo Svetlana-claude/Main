@@ -164,3 +164,59 @@ table.sravnenie.odin thead th { padding: 2mm 2.6mm; }
 table.sravnenie.odin thead th.param { width: 36%; }
 .sostoyanie { align-items: start; grid-template-columns: 1fr 1.25fr; }
 .sostoyanie .plan-blok { align-self: stretch; }
+
+/* ══ Справка по «33»: синий вариант того же набора ══ */
+.sinii .oblozhka.odin .fakty div, .oblozhka.odin.sinii .fakty div { border-top-color: #5fb2f2; }
+.oblozhka.odin.sinii .render { width: 125%; margin-left: -12%; }
+.kontsept .kol.p33 .zadachi li { border-top-color: #bcd8f0; }
+.kontsept .kol.p33 .zadachi li::before { background: var(--p33); }
+.plitka.p33.tih { border-color: #8cc0ea; }
+table.sravnenie.odin thead th.p33 { border-radius: 0 2mm 0 0; }
+.sostoyanie.sinii .plan-blok .metka:first-child { color: #5fb2f2; }
+.sostoyanie.sinii .plan-blok .cel-item { border-left-color: #5fb2f2; }
+.sostoyanie.sinii .kol.p33 .shagi li { font-size: 9.6pt; padding-bottom: 2.6mm; }
+
+/* Тенденции */
+.trendy { display: grid; grid-template-columns: repeat(3, 1fr); gap: 4mm; }
+.trend { background: var(--fon); border-radius: 2.5mm; padding: 4.5mm 5mm; border-top: 1.2mm solid var(--p33); }
+.trend .nomer { font-size: 8pt; font-weight: bold; color: var(--p33); letter-spacing: 0.12em; }
+.trend b { display: block; font-size: 10.5pt; color: var(--tyomnyy); margin: 1mm 0 1.5mm; line-height: 1.3; }
+.trend p { margin: 0; font-size: 8.8pt; line-height: 1.45; }
+.trend .dlya33 { margin-top: 2mm; font-size: 8.5pt; color: var(--p33); font-weight: bold; }
+
+/* Варианты применения */
+.primenenie { display: grid; grid-template-columns: repeat(4, 1fr); gap: 3.5mm; }
+.variant { border: 0.6pt solid var(--liniya); border-radius: 2.5mm; padding: 4mm 4.5mm; display: flex; flex-direction: column; }
+.variant .nomer { width: 7mm; height: 7mm; border-radius: 50%; background: var(--p33); color: #fff;
+                  font-size: 9pt; font-weight: bold; display: flex; align-items: center; justify-content: center; }
+.variant b { font-size: 10.5pt; color: var(--tyomnyy); margin: 2.5mm 0 1.5mm; line-height: 1.25; }
+.variant p { margin: 0 0 2mm; font-size: 8.6pt; line-height: 1.4; }
+.variant .chips { margin-top: auto; }
+.chip { display: inline-block; font-size: 7.4pt; background: var(--p33-svet); color: var(--p33);
+        border-radius: 1mm; padding: 0.4mm 1.6mm; margin: 0.8mm 0.8mm 0 0; }
+.chip.zakaz { background: #eef1f4; color: var(--seryy); }
+
+/* Почему «33» и что усилить */
+.otsenka { display: inline-block; font-size: 7.8pt; font-weight: bold; border-radius: 1mm; padding: 0.3mm 1.8mm; }
+.otsenka.vys { background: #dff3e6; color: #1d7a43; }
+.otsenka.sred { background: #fff2d6; color: #9a6500; }
+table.sravnenie.primen thead th.param { width: 22%; }
+table.sravnenie.primen thead th.p33 { width: auto; border-radius: 0; }
+table.sravnenie.primen thead th.posl { background: var(--p33); border-radius: 0 2mm 0 0; width: 13%; }
+table.sravnenie.primen td:first-child { color: var(--tyomnyy); font-weight: bold; }
+.dorabotki { display: grid; grid-template-columns: 1.25fr 1fr; gap: 7mm; flex: 1; }
+.dorabotki .kol h3 { font-size: 12.5pt; }
+.dorabotki .spisok { list-style: none; padding: 0; margin: 0; }
+.dorabotki .spisok li { padding: 2.2mm 0 2.2mm 0; border-top: 0.5pt solid #bcd8f0; margin: 0; font-size: 9.2pt; line-height: 1.4; }
+.dorabotki .spisok li b { color: var(--tyomnyy); }
+.dorabotki .riski { background: #fff6e0; }
+.dorabotki .riski h3 { color: #9a6500; }
+.dorabotki .riski .spisok li { border-top-color: #f0dcaa; }
+.pomet { font-size: 7.8pt; color: var(--seryy); margin: 2.5mm 0 0; }
+.oblozhka.odin.sinii { grid-template-columns: 1.1fr 1fr; }
+.oblozhka.odin.sinii .fakty { gap: 5mm; }
+.oblozhka.odin.sinii .fakty b { font-size: 12.5pt; white-space: nowrap; }
+table.sravnenie.primen { font-size: 9.6pt; }
+table.sravnenie.primen td { padding: 2.6mm 3mm; }
+.dorabotki { align-items: start; }
+.dorabotki .spisok li { font-size: 10pt; padding: 3mm 0; }
