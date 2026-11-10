@@ -216,7 +216,20 @@
   {% endif %}
 </section>
 
-{% if sess.role == "owner" %}
+{% if mine_added and not has_login %}
+<details class="panel">
+  <summary>Свой вход: {{ m.name }}</summary>
+  <form method="post" action="{{ root }}/invites/new" class="stack">
+    <input type="hidden" name="csrf" value="{{ sess.csrf }}">
+    <input type="hidden" name="member_id" value="{{ m.id }}">
+    <p>Если {{ m.name }} хочет сам заходить на свою страничку, сделай ссылку-приглашение и отправь её.
+      Вести страничку ты сможешь по-прежнему.</p>
+    <div><button type="submit">Сделать ссылку</button></div>
+  </form>
+</details>
+{% endif %}
+
+{% if can_delete %}
 <details class="panel danger-zone">
   <summary>Удалить страничку</summary>
   <form method="post" action="{{ root }}/m/{{ m.id }}/delete" class="stack">

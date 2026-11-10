@@ -136,13 +136,34 @@ def granted(user_id: int, member_id: int) -> bool:
                   (user_id, member_id)) is not None
 
 
+def added_by_me(sess: dict, member_id: int) -> bool:
+    """Страничку завёл сам вошедший (его близкие)."""
+    return bool(sess["member_id"]) and db.one(
+        "SELECT id FROM members WHERE id = ? AND added_by = ?", (member_id, sess["member_id"])) is not None
+
+
 def can_view(sess: dict, member_id: int) -> bool:
-    return owner(sess) or sess["member_id"] == member_id or granted(sess["user_id"], member_id)
+    return can_edit(sess, member_id) or granted(sess["user_id"], member_id)
 
 
 def can_edit(sess: dict, member_id: int) -> bool:
-    """Править: Светлана — всё, остальные — только свою страничку."""
-    return owner(sess) or sess["member_id"] == member_id
+    """Править: Светлана — всё, остальные — свою страничку и тех, кого добавили сами."""
+    return owner(sess) or sess["member_id"] == member_id or added_by_me(sess, member_id)
+
+
+def can_add(sess: dict) -> bool:
+    """Добавлять близких может тот, чью страничку завела Светлана (не их близкие)."""
+    if owner(sess) or not sess["member_id"]:
+        return False
+    me = db.one("SELECT added_by FROM members WHERE id = ?", (sess["member_id"],))
+    return bool(me) and me["added_by"] is None
+
+
+def my_people(sess: dict) -> list[dict]:
+    """Близкие, которых добавил вошедший."""
+    if not sess or not sess.get("member_id"):
+        return []
+    return db.rows("SELECT * FROM members WHERE added_by = ? ORDER BY id", (sess["member_id"],))
 
 
 def member_for(request: Request, member_id: int, edit: bool = False, csrf: str | None = None) -> tuple[dict, dict]:
@@ -160,3 +181,6 @@ def member_for(request: Request, member_id: int, edit: bool = False, csrf: str |
 def visible_members(sess: dict) -> list[dict]:
     members = db.rows("SELECT * FROM members ORDER BY id")
     return [m for m in members if can_view(sess, m["id"])]
+
+
+templates.env.globals["my_people"] = my_people

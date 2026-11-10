@@ -42,7 +42,8 @@ a { color: var(--accent); }
   background: var(--panel); border-bottom: 1px solid var(--line);
 }
 .brand { display: flex; align-items: center; gap: .45rem; font-weight: 700; color: var(--text); text-decoration: none; }
-.tabs { display: flex; gap: .25rem; }
+.tabs { display: flex; gap: .25rem; min-width: 0; overflow-x: auto; scrollbar-width: none; }
+.tabs::-webkit-scrollbar { display: none; }
 .tabs a { padding: .4rem .8rem; border-radius: 8px; color: var(--muted); text-decoration: none; white-space: nowrap; }
 .tabs a[aria-current="page"] { background: var(--accent-soft); color: var(--accent); font-weight: 600; }
 .logout { margin: 0 0 0 auto; }
@@ -179,6 +180,9 @@ tr.out td { background: #fff6f5; }
   .top { gap: .4rem; padding-left: .6rem; padding-right: .6rem; }
   .brand span { display: none; }
   .tabs a { padding: .4rem .6rem; }
+  /* Вкладки с именами близких — вторым рядом под шапкой, переносом, чтобы все были видны */
+  .top:has(.tabs.many) { flex-wrap: wrap; row-gap: 0; }
+  .tabs.many { order: 3; flex: 1 0 100%; flex-wrap: wrap; overflow: visible; padding-bottom: .45rem; }
   .content { padding: .75rem .65rem calc(2rem + env(safe-area-inset-bottom)); }
   .panel { padding: .85rem .8rem; }
   .grid2 { grid-template-columns: 1fr; }

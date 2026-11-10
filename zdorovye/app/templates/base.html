@@ -13,17 +13,22 @@
   <link rel="manifest" href="{{ root }}/manifest.webmanifest">
   <link rel="icon" href="{{ root }}/static/icon.svg" type="image/svg+xml">
   <link rel="apple-touch-icon" href="{{ root }}/static/icon-180.png">
-  <link rel="stylesheet" href="{{ root }}/static/site.css?v=4">
+  <link rel="stylesheet" href="{{ root }}/static/site.css?v=5">
 </head>
 <body class="{% block body_class %}{% endblock %}">
 {% block body %}
 <header class="top">
   <a class="brand" href="{{ root }}/"><img src="{{ root }}/static/icon.svg" alt="" width="28" height="28"><span>Здоровье</span></a>
   {% if sess %}
-  <nav class="tabs" aria-label="Разделы">
+  {% set people = my_people(sess) if sess.role != "owner" else [] %}
+  <nav class="tabs{% if people %} many{% endif %}" aria-label="Разделы">
     <a href="{{ root }}/" {% if active == "home" %}aria-current="page"{% endif %}>Семья</a>
     {% if sess.role == "owner" %}
     <a href="{{ root }}/access" {% if active == "access" %}aria-current="page"{% endif %}>Доступы{% if asked_total() %} <span class="badge" title="Ждут решения">{{ asked_total() }}</span>{% endif %}</a>
+    {% else %}
+    {% for p in people %}
+    <a href="{{ root }}/m/{{ p.id }}" {% if active == "m" ~ p.id %}aria-current="page"{% endif %}>{{ p.name }}</a>
+    {% endfor %}
     {% endif %}
   </nav>
   <form method="post" action="{{ root }}/logout" class="logout">

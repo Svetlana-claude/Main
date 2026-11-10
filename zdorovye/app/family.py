@@ -6,7 +6,8 @@ from fastapi import APIRouter, Form, HTTPException, Request
 
 from . import config, db, labs, organs
 from .auth import asked_count
-from .web import can_edit, member_for, need, need_owner, owner, page, parse_day, to, today, visible_members
+from .web import (added_by_me, can_add, can_edit, member_for, my_people, need, owner, page, parse_day, to,
+                  today, visible_members)
 
 router = APIRouter()
 
@@ -43,13 +44,17 @@ def home(request: Request):
     sess = need(request)
     if not owner(sess):
         mine = db.one("SELECT * FROM members WHERE id = ?", (sess["member_id"],))
-        others = db.rows("SELECT id, name FROM members WHERE id != ? ORDER BY name", (sess["member_id"],))
+        people = [{**m, **_flags(m["id"])} for m in my_people(sess)]
+        others = db.rows("SELECT id, name FROM members WHERE id != ? AND added_by IS NOT ? ORDER BY name",
+                         (sess["member_id"], sess["member_id"]))
         states = {r["member_id"]: r["state"] for r in db.rows(
             "SELECT member_id, state FROM access WHERE user_id = ? ORDER BY id", (sess["user_id"],))}
         return page(request, "home_member.html", {"sess": sess, "active": "home", "mine": mine,
-                                                  "others": others, "states": states})
+                                                  "people": people, "others": others, "states": states,
+                                                  "can_add": can_add(sess), "limit": config.ADD_LIMIT})
     members = visible_members(sess)
-    cards = [{**m, **_flags(m["id"])} for m in members]
+    names = {m["id"]: m["name"] for m in members}
+    cards = [{**m, **_flags(m["id"]), "adder": names.get(m["added_by"], "")} for m in members]
     return page(request, "home.html", {"sess": sess, "active": "home", "cards": cards,
                                        "asked": asked_count()})
 
@@ -57,12 +62,23 @@ def home(request: Request):
 @router.post("/members/new", name="member_new")
 def member_new(request: Request, name: str = Form(""), birth_date: str = Form(""),
                sex: str = Form(""), csrf: str = Form("")):
-    need_owner(request, csrf)
+    sess = need(request, csrf)
+    if not owner(sess) and not can_add(sess):
+        raise HTTPException(403, "Добавлять людей могут Светлана и те, кого добавила она")
     name = name.strip()[:80]
     if not name:
         raise HTTPException(400, "Нужно имя")
-    member_id = db.insert("INSERT INTO members (name, birth_date, sex, created_at) VALUES (?, ?, ?, ?)",
-                          (name, _clean_day(birth_date), sex if sex in ("ж", "м") else "", db.now()))
+    added_by = None if owner(sess) else sess["member_id"]
+    with db.tx() as con:
+        # Подсчёт и запись разом: два нажатия подряд не проскочат за предел
+        con.execute("BEGIN IMMEDIATE")
+        if added_by is not None and con.execute("SELECT count(*) FROM members WHERE added_by = ?",
+                                                (added_by,)).fetchone()[0] >= config.ADD_LIMIT:
+            raise HTTPException(400, f"Можно добавить не больше {config.ADD_LIMIT} человек")
+        member_id = con.execute("INSERT INTO members (name, birth_date, sex, created_at, added_by) "
+                                "VALUES (?, ?, ?, ?, ?)",
+                                (name, _clean_day(birth_date), sex if sex in ("ж", "м") else "", db.now(),
+                                 added_by)).lastrowid
     return to(request, "member", member_id=member_id)
 
 
@@ -76,7 +92,11 @@ def member_page(request: Request, member_id: int):
     latest = labs.latest(member_id)
     assessment = organs.assessment_of(member_id)
     return page(request, "member.html", {
-        "sess": sess, "active": "home", "m": member, "edit": can_edit(sess, member_id),
+        "sess": sess, "active": f"m{member_id}" if added_by_me(sess, member_id) else "home",
+        "m": member, "edit": can_edit(sess, member_id),
+        "can_delete": owner(sess) or added_by_me(sess, member_id),
+        "mine_added": added_by_me(sess, member_id),
+        "has_login": db.one("SELECT id FROM users WHERE member_id = ?", (member_id,)) is not None,
         "ill": ill, "ill_stats": illness_stats(ill), "vac": vac,
         "latest": latest, "docs": labs.docs_of(member_id),
         "body": {o["id"]: o for o in organs.state_of(member, latest, ill, assessment)},
@@ -100,7 +120,9 @@ async def member_profile(request: Request, member_id: int):
 
 @router.post("/m/{member_id}/delete", name="member_delete")
 def member_delete(request: Request, member_id: int, sure: str = Form(""), csrf: str = Form("")):
-    need_owner(request, csrf)
+    sess = need(request, csrf)
+    if not owner(sess) and not added_by_me(sess, member_id):
+        raise HTTPException(403, "Удалить может Светлана или тот, кто добавил")
     if sure != "да":
         raise HTTPException(400, "Поставь галочку «Да, удалить насовсем»")
     files = [r["file"] for r in db.rows("SELECT file FROM docs WHERE member_id = ?", (member_id,))]

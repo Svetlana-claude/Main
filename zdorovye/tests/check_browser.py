@@ -207,6 +207,43 @@ def invite_flow(pw, base: str, ctx, page, kind: str, size: dict, mobile: bool):
     expect(other.locator("h1")).to_have_text("Не получилось")
 
 
+def family_flow(pw, base: str, page, kind: str, size: dict, mobile: bool, login: str):
+    """Мама, которую добавила Светлана, заводит пятерых детей; вкладки с их именами наверху."""
+    page.goto(f"{base}/")
+    page.click("summary:has-text('Добавить члена семьи')")
+    page.fill("form[action$='/members/new'] input[name=name]", "Мама")
+    page.click("form[action$='/members/new'] button")
+    page.goto(f"{base}/access")
+    page.select_option("select[name=member_id]", label="Мама")
+    page.click("text=Сделать ссылку")
+    link = base + "/join/" + page.input_value("#invite").rsplit("/join/", 1)[1]
+
+    mom = pw.chromium.launch().new_context(viewport=size, is_mobile=mobile, has_touch=mobile).new_page()
+    mom.goto(link)
+    mom.fill("input[name=login]", login)
+    mom.fill("input[name=password]", PASSWORD)
+    mom.fill("input[name=password2]", PASSWORD)
+    mom.click("button[type=submit]")
+    names = ["Маша", "Константин", "Елизавета", "Петя", "Александра"]
+    for n in names:
+        mom.goto(f"{base}/")
+        mom.click("summary:has-text('Добавить человека')")
+        mom.fill("form[action$='/members/new'] input[name=name]", n)
+        mom.fill("form[action$='/members/new'] input[name=birth_date]", "2016-04-12")
+        mom.click("form[action$='/members/new'] button")
+        expect(mom.locator("h1")).to_contain_text(n)
+    for n in names:
+        expect(mom.locator(f".tabs a:has-text('{n}')")).to_have_count(1)
+    expect(mom.locator(".tabs a[aria-current=page]")).to_have_text("Александра")
+    shot(mom, f"{kind}-9-mama-rebenok")
+    mom.goto(f"{base}/")
+    expect(mom.locator("text=Добавлено 5 из 5")).to_be_visible()
+    shot(mom, f"{kind}-9b-mama-blizkie")
+    page.goto(f"{base}/")
+    expect(page.locator("text=Добавил(а): Мама").first).to_be_visible()
+    shot(page, f"{kind}-9c-semya-u-svetlany")
+
+
 def main() -> None:
     SHOTS.mkdir(exist_ok=True)
     proc, base, token, secret = start_site()
@@ -214,8 +251,10 @@ def main() -> None:
         with sync_playwright() as pw:
             ctx, page, _ = owner_flow(pw, base, token, secret, "pc", {"width": 1280, "height": 900}, False, True)
             invite_flow(pw, base, ctx, page, "pc", {"width": 1280, "height": 900}, False)
+            family_flow(pw, base, page, "pc", {"width": 1280, "height": 900}, False, "mama-pc")
             time.sleep(31)          # новый код для второго входа
             ctx, page, _ = owner_flow(pw, base, token, secret, "phone", {"width": 390, "height": 844}, True, False)
+            family_flow(pw, base, page, "phone", {"width": 390, "height": 844}, True, "mama-phone")
     finally:
         proc.terminate()
     if errors:

@@ -10,6 +10,7 @@
   <a class="person" href="{{ root }}/m/{{ c.id }}">
     <span class="person-name">{{ c.name }}</span>
     <span class="muted small">{{ age(c.birth_date) }}{% if c.allergies %} · аллергия{% endif %}</span>
+    {% if c.adder %}<span class="muted small">Добавил(а): {{ c.adder }}</span>{% endif %}
     {% if c.out %}<span class="chip out">Вне нормы: {{ c.out|length }}</span>{% endif %}
     {% for v in c.vac %}<span class="chip warn">Прививка: {{ v.name }} — {{ v.next_due|day }}</span>{% endfor %}
     {% if not c.out and not c.vac %}<span class="chip ok">Всё спокойно</span>{% endif %}

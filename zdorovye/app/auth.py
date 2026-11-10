@@ -9,8 +9,8 @@ import segno
 from fastapi import APIRouter, Form, HTTPException, Request
 
 from . import config, db, security
-from .web import (client_ip, csrf_ok, current, need, need_owner, page, same_origin, templates,
-                  set_cookie, to)
+from .web import (added_by_me, can_view, client_ip, csrf_ok, current, need, need_owner, owner, page,
+                  same_origin, templates, set_cookie, to)
 
 router = APIRouter()
 log = logging.getLogger("uvicorn.error")
@@ -182,7 +182,10 @@ def _invite(token: str) -> dict | None:
 
 @router.post("/invites/new", name="invite_new")
 def invite_new(request: Request, member_id: int = Form(...), csrf: str = Form("")):
-    need_owner(request, csrf)
+    sess = need(request, csrf)
+    # Светлана — любому; остальные — только своим близким
+    if not owner(sess) and not added_by_me(sess, member_id):
+        raise HTTPException(403, "Приглашать может Светлана или тот, кто добавил человека")
     if not db.one("SELECT id FROM members WHERE id = ?", (member_id,)):
         raise HTTPException(404, "Такого человека нет")
     if db.one("SELECT id FROM users WHERE member_id = ?", (member_id,)):
@@ -196,7 +199,8 @@ def invite_new(request: Request, member_id: int = Form(...), csrf: str = Form(""
                (created + timedelta(days=config.INVITE_DAYS)).isoformat()))
     link = f"{config.SITE_URL}{config.ROOT_PATH}/join/{token}"
     # Ссылка показывается один раз: в базе её не осталось
-    return page(request, "invite_link.html", {"sess": need(request), "active": "access", "link": link,
+    return page(request, "invite_link.html", {"sess": sess, "active": "access" if owner(sess) else f"m{member_id}",
+                                              "link": link,
                                               "member": db.one("SELECT * FROM members WHERE id = ?", (member_id,)),
                                               "days": config.INVITE_DAYS})
 
@@ -257,7 +261,7 @@ def join(request: Request, token: str, login: str = Form(""), password: str = Fo
 @router.post("/access/ask", name="access_ask")
 def access_ask(request: Request, member_id: int = Form(...), csrf: str = Form("")):
     sess = need(request, csrf)
-    if sess["role"] == "owner" or sess["member_id"] == member_id:
+    if sess["role"] == "owner" or can_view(sess, member_id):
         return to(request, "home")
     if not db.one("SELECT id FROM members WHERE id = ?", (member_id,)):
         raise HTTPException(404, "Такого человека нет")

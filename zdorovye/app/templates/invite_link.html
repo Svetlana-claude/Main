@@ -9,6 +9,6 @@
     <input id="invite" value="{{ link }}" readonly aria-label="Ссылка-приглашение">
     <button type="button" class="primary" data-copy="invite">Скопировать</button>
   </div>
-  <p><a href="{{ root }}/access">Готово</a></p>
+  <p><a href="{{ root }}/{% if sess.role == 'owner' %}access{% else %}m/{{ member.id }}{% endif %}">Готово</a></p>
 </section>
 {% endblock %}

@@ -6,6 +6,43 @@
 <p><a class="person wide" href="{{ root }}/m/{{ mine.id }}"><span class="person-name">{{ mine.name }}</span>
   <span class="muted small">Открыть</span></a></p>
 {% endif %}
+{% if can_add or people %}
+<h2>Мои близкие</h2>
+{% if people %}
+<div class="cards">
+  {% for c in people %}
+  <a class="person" href="{{ root }}/m/{{ c.id }}">
+    <span class="person-name">{{ c.name }}</span>
+    <span class="muted small">{{ age(c.birth_date) }}{% if c.allergies %} · аллергия{% endif %}</span>
+    {% if c.out %}<span class="chip out">Вне нормы: {{ c.out|length }}</span>{% endif %}
+    {% for v in c.vac %}<span class="chip warn">Прививка: {{ v.name }} — {{ v.next_due|day }}</span>{% endfor %}
+    {% if not c.out and not c.vac %}<span class="chip ok">Всё спокойно</span>{% endif %}
+  </a>
+  {% endfor %}
+</div>
+{% else %}
+<p class="muted small">Сюда можно добавить тех, за чьим здоровьем ты следишь, — например, детей.</p>
+{% endif %}
+{% if can_add %}
+{% set left = limit - people|length %}
+{% if left > 0 %}
+<details class="panel add">
+  <summary>Добавить человека <span class="muted small">(можно ещё {{ left }} из {{ limit }})</span></summary>
+  <form method="post" action="{{ root }}/members/new" class="grid2">
+    <input type="hidden" name="csrf" value="{{ sess.csrf }}">
+    <label>Имя <input name="name" required maxlength="80"></label>
+    <label>Дата рождения <input name="birth_date" type="date"></label>
+    <label>Пол
+      <select name="sex"><option value="">—</option><option value="ж">женский</option><option value="м">мужской</option></select>
+    </label>
+    <div class="actions"><button type="submit" class="primary">Добавить</button></div>
+  </form>
+</details>
+{% else %}
+<p class="muted small">Добавлено {{ limit }} из {{ limit }} — больше нельзя. Чтобы добавить другого, удали кого-то на его страничке.</p>
+{% endif %}
+{% endif %}
+{% endif %}
 {% if others %}
 <h2>Остальные</h2>
 <p class="muted small">Чужую страничку можно посмотреть, если Светлана откроет доступ.</p>

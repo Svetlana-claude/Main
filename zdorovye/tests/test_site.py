@@ -395,3 +395,64 @@ def test_body_assess_needs_edit_rights(site):
     m, _ = join(invite(site, own), "figurka")
     mc = hidden(m.get("/").text, "csrf")
     assert m.post(f"/m/{other}/assess", data={"csrf": mc}).status_code == 404
+
+
+# ── Близкие: добавленные Светланой добавляют до 5 своих ─────────────────
+
+def test_member_adds_own_people(site):
+    mom = add_member(site, "Мама")
+    stranger = add_member(site, "Тётя")
+    m, _ = join(invite(site, mom), "mama")
+    home = m.get("/").text
+    assert "Мои близкие" in home and "можно ещё 5 из 5" in home
+
+    kids = [add_member(m, f"Ребёнок {i}", "2018-01-0" + str(i)) for i in range(1, 6)]
+    home = m.get("/").text
+    assert "Добавлено 5 из 5" in home and "Добавить человека" not in home
+    # Вкладки с именами наверху
+    for i in range(1, 6):
+        assert f'href="/m/{kids[i - 1]}"' in home.split("</nav>")[0] and f"Ребёнок {i}" in home.split("</nav>")[0]
+    mc = hidden(home, "csrf")
+    # Шестой — нельзя
+    r = m.post("/members/new", data={"name": "Шестой", "csrf": mc})
+    assert r.status_code == 400
+    assert db.one("SELECT count(*) AS n FROM members WHERE added_by = ?", (mom,))["n"] == 5
+
+    # Своих ведёт: смотрит, правит, болезни, прививки
+    k = kids[0]
+    page = m.get(f"/m/{k}").text
+    assert 'aria-current="page">Ребёнок 1' in page
+    assert m.post(f"/m/{k}/profile", data={"name": "Ребёнок 1", "allergies": "орехи", "csrf": mc}).status_code == 303
+    assert m.post(f"/m/{k}/ill", data={"started": "2026-10-01", "title": "ОРВИ", "csrf": mc}).status_code == 303
+    assert m.post(f"/m/{k}/vac", data={"name": "Корь", "csrf": mc}).status_code == 303
+    assert "орехи" in m.get(f"/m/{k}").text
+    # Чужое по-прежнему закрыто
+    assert m.get(f"/m/{stranger}").status_code == 404
+    assert m.post(f"/m/{stranger}/delete", data={"sure": "да", "csrf": mc}).status_code == 403
+    assert m.post("/invites/new", data={"member_id": stranger, "csrf": mc}).status_code == 403
+
+    # Светлана видит всех и кто добавил
+    owner_home = site.get("/").text
+    assert "Ребёнок 3" in owner_home and "Добавил(а): Мама" in owner_home
+
+    # Удалила одного — место освободилось
+    assert m.post(f"/m/{kids[4]}/delete", data={"sure": "да", "csrf": mc}).status_code == 303
+    assert "можно ещё 1 из 5" in m.get("/").text
+
+    # Ребёнку — свой вход; он видит только себя и сам добавлять не может
+    r = m.post("/invites/new", data={"member_id": k, "csrf": mc})
+    assert r.status_code == 200 and f'href="/m/{k}"' in r.text
+    token = re.search(r"/join/([\w-]+)", r.text).group(1)
+    kid, r = join(token, "rebenok1")
+    assert r.status_code == 303
+    kc = hidden(kid.get("/").text, "csrf")
+    assert "Добавить человека" not in kid.get("/").text
+    assert kid.post("/members/new", data={"name": "Внук", "csrf": kc}).status_code == 403
+    assert kid.get(f"/m/{kids[1]}").status_code == 404
+    assert kid.get(f"/m/{mom}").status_code == 404
+    # Мама по-прежнему ведёт его страничку
+    assert m.post(f"/m/{k}/profile", data={"name": "Ребёнок 1", "csrf": mc}).status_code == 303
+
+    # Близкие чужих — не в списке «Остальные» у самой мамы, а у других — с запросом доступа
+    other, _ = join(invite(site, stranger), "tetya")
+    assert "Ребёнок 2" in other.get("/").text and other.get(f"/m/{kids[1]}").status_code == 404

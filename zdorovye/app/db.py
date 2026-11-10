@@ -18,7 +18,11 @@ CREATE TABLE IF NOT EXISTS members (
     medicines   TEXT NOT NULL DEFAULT '',
     vitamins    TEXT NOT NULL DEFAULT '',
     notes       TEXT NOT NULL DEFAULT '',
-    created_at  TEXT NOT NULL
+    created_at  TEXT NOT NULL,
+    -- Кто завёл страничку: NULL — Светлана, иначе страничка того, кто добавил
+    -- (близкие: до config.ADD_LIMIT на человека, ведёт их он сам). По страничке,
+    -- а не по входу: новый вход по новому приглашению не теряет своих близких
+    added_by    INTEGER REFERENCES members(id) ON DELETE SET NULL
 );
 -- Входы. role: owner (Светлана, видит всех) | member (только свою страничку
 -- и те, к которым Светлана открыла доступ)
@@ -160,6 +164,9 @@ def init() -> None:
     config.FILES_DIR.mkdir(parents=True, exist_ok=True, mode=0o700)
     with tx() as con:
         con.executescript(SCHEMA)
+        # Базы до «близких»: столбца «кто добавил» ещё нет
+        if "added_by" not in {r[1] for r in con.execute("PRAGMA table_info(members)")}:
+            con.execute("ALTER TABLE members ADD COLUMN added_by INTEGER REFERENCES members(id) ON DELETE SET NULL")
         con.execute("PRAGMA journal_mode = WAL")
         # Разбор, прерванный перезапуском сайта, не продолжится сам
         con.execute("UPDATE docs SET state = 'error', error = 'Разбор прервался — нажми «Разобрать ещё раз»' "
