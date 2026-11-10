@@ -7,6 +7,14 @@
 ---
 
 
+## 10.11.2026 — Разбор пяти навыков для дизайна сайтов
+
+**Статус:** выполнено, разбор в переписке; ничего не установлено
+
+**Суть:** по пяти снимкам `glavpryg-sayt/downloads/photo_2026-11-10_16-22-*.jpg` найти на GitHub и разобрать навыки для дизайна.
+
+**Ход:** скачаны во временную папку `/tmp/vneshnee/dizayn`, прочитаны, не запускались. Leonxlnx/taste-skill (MIT) — строит новые лендинги по жёстким правилам; правило «без ИНН, без настоящего телефона», Google Fonts и jsdelivr противоречат юр. требованиям Главпрыга; ставит хук на каждый ответ. pbakaus/impeccable (Apache-2.0) — работает с готовыми страницами (critique, audit, polish), подкачивает движок с GitHub со сверкой контрольных сумм — лучший кандидат. VoltAgent/awesome-design-md (MIT) — 84 описания дизайна брендов в DESIGN.md; идея — свой DESIGN.md для Главпрыга. microsoft/playwright-cli (Apache-2.0) — у нас уже Playwright. img2threejs 2.0.1 — уже стоит в `~/.claude/skills`. «Да» на проверку /pre-release по glavprig.ru — в `current_questions.md`.
+
 ## 09.11.2026 — Разбор навыка /pre-release (LenaWhynot/whynot-skills)
 
 **Статус:** выполнено, разбор в переписке
