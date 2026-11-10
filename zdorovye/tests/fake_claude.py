@@ -5,9 +5,17 @@ import json
 import os
 import sys
 
-sys.stdin.read()
+prompt = sys.stdin.read()
 mode = os.environ.get("FAKE_MODE", "ok")
-if mode == "empty":
+if "Оцени по органам" in prompt:
+    answer = {"general": "В целом спокойно, но печень стоит проверить.",
+              "organs": {"liver": {"level": 2, "summary": "АЛТ заметно выше нормы",
+                                   "questions": ["Были ли недавно лекарства или алкоголь?"],
+                                   "suggestions": ["Пересдать АЛТ и АСТ через 2 недели", "Показаться терапевту"]},
+                         "brain": {"level": None, "summary": "", "questions": ["Бывают ли головные боли?"],
+                                   "suggestions": []},
+                         "nonsense": {"level": 5}}}
+elif mode == "empty":
     answer = {"date": "", "lab": "", "items": []}
 else:
     answer = {"date": os.environ.get("FAKE_DATE", "2026-10-01"), "lab": "Тест-Лаб", "items": [

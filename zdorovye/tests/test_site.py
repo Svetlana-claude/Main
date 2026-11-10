@@ -324,3 +324,74 @@ def test_setup_qr_scales_whole():
     from app import auth
     svg = auth._qr_svg("A" * 32)
     assert "viewBox" in svg and 'width="' not in svg.split(">", 1)[0]
+
+
+# ── Фигурка ──────────────────────────────────────────────────────────────
+
+def save_labs(c, mid: int, rows: list[tuple], taken: str = "2026-10-01") -> None:
+    doc_id = upload(c, mid, FAKE_MODE="ok")
+    wait_parsed(doc_id)
+    form = {"csrf": csrf(c), "taken_on": taken, "lab": "",
+            "name": [r[0] for r in rows], "value": [r[1] for r in rows], "unit": ["" for _ in rows],
+            "low": [r[2] for r in rows], "high": [r[3] for r in rows], "ref_text": ["" for _ in rows]}
+    assert c.post(f"/m/{mid}/docs/{doc_id}/save", data=form).status_code == 303
+
+
+def organ_class(page: str, oid: str) -> str:
+    return re.search(rf'<g class="([^"]+)" data-organ="{oid}"', page).group(1)
+
+
+def test_body_colors_by_rules(site):
+    from app import organs
+    assert organs.severity({"value": 45, "low": 0, "high": 40}) == 1
+    assert organs.severity({"value": 80, "low": 0, "high": 40}) == 2
+    assert organs.severity({"value": 35, "low": None, "high": 20}) == 2
+    assert organs.severity({"value": 20, "low": 30, "high": None}) == 1
+    assert organs.organ_of_lab("лейкоциты в моче") == "kidneys" and organs.organ_of_lab("лейкоциты") == "blood"
+
+    mid = add_member(site, "Фигурка")
+    page = site.get(f"/m/{mid}").text
+    assert 'class="body-figure"' in page and page.count('<article class="organ-panel') == 12
+    assert "nodata" in organ_class(page, "liver") and "Обычно смотрят: АЛТ" in page
+
+    save_labs(site, mid, [("АЛТ", "45", "0", "40"), ("Гемоглобин", "135", "120", "140"), ("ТТГ", "9", "0,4", "4")])
+    page = site.get(f"/m/{mid}").text
+    assert organ_class(page, "liver") == "organ lvl-1"
+    assert organ_class(page, "blood") == "organ lvl-0"
+    assert organ_class(page, "thyroid") == "organ lvl-2"
+    assert "nodata" in organ_class(page, "heart")
+    assert re.search(r'data-organ="liver"\s+data-name="Печень" data-line="Вне нормы: АЛТ"', page)
+
+    c = csrf(site)
+    site.post(f"/m/{mid}/ill", data={"title": "Гастрит", "started": "2026-11-01", "csrf": c})
+    assert organ_class(site.get(f"/m/{mid}").text, "stomach") == "organ lvl-1"
+
+
+def test_body_assessment(site):
+    mid = add_member(site, "Оценка")
+    save_labs(site, mid, [("АЛТ", "45", "0", "40")])
+    assert site.post(f"/m/{mid}/assess", data={"csrf": csrf(site)}).status_code == 303
+    import time
+    for _ in range(100):
+        row = db.one("SELECT state FROM assessments WHERE member_id = ?", (mid,))
+        if row["state"] != "running":
+            break
+        time.sleep(0.1)
+    assert row["state"] == "ready"
+    page = site.get(f"/m/{mid}").text
+    assert organ_class(page, "liver") == "organ lvl-2"          # Claude поднял до «скорее к врачу»
+    assert "Пересдать АЛТ и АСТ через 2 недели" in page and "Бывают ли головные боли?" in page
+    assert "печень стоит проверить" in page and "Оценить заново" in page
+    # Без данных органа уровень Claude не красит: мозг остаётся бледным, с вопросом
+    assert "nodata" in organ_class(page, "brain")
+    # Новые данные — оценка помечается устаревшей
+    site.post(f"/m/{mid}/ill", data={"title": "ОРВИ", "started": "2026-11-05", "csrf": csrf(site)})
+    assert "оценку стоит обновить" in site.get(f"/m/{mid}").text
+
+
+def test_body_assess_needs_edit_rights(site):
+    own = add_member(site, "Своя фигурка")
+    other = add_member(site, "Чужая фигурка")
+    m, _ = join(invite(site, own), "figurka")
+    mc = hidden(m.get("/").text, "csrf")
+    assert m.post(f"/m/{other}/assess", data={"csrf": mc}).status_code == 404

@@ -3,8 +3,72 @@
 {% block content %}
 <h1>{{ m.name }} <span class="muted small">{{ age(m.birth_date) }}</span></h1>
 <nav class="jump" aria-label="Разделы странички">
-  <a href="#labs">Анализы</a><a href="#ill">Болезни</a><a href="#vac">Прививки</a><a href="#about">Основное</a>
+  <a href="#body">Организм</a><a href="#labs">Анализы</a><a href="#ill">Болезни</a><a href="#vac">Прививки</a><a href="#about">Основное</a>
 </nav>
+
+<section class="panel" id="body">
+  <h2>Организм</h2>
+  {% set a = assessment %}
+  {% if a and a.state == "running" %}
+    <p class="note" data-reload="8">Claude оценивает данные — обычно минута-две. Страница обновится сама.</p>
+  {% elif a and a.state == "error" %}
+    <p class="note err">Оценка не получилась: {{ a.error }}</p>
+  {% endif %}
+  {% if a and a.general %}<p class="general">{{ a.general }}{% if a.stale %} <span class="chip warn">данные изменились — оценку стоит обновить</span>{% endif %}</p>{% endif %}
+  <div class="body-grid">
+    <div class="body-wrap">
+      {% include "_body.html" %}
+      <div class="tip" id="organ-tip" hidden></div>
+      <p class="legend small"><span><span class="sw lvl-0"></span>в порядке</span> <span><span class="sw lvl-1"></span>есть отклонения</span>
+        <span><span class="sw lvl-2"></span>скорее к врачу</span> <span><span class="sw nodata"></span>нет данных</span> <span><span class="q">?</span> не хватает данных</span></p>
+    </div>
+    <div class="organ-panels">
+      <p class="muted organ-hint" id="organ-hint">Нажми на орган — здесь появится, что о нём известно, вопросы и что стоит сделать.</p>
+      {% for oid, o in body.items() %}
+      <article class="organ-panel lvl-{{ o.level }}" id="organ-{{ oid }}" hidden>
+        <h3>{{ o.name }}</h3>
+        <p class="muted small">{{ o.about }}</p>
+        <p class="state"><span class="sw lvl-{{ o.level }}{% if not o.has_data %} nodata{% endif %}"></span>{{ o.line }}</p>
+        {% if o.labs %}
+        <table class="results">
+          <tbody>
+          {% for r in o.labs %}
+          <tr class="{{ 'out' if r.sev }}">
+            <td><a href="{{ root }}/m/{{ m.id }}/chart?key={{ r.key|urlencode }}">{{ r.name }}</a></td>
+            <td class="val">{{ r.value|num if r.value is not none else r.value_text }} {{ r.unit }}{% if r.sev == 2 %} <span class="chip out">сильно</span>{% elif r.sev %} <span class="chip warn">{{ r.flag }}</span>{% endif %}</td>
+            <td class="muted small">{{ r.taken_on|day }}</td>
+          </tr>
+          {% endfor %}
+          </tbody>
+        </table>
+        {% endif %}
+        {% if o.ill %}
+        <p class="small"><b>Болезни:</b> {% for i in o.ill %}{{ i.title }} ({{ i.started|day }}){% if not loop.last %}, {% endif %}{% endfor %}</p>
+        {% endif %}
+        {% if o.questions %}
+        <h4>Вопросы</h4>
+        <ul>{% for q in o.questions %}<li>{{ q }}</li>{% endfor %}</ul>
+        {% elif not o.has_data %}
+        <h4>Вопросы</h4>
+        <ul><li>Данных пока нет. Обычно смотрят: {{ o.usual }}.</li></ul>
+        {% endif %}
+        {% if o.suggestions %}
+        <h4>Что стоит сделать</h4>
+        <ul>{% for s in o.suggestions %}<li>{{ s }}</li>{% endfor %}</ul>
+        {% endif %}
+      </article>
+      {% endfor %}
+    </div>
+  </div>
+  {% if edit %}
+  <form method="post" action="{{ root }}/m/{{ m.id }}/assess" class="assess">
+    <input type="hidden" name="csrf" value="{{ sess.csrf }}">
+    <button type="submit" {% if a and a.state == "running" %}disabled{% endif %}>{% if a and a.state == "ready" %}Оценить заново{% else %}Оценить{% endif %}</button>
+    <span class="muted small">Claude посмотрит все данные и напишет по каждому органу вопросы и что стоит сделать. {% if a and a.state == "ready" %}Последняя оценка — {{ a.created_at|moment }}.{% endif %}</span>
+  </form>
+  {% endif %}
+  <p class="muted small">Это подсказки, чтобы ничего не упустить, а не диагноз. Решения о лечении — с врачом.</p>
+</section>
 
 <section class="panel" id="labs">
   <h2>Анализы</h2>

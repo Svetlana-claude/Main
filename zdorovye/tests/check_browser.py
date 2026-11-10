@@ -130,6 +130,25 @@ def owner_flow(pw, base: str, token: str, secret: str, kind: str, size: dict, mo
     expect(page.locator("h1")).to_contain_text(name)
     expect(page.locator("tr.out").first).to_contain_text("Гемоглобин")
 
+    # Фигурка: кровь жёлтая (гемоглобин ниже нормы), подсказка и блок органа
+    blood = page.locator('.organ[data-organ="blood"]')
+    if "lvl-1" not in (blood.get_attribute("class") or ""):
+        errors.append(f"{kind}: кровь не жёлтая при низком гемоглобине")
+    if not mobile:
+        page.locator('.organ[data-organ="liver"]').hover()
+        expect(page.locator("#organ-tip")).to_contain_text("Печень")
+        page.locator("#body").screenshot(path=str(SHOTS / f"{kind}-2b-figura-navedenie.png"))
+    page.locator('.organ[data-organ="blood"]').click()
+    expect(page.locator("#organ-blood")).to_be_visible()
+    expect(page.locator("#organ-blood")).to_contain_text("Гемоглобин")
+    page.locator("#body").screenshot(path=str(SHOTS / f"{kind}-2c-figura-krov.png"))
+    page.click("button:has-text('Оценить')")
+    expect(page.locator(".general")).to_contain_text("печень", timeout=30000)
+    page.locator('.organ[data-organ="liver"]').click()
+    expect(page.locator("#organ-liver")).to_contain_text("Пересдать АЛТ")
+    no_side_scroll(page, f"{kind}-figura")
+    page.locator("#body").screenshot(path=str(SHOTS / f"{kind}-2d-figura-ocenka.png"))
+
     # Болезнь и прививка
     page.click("summary:has-text('Записать болезнь')")
     page.fill("form[action$='/ill'] input[name=title]", "ОРВИ")
@@ -144,7 +163,7 @@ def owner_flow(pw, base: str, token: str, secret: str, kind: str, size: dict, mo
     expect(page.locator("#vac")).to_contain_text("скоро")
     shot(page, f"{kind}-3-stranichka")
 
-    page.click("text=Гемоглобин")
+    page.click("#labs table >> text=Гемоглобин")
     expect(page.locator("svg.chart")).to_be_visible()
     shot(page, f"{kind}-4-grafik")
 

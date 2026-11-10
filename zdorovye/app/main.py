@@ -6,7 +6,7 @@ from fastapi.responses import FileResponse, HTMLResponse, JSONResponse
 from fastapi.staticfiles import StaticFiles
 from starlette.exceptions import HTTPException as StarletteHTTPException
 
-from . import auth, config, db, family, kopii, labs
+from . import auth, config, db, family, kopii, labs, organs
 from .web import NeedLogin, current, page, to
 
 
@@ -24,6 +24,7 @@ app.include_router(auth.router)
 app.include_router(family.router)
 app.include_router(labs.router)
 app.include_router(kopii.router)
+app.include_router(organs.router)
 
 CSP = ("default-src 'self'; img-src 'self' data: blob:; style-src 'self'; script-src 'self'; "
        "object-src 'none'; frame-src 'self'; frame-ancestors 'self'; base-uri 'none'; form-action 'self'")

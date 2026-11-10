@@ -121,6 +121,16 @@ CREATE TABLE IF NOT EXISTS results (
     ref_text   TEXT NOT NULL DEFAULT ''
 );
 CREATE INDEX IF NOT EXISTS results_member ON results (member_id, key, taken_on);
+-- Оценка Claude по органам: одна на человека. state: running | ready | error.
+-- print — отпечаток данных на момент оценки: не совпал — оценка устарела
+CREATE TABLE IF NOT EXISTS assessments (
+    member_id  INTEGER PRIMARY KEY REFERENCES members(id) ON DELETE CASCADE,
+    state      TEXT NOT NULL,
+    data       TEXT NOT NULL DEFAULT '',
+    print      TEXT NOT NULL DEFAULT '',
+    error      TEXT NOT NULL DEFAULT '',
+    created_at TEXT NOT NULL
+);
 """
 
 
@@ -154,6 +164,8 @@ def init() -> None:
         # Разбор, прерванный перезапуском сайта, не продолжится сам
         con.execute("UPDATE docs SET state = 'error', error = 'Разбор прервался — нажми «Разобрать ещё раз»' "
                     "WHERE state = 'parsing'")
+        con.execute("UPDATE assessments SET state = CASE WHEN data = '' THEN 'error' ELSE 'ready' END, "
+                    "error = 'Оценка прервалась — нажми «Оценить» ещё раз' WHERE state = 'running'")
     config.DB_PATH.chmod(0o600)
 
 

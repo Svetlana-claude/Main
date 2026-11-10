@@ -4,7 +4,7 @@ from datetime import timedelta
 
 from fastapi import APIRouter, Form, HTTPException, Request
 
-from . import config, db, labs
+from . import config, db, labs, organs
 from .auth import asked_count
 from .web import can_edit, member_for, need, need_owner, owner, page, parse_day, to, today, visible_members
 
@@ -73,11 +73,14 @@ def member_page(request: Request, member_id: int):
     vac = db.rows("SELECT * FROM vaccines WHERE member_id = ? ORDER BY done_on DESC, id DESC", (member_id,))
     for v in vac:
         v["state"] = vaccine_state(v["next_due"])
+    latest = labs.latest(member_id)
+    assessment = organs.assessment_of(member_id)
     return page(request, "member.html", {
         "sess": sess, "active": "home", "m": member, "edit": can_edit(sess, member_id),
         "ill": ill, "ill_stats": illness_stats(ill), "vac": vac,
-        "latest": labs.latest(member_id), "docs": labs.docs_of(member_id),
-        "today": today().isoformat()})
+        "latest": latest, "docs": labs.docs_of(member_id),
+        "body": {o["id"]: o for o in organs.state_of(member, latest, ill, assessment)},
+        "assessment": assessment, "today": today().isoformat()})
 
 
 @router.post("/m/{member_id}/profile", name="member_profile")
