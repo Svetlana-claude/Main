@@ -1,0 +1,75 @@
+{
+ "cx0": 0.0069,
+ "kachestvo": 29.5,
+ "varianty": {
+  "elektro": {
+   "imya": "Электрический",
+   "m_du": 1.0,
+   "m_energ": 13.0,
+   "skorost_kreys": 95,
+   "dalnost": 800,
+   "vremya": 8.4,
+   "dalnost_lo": 800,
+   "dalnost_hi": 800,
+   "po_nagruzke": {
+    "1.5": 800,
+    "3.0": 708,
+    "5.0": 585
+   }
+  },
+  "benzin": {
+   "imya": "ДВС с инжектором, бензин",
+   "m_du": 3.2,
+   "m_energ": 10.8,
+   "skorost_kreys": 95,
+   "dalnost": 6970,
+   "vremya": 73.4,
+   "dalnost_lo": 5034,
+   "dalnost_hi": 8237,
+   "vremya_lo": 53.0,
+   "vremya_hi": 86.7,
+   "po_nagruzke": {
+    "1.5": 6970,
+    "3.0": 5777,
+    "5.0": 4310
+   },
+   "nagr_24ch": 8.1
+  },
+  "kerosin": {
+   "imya": "ДВС на керосине",
+   "m_du": 4.0,
+   "m_energ": 10.0,
+   "skorost_kreys": 95,
+   "dalnost": 5138,
+   "vremya": 54.1,
+   "dalnost_lo": 4110,
+   "dalnost_hi": 5872,
+   "vremya_lo": 43.3,
+   "vremya_hi": 61.8,
+   "po_nagruzke": {
+    "1.5": 5138,
+    "3.0": 4204,
+    "5.0": 3056
+   },
+   "nagr_24ch": 6.5
+  },
+  "reaktiv": {
+   "imya": "Реактивный (малый ТРД)",
+   "m_du": 2.5,
+   "m_energ": 11.5,
+   "skorost_kreys": 150,
+   "dalnost": 710,
+   "vremya": 4.7,
+   "dalnost_lo": 508,
+   "dalnost_hi": 845,
+   "vremya_lo": 3.4,
+   "vremya_hi": 5.6,
+   "po_nagruzke": {
+    "1.5": 710,
+    "3.0": 612,
+    "5.0": 484
+   },
+   "nagr_24ch": 0.0
+  }
+ }
+}

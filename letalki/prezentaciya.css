@@ -220,3 +220,128 @@ table.sravnenie.primen { font-size: 9.6pt; }
 table.sravnenie.primen td { padding: 2.6mm 3mm; }
 .dorabotki { align-items: start; }
 .dorabotki .spisok li { font-size: 10pt; padding: 3mm 0; }
+
+/* ══ «33» — выбор двигателя: четыре варианта и графики ══ */
+:root { --el: #1677c4; --bz: #e0a100; --ks: #7a4fb5; --rd: #d9481f; --neytr: #9aa7b5; --neytr2: #4a5868; }
+.tsv { display: inline-block; width: 2.8mm; height: 2.8mm; border-radius: 0.7mm; vertical-align: -0.3mm; margin-right: 1.5mm; }
+.tsv.el { background: var(--el); } .tsv.bz { background: var(--bz); }
+.tsv.ks { background: var(--ks); } .tsv.rd { background: var(--rd); }
+.legenda-g { font-size: 8.5pt; color: var(--seryy); margin: 0 0 3mm; }
+.legenda-g span.p { margin-right: 5mm; white-space: nowrap; }
+
+.chetyre { display: grid; grid-template-columns: repeat(4, 1fr); gap: 3.5mm; }
+.var4 { border-radius: 2.5mm; background: var(--fon); padding: 4.5mm 4.5mm 4mm; border-top: 1.6mm solid; display: flex; flex-direction: column; }
+.var4.el { border-color: var(--el); } .var4.bz { border-color: var(--bz); }
+.var4.ks { border-color: var(--ks); } .var4.rd { border-color: var(--rd); }
+.var4 b.im { font-size: 11.5pt; color: var(--tyomnyy); line-height: 1.2; }
+.var4 .chto-eto { font-size: 8.4pt; color: var(--seryy); margin: 1.2mm 0 3mm; line-height: 1.35; }
+.var4 dl { margin: 0 0 3mm; font-size: 8.4pt; display: grid; grid-template-columns: auto 1fr; gap: 0.8mm 2.5mm; }
+.var4 dt { color: var(--seryy); } .var4 dd { margin: 0; font-weight: bold; color: var(--tyomnyy); }
+.var4 .plus, .var4 .minus { font-size: 8.4pt; line-height: 1.35; margin: 0 0 1.5mm; }
+.var4 .plus::before { content: "+ "; font-weight: bold; color: #1d7a43; }
+.var4 .minus::before { content: "− "; font-weight: bold; color: #b3261e; }
+
+/* Горизонтальные полосы */
+.grafik { margin: 0 0 4mm; }
+.grafik h4 { font-size: 10pt; color: var(--tyomnyy); margin: 0 0 2mm; }
+.grafik h4 small { font-weight: normal; color: var(--seryy); font-size: 8.3pt; }
+.gs { display: grid; grid-template-columns: 30mm 1fr; align-items: center; column-gap: 3mm; margin: 0 0 1.6mm; }
+.gs .im { font-size: 8.6pt; color: var(--tekst); white-space: nowrap; }
+.dor { position: relative; height: 5.4mm; border-left: 0.6pt solid #b9c7d3; }
+.pl { position: absolute; left: 0; top: 0; bottom: 0; border-radius: 0 1.2mm 1.2mm 0; }
+.pl.el { background: var(--el); } .pl.bz { background: var(--bz); }
+.pl.ks { background: var(--ks); } .pl.rd { background: var(--rd); }
+.pl.dop { opacity: 0.28; }
+.pl.dop.shtrih { opacity: 1; background: repeating-linear-gradient(135deg, #fff 0 1.2mm, #c9d3dd 1.2mm 1.6mm); border: 0.5pt dashed #9aa7b5; }
+.zn { position: absolute; top: 0.4mm; font-size: 8.4pt; color: var(--tyomnyy); font-weight: bold; white-space: nowrap; padding-left: 1.8mm; }
+.zn small { font-weight: normal; color: var(--seryy); }
+.predel { position: absolute; top: -1.5mm; bottom: -1.5mm; border-left: 0.9pt dashed var(--tyomnyy); }
+.predel span { position: absolute; top: -3.4mm; left: -10mm; width: 20mm; text-align: center; font-size: 7pt; color: var(--tyomnyy); }
+.dva-grafika { display: grid; grid-template-columns: 1fr 1fr; gap: 9mm; }
+
+/* Массовая сводка — составная полоса */
+.massa .dor { height: 7mm; border-left: 0; display: flex; gap: 0.5mm; }
+.massa .seg { height: 100%; display: flex; align-items: center; justify-content: center; font-size: 7.6pt; color: #fff; font-weight: bold; }
+.massa .seg:first-child { border-radius: 1.2mm 0 0 1.2mm; } .massa .seg:last-child { border-radius: 0 1.2mm 1.2mm 0; }
+.seg.planer { background: var(--neytr); } .seg.du { background: var(--neytr2); } .seg.nagr { background: #2a9d8f; }
+.seg.el { background: var(--el); } .seg.bz { background: var(--bz); color: var(--tyomnyy); }
+.seg.ks { background: var(--ks); } .seg.rd { background: var(--rd); }
+
+/* Температурная шкала −50…+50 */
+.temp .dor { height: 7mm; border-left: 0; background: #f0f2f5; border-radius: 1.2mm; }
+.temp .t { position: absolute; top: 0; bottom: 0; font-size: 7pt; display: flex; align-items: center; justify-content: center; text-align: center; line-height: 1.1; }
+.t.ok { background: #cfeedd; color: #155f34; } .t.mery { background: #fbe9b7; color: #7a5200; } .t.net { background: #f5cfcc; color: #8c1d16; }
+.shkala { display: grid; grid-template-columns: 30mm 1fr; column-gap: 3mm; }
+.shkala .os { position: relative; height: 4mm; font-size: 7.4pt; color: var(--seryy); }
+.shkala .os span { position: absolute; transform: translateX(-50%); }
+
+/* Матрица совместимости */
+table.matr { font-size: 8.4pt; }
+table.matr td, table.matr th { padding: 1.5mm 2.2mm; vertical-align: middle; }
+table.matr thead th { color: #fff; font-size: 9pt; }
+table.matr thead th.param { background: var(--tyomnyy); border-radius: 2mm 0 0 0; width: 20%; }
+table.matr thead th.el { background: var(--el); } table.matr thead th.bz { background: var(--bz); color: var(--tyomnyy); }
+table.matr thead th.ks { background: var(--ks); } table.matr thead th.rd { background: var(--rd); border-radius: 0 2mm 0 0; }
+table.matr td:first-child { font-weight: bold; color: var(--tyomnyy); }
+.oc { display: inline-block; font-size: 7.4pt; font-weight: bold; border-radius: 1mm; padding: 0.2mm 1.4mm; margin-right: 1mm; white-space: nowrap; }
+.oc.v2 { background: #cfeedd; color: #155f34; } .oc.v1 { background: #e3eef8; color: #19527f; }
+.oc.v0 { background: #fbe9b7; color: #7a5200; } .oc.vx { background: #f5cfcc; color: #8c1d16; }
+table.matr td span.pr { color: var(--seryy); }
+table.matr tr.gruppa td { padding: 1.2mm 2.2mm; }
+
+/* Применение по вариантам */
+.prim4 .var4 .glavnoe { font-size: 9.6pt; font-weight: bold; color: var(--tyomnyy); margin: 1mm 0 2.5mm; line-height: 1.3; }
+.prim4 .var4 ul { margin: 0 0 2mm; padding-left: 4mm; font-size: 8.4pt; }
+.prim4 .var4 li { margin: 0.6mm 0; }
+.prim4 .var4 .ne { margin-top: auto; font-size: 8pt; color: var(--seryy); border-top: 0.5pt solid var(--liniya); padding-top: 1.8mm; }
+
+/* Итог */
+.itog { display: grid; grid-template-columns: repeat(4, 1fr); gap: 3.5mm; margin-bottom: 5mm; }
+.itog .var4 .stup { font-size: 7.6pt; letter-spacing: 0.12em; text-transform: uppercase; color: var(--seryy); font-weight: bold; }
+.itog .var4 .resh { font-size: 10.5pt; font-weight: bold; color: var(--tyomnyy); margin: 1.5mm 0; line-height: 1.3; }
+.itog .var4 p { font-size: 8.5pt; margin: 0; line-height: 1.4; }
+.proverit { background: var(--tyomnyy); color: #dfe7ef; border-radius: 3mm; padding: 5mm 7mm; font-size: 9pt; }
+.proverit b { color: #fff; }
+.proverit ol { margin: 1.5mm 0 0; padding-left: 5mm; columns: 2; column-gap: 8mm; }
+.proverit li { margin: 0 0 1.5mm; break-inside: avoid; }
+/* Документ «выбор двигателя» — крупнее, чтобы слайд был заполнен */
+.dv .var4 b.im { font-size: 13pt; }
+.dv .var4 .chto-eto, .dv .var4 dl, .dv .var4 .plus, .dv .var4 .minus { font-size: 9.6pt; }
+.dv .var4 .plus, .dv .var4 .minus { margin-bottom: 2.2mm; }
+.dv .chetyre .var4 { padding: 6mm 5.5mm; }
+.dv .dor { height: 7mm; }
+.dv .gs { margin-bottom: 3mm; }
+.dv .gs .im, .dv .zn { font-size: 9.4pt; }
+.dv .zn { top: 0.9mm; }
+.dv .grafik h4 { font-size: 11pt; margin-bottom: 3.5mm; }
+.dv .grafik.plotno .dor { height: 5mm; }
+.dv .grafik.plotno .gs { margin-bottom: 1.4mm; }
+.dv .grafik.plotno .zn { top: 0; font-size: 8.6pt; }
+.dv .massa .dor { height: 10mm; }
+.dv .massa .seg { font-size: 8.6pt; }
+.dv .temp .dor { height: 9mm; }
+.dv .temp .t { font-size: 8pt; }
+.dv table.sravnenie { font-size: 9.4pt; }
+.dv table.sravnenie td { padding: 2.2mm 3mm; }
+.dv table.matr { font-size: 9pt; table-layout: fixed; }
+.dv table.matr td, .dv table.matr th { padding: 2.1mm 2.4mm; }
+.dv table.matr thead th.param { width: 19%; }
+.dv .oc { font-size: 8pt; }
+.dv table.uzk td:first-child { white-space: nowrap; width: 24mm; }
+.dv table.uzk td { padding: 2mm 2.5mm; }
+.dv .prim4 .var4 .glavnoe { font-size: 11pt; }
+.dv .prim4 .var4 ul { font-size: 10pt; }
+.dv .prim4 .var4 li { margin: 1.6mm 0; }
+.dv .prim4 .var4 .ne { font-size: 9pt; }
+.dv .itog .var4 { padding: 6mm 5.5mm; }
+.dv .itog .var4 .resh { font-size: 12pt; }
+.dv .itog .var4 p { font-size: 9.8pt; }
+.dv .proverit { font-size: 10.2pt; padding: 7mm 8mm; }
+.dv .proverit li { margin-bottom: 2.6mm; }
+.dv .kontsept .kol p, .dv .zadachi li { font-size: 10pt; }
+.dv .pomet { font-size: 8.4pt; }
+.dv table.matr.plotnee td { padding: 1.5mm 2.4mm; line-height: 1.3; }
+.dv table.sravnenie.plotnee td { padding: 1.6mm 3mm; line-height: 1.32; }
+.dv .temp .dor { height: 8mm; }
+.dv .temp .gs { margin-bottom: 2.2mm; }
+.dv table.matr thead th.param { width: 21%; }
