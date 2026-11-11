@@ -21,7 +21,7 @@ def ensure_env() -> None:
         return
     fd = os.open(ENV_FILE, os.O_WRONLY | os.O_CREAT | os.O_TRUNC, 0o600)
     with os.fdopen(fd, "w", encoding="utf-8") as fh:
-        fh.write(f"SECRET_KEY={secrets.token_urlsafe(48)}\nLOGIN=Svetlana\nSITE_URL=https://mokeevasky.ru\n")
+        fh.write(f"SECRET_KEY={secrets.token_urlsafe(48)}\nLOGIN=ZdorovieM\nSITE_URL=https://mokeevasky.ru\n")
 
 
 def main() -> None:

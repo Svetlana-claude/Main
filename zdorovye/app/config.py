@@ -27,7 +27,7 @@ DATA_DIR = Path(_env.get("DATA_DIR", Path.home() / ".local/share/zdorovye"))
 DB_PATH = DATA_DIR / "zdorovye.db"
 FILES_DIR = DATA_DIR / "files"            # бланки анализов
 KEY_FILE = DATA_DIR / "klyuch-kopiy.asc"  # ключ от копий — лежит, пока Светлана его не скачает
-OWNER_LOGIN = _env.get("LOGIN", "Svetlana")
+OWNER_LOGIN = _env.get("LOGIN", "ZdorovieM")
 ROOT_PATH = os.environ.get("ROOT_PATH", "/zdorovye")
 SITE_URL = _env.get("SITE_URL", "https://mokeevasky.ru")
 
