@@ -3,11 +3,11 @@
 <section class="dv slide oblozhka odin sinii">
 <p class="metka">Проект «33» · сравнение силовых установок · ноябрь 2026</p>
 <h1>«33» — какой<br><span class="p33">двигатель выбрать</span></h1>
-<p class="podzag">Электрический, ДВС с инжектором на бензине и на керосине и реактивный — на одном планере «33» с взлётной массой 24 кг</p>
+<p class="podzag">Электрический, ДВС с СЭВ инжектором на бензине и на керосине и реактивный — на одном планере «33» с взлётной массой 24 кг</p>
 <div class="fakty">
 <div><b><span class="tsv el"></span>электро</b><span>как в справке</span></div>
-<div><b><span class="tsv bz"></span>бензин</b><span>ДВС, инжектор</span></div>
-<div><b><span class="tsv ks"></span>керосин</b><span>ДВС, инжектор</span></div>
+<div><b><span class="tsv bz"></span>бензин</b><span>ДВС + СЭВ инжектор</span></div>
+<div><b><span class="tsv ks"></span>керосин</b><span>ДВС + СЭВ инжектор</span></div>
 <div><b><span class="tsv rd"></span>реактив</b><span>малый ТРД</span></div>
 </div>
 <img class="render" src="../img/proekt-33.png" alt="Рендер БПЛА «33»">
@@ -20,21 +20,68 @@
 <div class="var4 el"><b class="im">Электрический</b><p class="chto-eto">Два электродвигателя по 1,4 кВт, аккумуляторы в корне крыла — как в справке.</p>
 <dl><dt>Установка</dt><dd>≈ 1,0 кг</dd><dt>Энергия</dt><dd>≈ 13 кг аккумуляторов</dd><dt>Заправка</dt><dd>зарядка 2–4 ч или замена</dd></dl>
 <p class="plus">тихий, без вибраций и выхлопа, проще всех в обслуживании</p><p class="plus">мощность не падает с высотой</p><p class="minus">дальность ограничена аккумулятором</p><p class="minus">боится мороза</p></div>
-<div class="var4 bz"><b class="im">ДВС с инжектором, бензин</b><p class="chto-eto">Двухтактный двигатель 50–100 см³ с впрыском топлива, генератор для борта.</p>
+<div class="var4 bz"><b class="im">ДВС + СЭВ инжектор, бензин</b><p class="chto-eto">Двухтактный двигатель 50–100 см³ с нашим электронным впрыском СЭВ, генератор для борта.</p>
 <dl><dt>Установка</dt><dd>≈ 3,2 кг</dd><dt>Энергия</dt><dd>до 10,8 кг бензина (14,6 л)</dd><dt>Заправка</dt><dd>минуты</dd></dl>
-<p class="plus">дальность и время в разы больше</p><p class="plus">генератор питает тяжёлую нагрузку</p><p class="minus">шум, вибрации, выхлоп</p><p class="minus">ресурс до переборки 200–300 ч</p></div>
-<div class="var4 ks"><b class="im">ДВС с инжектором, керосин</b><p class="chto-eto">Двигатель на тяжёлом топливе (керосин ТС-1, дизель) с инжектором — впрыском топлива.</p>
+<p class="plus">дальность и время в разы больше</p><p class="plus">запуск за 45 с, без ручного обогатителя</p><p class="plus">генератор питает тяжёлую нагрузку</p><p class="minus">шум, вибрации, выхлоп</p><p class="minus">ресурс до переборки 200–300 ч</p></div>
+<div class="var4 ks"><b class="im">ДВС + СЭВ инжектор, керосин</b><p class="chto-eto">Двигатель на керосине ТС-1 с СЭВ инжектором — на керосине уже запускался.</p>
 <dl><dt>Установка</dt><dd>≈ 4,0 кг</dd><dt>Энергия</dt><dd>до 10 кг керосина (12,5 л)</dd><dt>Заправка</dt><dd>минуты</dd></dl>
-<p class="plus">одно топливо с авиацией и флотом</p><p class="plus">керосин безопаснее хранить</p><p class="minus">тяжелее и дороже бензинового</p><p class="minus">трудный запуск на морозе</p></div>
+<p class="plus">одно топливо с авиацией и флотом</p><p class="plus">керосин безопаснее хранить</p><p class="plus">свой впрыск — без импортного двигателя на тяжёлом топливе</p><p class="minus">тяжелее бензинового, расход выше</p><p class="minus">на морозе — подогрев перед запуском</p></div>
 <div class="var4 rd"><b class="im">Реактивный</b><p class="chto-eto">Малый турбореактивный двигатель тягой 40–60 Н, керосин.</p>
 <dl><dt>Установка</dt><dd>≈ 2,5 кг</dd><dt>Энергия</dt><dd>до 11,5 кг керосина (14,4 л)</dd><dt>Заправка</dt><dd>минуты</dd></dl>
 <p class="plus">высокая скорость — на другом крыле</p><p class="plus">проще всех по устройству</p><p class="minus">расход топлива в 15 раз выше ДВС</p><p class="minus">очень шумный и дорогой час полёта</p></div>
 </div>
-<p class="pomet">Массы установок и расходы — оценка по открытым данным двигателей такого размера. Бензин и керосин разведены: у них разные двигатели, заказчики и условия хранения топлива.</p>
+<p class="pomet">Массы установок и расходы — оценка по открытым данным двигателей такого размера. Бензин и керосин разведены: у них разные заказчики и условия хранения топлива. Впрыск у обоих — СЭВ инжектор.</p>
 </section>
 
 <section class="dv slide">
-<p class="metka">2 · Как считали</p>
+<p class="metka">2 · Наш впрыск</p>
+<h2>СЭВ инжектор — отечественный электронный впрыск для ДВС</h2>
+<div class="cifry odin sev">
+<div class="plitka" style="border-color:var(--bz)"><div class="znach">300 <i>тыс. ₽</i></div><div class="chto">блок + программа</div><div class="cel-pok">на 55 % дешевле аналогов</div></div>
+<div class="plitka" style="border-color:var(--bz)"><div class="znach">−25 <i>%</i></div><div class="chto">расход к карбюратору</div><div class="cel-pok">дальность +25 %</div></div>
+<div class="plitka" style="border-color:var(--bz)"><div class="znach">45 <i>с</i></div><div class="chto">запуск двигателя</div><div class="cel-pok">карбюратор — 5–60 мин</div></div>
+<div class="plitka" style="border-color:var(--ks)"><div class="znach">+10 <i>%</i></div><div class="chto">к мощности ДВС</div></div>
+<div class="plitka" style="border-color:var(--ks)"><div class="znach">1 <i>нед.</i></div><div class="chto">срок поставки</div><div class="cel-pok">сервис в России</div></div>
+<div class="plitka" style="border-color:var(--ks)"><div class="znach">2 <i>топлива</i></div><div class="chto">бензин и керосин</div><div class="cel-pok">на керосине уже запускался</div></div>
+</div>
+<div class="dve" style="flex:0">
+<div class="grafik" style="flex:1">
+<h4>Цена системы впрыска <small>— тыс. ₽</small></h4>
+<div class="gs"><span class="im"><b>СЭВ инжектор</b></span><div class="dor"><div class="pl" style="width:23.1%;background:var(--tyomnyy)"></div><span class="zn" style="left:23.1%">300 <small>Россия</small></span></div></div>
+<div class="gs"><span class="im">LUTAN</span><div class="dor"><div class="pl" style="width:61.5%;background:var(--neytr)"></div><span class="zn" style="left:61.5%">800 <small>Турция–Китай</small></span></div></div>
+<div class="gs"><span class="im">FlyEfi</span><div class="dor"><div class="pl" style="width:76.9%;background:var(--neytr)"></div><span class="zn" style="left:76.9%">1 000 <small>США</small></span></div></div>
+<div class="gs"><span class="im">SDS EFI</span><div class="dor"><div class="pl" style="width:100%;background:var(--neytr)"></div><span class="zn" style="left:60%;color:#fff">1 300 <small style="color:#fff">США / Канада</small></span></div></div>
+</div>
+<div class="kol p33" style="flex:1">
+<h3 style="font-size:11.5pt;margin-bottom:2mm">Что входит</h3>
+<p style="margin:0 0 2mm;font-size:9.4pt">Блок управления, настроенный под двигатель; жгут; дроссельный узел с холодным ходом и впрыском; модуль зажигания; топливная станция.</p>
+<p style="margin:0;font-size:9.4pt">Установка на новый двигатель — 3–5 недель, с настройкой на стенде. Запуск без ручных манипуляций: смесь сама обогащается по прогреву.</p>
+</div>
+</div>
+<p class="pomet">Данные — презентация проекта «СЭВ-динамика» (стендовые испытания с замерами, испытания 2024 года). Цены аналогов — оттуда же.</p>
+</section>
+
+<section class="dv slide">
+<p class="metka">2 · Что СЭВ даёт «33»</p>
+<h2>Карбюратор, импортный впрыск или СЭВ инжектор</h2>
+<table class="sravnenie matr">
+<thead><tr><th class="param">Для «33» на бензине</th><th style="background:var(--neytr2)">Карбюратор</th><th style="background:var(--neytr)">Импортный впрыск</th><th class="bz">СЭВ инжектор</th></tr></thead>
+<tbody>
+<tr><td>Дальность, бак ≈ 7 л</td><td>≈ 3 100 км</td><td>≈ 3 700 км <span class="pr">расход −20 %</span></td><td><span class="oc v2">≈ 3 850 км</span><span class="pr">расход −25 %</span></td></tr>
+<tr><td>Время в воздухе</td><td>≈ 32 ч</td><td>≈ 39 ч</td><td><span class="oc v2">≈ 40 ч</span></td></tr>
+<tr><td>Запуск</td><td><span class="oc v0">5–60 мин</span><span class="pr">прогрев, ручной обогатитель</span></td><td>минуты</td><td><span class="oc v2">45 с</span><span class="pr">сам обогащает смесь по прогреву</span></td></tr>
+<tr><td>Надёжность</td><td><span class="oc vx">слабое место</span><span class="pr">вероятность отказа — 80 % в сравнении с инжекторной</span></td><td>как у СЭВ</td><td><span class="oc v2">электронное управление</span></td></tr>
+<tr><td>Высота и мороз</td><td><span class="oc v0">смесь сбивается</span><span class="pr">на высоте переобогащается</span></td><td>подстраивает смесь</td><td><span class="oc v2">подстраивает смесь</span><span class="pr">+10 % мощности</span></td></tr>
+<tr><td>Керосин</td><td><span class="oc vx">не годится</span></td><td>нужен отдельный двигатель на тяжёлом топливе</td><td><span class="oc v2">уже запускался</span></td></tr>
+<tr><td>Цена системы</td><td>дёшево</td><td>800–1 300 тыс. ₽</td><td><span class="oc v2">300 тыс. ₽</span></td></tr>
+<tr><td>Поставка и сервис</td><td>—</td><td>2 месяца или нет; сервиса в России нет</td><td><span class="oc v2">1 неделя, сервис в России</span></td></tr>
+</tbody>
+</table>
+<p class="pomet">Проценты расхода, запуск, надёжность и цены — по данным «СЭВ-динамика»; дальность и время — пересчёт из расчёта этого документа. Для «33» СЭВ инжектор — ещё и витрина: свой впрыск на своём аппарате.</p>
+</section>
+
+<section class="dv slide">
+<p class="metka">3 · Как считали</p>
 <h2>Один планер — разная начинка</h2>
 <div class="dve" style="flex:0">
 <div style="flex:1.35">
@@ -52,7 +99,7 @@
 <ul class="zadachi">
 <li>Планер, крыло и взлётная масса 24 кг — как в справке; меняется только двигатель и запас энергии.</li>
 <li>Аэродинамика подогнана под заявленные 800 км электрической версии. Не подтвердят испытания — все дальности снизятся в той же доле.</li>
-<li>Аккумулятор — 230 Вт·ч/кг; расход бензинового ДВС на малом газе — 0,65 кг/кВт·ч, керосинового — 0,8, ТРД — 0,25 кг/Н·ч.</li>
+<li>Аккумулятор — 230 Вт·ч/кг; расход ДВС с СЭВ инжектором на малом газе — 0,65 кг/кВт·ч на бензине и 0,8 на керосине (с карбюратором — на 25 % больше); ТРД — 0,25 кг/Н·ч.</li>
 <li>Питание нагрузки не учтено ни у кого — как в справке.</li>
 </ul>
 </div>
@@ -61,7 +108,7 @@
 </section>
 
 <section class="dv slide">
-<p class="metka">3 · Дальность и время в воздухе</p>
+<p class="metka">4 · Дальность и время в воздухе</p>
 <h2>Топливо даёт в 4–9 раз больше</h2>
 <p class="legenda-g"><span class="p">▮ сплошная — бак ≈ 7 л (сколько, скорее всего, поместится в «33»)</span><span class="p">▯ светлая — предел по массе: всё свободное — топливо</span><span class="p">▨ штриховка — цель из справки</span></p>
 <div class="dva-grafika">
@@ -84,17 +131,17 @@
 <div class="kol p33"><p style="margin:0"><b>Почему так.</b> Килограмм бензина несёт в 50 раз больше энергии, чем килограмм аккумулятора; даже с КПД маленького ДВС ≈ 13 % на винт доходит в 8–9 раз больше. Керосиновый ДВС тяжелее и прожорливее бензинового — минус ≈ 25 % (так было при переводе ScanEagle на тяжёлое топливо, flightglobal.com).</p></div>
 <div class="kol drk"><p style="margin:0"><b>Реактивный на этом планере проигрывает даже электричке:</b> «33» летает медленно, а малый ТРД на малом газе тратит топливо впустую — ≈ 2,3 кг/ч против 0,14 кг/ч у бензинового ДВС.</p></div>
 </div>
-<p class="pomet">Разброс по расходу топлива: бензин 5 000–8 200 км, керосин 4 100–5 900 км, реактив 510–850 км при полном баке. Ветер, набор высоты и резерв в расчёт не входят — на практике дальность у всех ниже.</p>
+<p class="pomet">С карбюратором вместо СЭВ инжектора бензиновая версия пролетела бы ≈ 3 100 км вместо 3 850 (расход на 25 % выше). Разброс по расходу топлива: бензин 5 000–8 200 км, керосин 4 100–5 900 км, реактив 510–850 км при полном баке. Ветер, набор высоты и резерв в расчёт не входят — на практике дальность у всех ниже.</p>
 </section>
 
 <section class="dv slide">
-<p class="metka">4 · Скорость и высота</p>
+<p class="metka">5 · Скорость и высота</p>
 <h2>Скорость упирается в крыло, а не в двигатель</h2>
 <div class="dva-grafika">
 <div class="grafik">
 <h4>Наибольшая скорость <small>— км/ч</small></h4>
 <div class="gs"><span class="im"><span class="tsv el"></span>Электро</span><div class="dor"><div class="pl el" style="width:37.8%"></div><span class="zn" style="left:37.8%">170 <small>справка</small></span></div></div>
-<div class="gs"><span class="im"><span class="tsv bz"></span>Бензин</span><div class="dor"><div class="pl bz" style="width:38.9%"></div><span class="zn" style="left:38.9%">≈ 175</span></div></div>
+<div class="gs"><span class="im"><span class="tsv bz"></span>Бензин</span><div class="dor"><div class="pl bz" style="width:40%"></div><span class="zn" style="left:40%">≈ 180 <small>+10 % мощности СЭВ</small></span></div></div>
 <div class="gs"><span class="im"><span class="tsv ks"></span>Керосин</span><div class="dor"><div class="pl ks" style="width:37.8%"></div><span class="zn" style="left:37.8%">≈ 170</span></div></div>
 <div class="gs"><span class="im"><span class="tsv rd"></span>Реактив</span><div class="dor"><div class="pl rd dop shtrih" style="width:100%"></div><div class="pl rd" style="width:44.4%"></div><div class="predel" style="left:44.4%"></div><span class="zn" style="left:44.4%">≈ 200 <small>новое крыло — 350–450</small></span></div></div>
 <p class="pomet">Пунктир — предел планера «33», ≈ 200 км/ч (скорее всего; проверяется расчётом на прочность и флаттер — опасные колебания крыла). Шкала до 450 км/ч.</p>
@@ -102,10 +149,10 @@
 <div class="grafik">
 <h4>Практический потолок <small>— м</small></h4>
 <div class="gs"><span class="im"><span class="tsv el"></span>Электро</span><div class="dor"><div class="pl el" style="width:75%"></div><span class="zn" style="left:75%">7 500</span></div></div>
-<div class="gs"><span class="im"><span class="tsv bz"></span>Бензин</span><div class="dor"><div class="pl bz dop" style="width:65%"></div><div class="pl bz" style="width:50%"></div><span class="zn" style="left:65%">5 000–6 500</span></div></div>
-<div class="gs"><span class="im"><span class="tsv ks"></span>Керосин</span><div class="dor"><div class="pl ks dop" style="width:65%"></div><div class="pl ks" style="width:50%"></div><span class="zn" style="left:65%">5 000–6 500</span></div></div>
+<div class="gs"><span class="im"><span class="tsv bz"></span>Бензин</span><div class="dor"><div class="pl bz dop" style="width:70%"></div><div class="pl bz" style="width:55%"></div><span class="zn" style="left:70%">5 500–7 000</span></div></div>
+<div class="gs"><span class="im"><span class="tsv ks"></span>Керосин</span><div class="dor"><div class="pl ks dop" style="width:70%"></div><div class="pl ks" style="width:55%"></div><span class="zn" style="left:70%">5 500–7 000</span></div></div>
 <div class="gs"><span class="im"><span class="tsv rd"></span>Реактив</span><div class="dor"><div class="pl rd dop" style="width:75%"></div><div class="pl rd" style="width:60%"></div><span class="zn" style="left:75%">6 000–7 500</span></div></div>
-<p class="pomet">У ДВС без наддува мощность на 7 500 м — меньше половины, у ТРД тяга тоже падает. Электродвигателю высота не мешает. Значения ДВС и ТРД — оценка. Шкала до 10 000 м.</p>
+<p class="pomet">У ДВС без наддува мощность на 7 500 м — меньше половины; СЭВ инжектор сам подстраивает смесь под высоту, карбюратор так не умеет. У ТРД тяга тоже падает. Электродвигателю высота не мешает. Значения ДВС и ТРД — оценка. Шкала до 10 000 м.</p>
 </div>
 </div>
 <table class="sravnenie" style="margin-top:2mm">
@@ -118,13 +165,13 @@
 </section>
 
 <section class="dv slide">
-<p class="metka">5 · Работа в разных температурах</p>
+<p class="metka">6 · Работа в разных температурах</p>
 <h2>Мороз бьёт по аккумулятору, жара — по двигателю</h2>
 <div class="grafik temp" style="margin-bottom:2mm">
 <h4>Диапазон работы <small>— °C, оценка по типовым данным</small></h4>
 <div class="gs"><span class="im"><span class="tsv el"></span>Электро</span><div class="dor"><div class="t net" style="left:0;width:10%">нет</div><div class="t mery" style="left:10%;width:40%">подогрев и утепление аккумуляторов</div><div class="t ok" style="left:50%;width:35%">штатно</div><div class="t mery" style="left:85%;width:15%">охлаждение</div></div></div>
-<div class="gs"><span class="im"><span class="tsv bz"></span>Бензин</span><div class="dor"><div class="t mery" style="left:0;width:25%">подогрев перед запуском</div><div class="t ok" style="left:25%;width:65%">штатно</div><div class="t mery" style="left:90%;width:10%">перегрев</div></div></div>
-<div class="gs"><span class="im"><span class="tsv ks"></span>Керосин</span><div class="dor"><div class="t mery" style="left:0;width:40%">запуск со свечами накала и подогревом</div><div class="t ok" style="left:40%;width:60%">штатно</div></div></div>
+<div class="gs"><span class="im"><span class="tsv bz"></span>Бензин</span><div class="dor"><div class="t mery" style="left:0;width:20%">подогрев</div><div class="t ok" style="left:20%;width:70%">штатно — СЭВ сам обогащает смесь</div><div class="t mery" style="left:90%;width:10%">перегрев</div></div></div>
+<div class="gs"><span class="im"><span class="tsv ks"></span>Керосин</span><div class="dor"><div class="t mery" style="left:0;width:30%">подогрев перед запуском</div><div class="t ok" style="left:30%;width:70%">штатно — запуск с СЭВ подтверждён</div></div></div>
 <div class="gs"><span class="im"><span class="tsv rd"></span>Реактив</span><div class="dor"><div class="t mery" style="left:0;width:10%">АКБ запуска</div><div class="t ok" style="left:10%;width:80%">штатно</div><div class="t mery" style="left:90%;width:10%">тяга −10 %</div></div></div>
 <div class="shkala"><span></span><div class="os"><span style="left:0">−50</span><span style="left:20%">−30</span><span style="left:40%">−10</span><span style="left:50%">0</span><span style="left:70%">+20</span><span style="left:90%">+40</span><span style="left:100%;transform:translateX(-100%)">+50</span></div></div>
 <p class="legenda-g" style="margin-top:2mm"><span class="p"><span class="tsv" style="background:#cfeedd"></span>штатно</span><span class="p"><span class="tsv" style="background:#fbe9b7"></span>с мерами</span><span class="p"><span class="tsv" style="background:#f5cfcc"></span>не рекомендуется</span></p>
@@ -133,7 +180,7 @@
 <thead><tr><th class="param">Что происходит</th><th class="p33" style="width:19%">Электро</th><th class="p33" style="width:19%">Бензин</th><th class="p33" style="width:19%">Керосин</th><th class="drk">Реактив</th></tr></thead>
 <tbody>
 <tr><td>Дальность при −20 °C</td><td class="z">≈ 600 км <span>(−25 %) без подогрева</span></td><td class="z">почти без потерь</td><td class="z">почти без потерь</td><td class="z">почти без потерь</td></tr>
-<tr><td>Топливо на морозе</td><td><span>—</span></td><td>не замерзает; на холоде хуже испаряется — нужен подогрев</td><td>ТС-1 не мутнеет до −60 °C; запуск труднее бензина</td><td>тот же керосин; запуск обычный</td></tr>
+<tr><td>Топливо на морозе</td><td><span>—</span></td><td>не замерзает; СЭВ сам обогащает смесь по прогреву — без ручного обогатителя</td><td>ТС-1 не мутнеет до −60 °C; испаряется хуже бензина — в сильный мороз подогрев</td><td>тот же керосин; запуск обычный</td></tr>
 <tr><td>Жара +40…+45 °C</td><td>нагрев аккумуляторов на наборе высоты</td><td>перегрев, пузыри пара в топливе</td><td>перегрев, но топливо устойчиво</td><td>тяга ниже на 10–15 %</td></tr>
 <tr><td>Безопасность хранения</td><td>аккумуляторы — риск возгорания при повреждении</td><td>бензин вспыхивает уже при −40 °C</td><td>керосин — только от +28 °C и выше: пригоден для кораблей</td><td>как керосин</td></tr>
 </tbody>
@@ -141,24 +188,24 @@
 </section>
 
 <section class="dv slide">
-<p class="metka">6 · Стоимость</p>
+<p class="metka">7 · Стоимость</p>
 <h2>Электрический час — самый дешёвый</h2>
 <div class="dva-grafika">
 <div class="grafik">
 <h4>Комплект: двигатель + запас энергии <small>— тыс. ₽</small></h4>
 <div class="gs"><span class="im"><span class="tsv el"></span>Электро</span><div class="dor"><div class="pl el dop" style="width:32.1%"></div><div class="pl el" style="width:17.9%"></div><span class="zn" style="left:32.1%">250–450 <small>с аккумуляторами</small></span></div></div>
-<div class="gs"><span class="im"><span class="tsv bz"></span>Бензин</span><div class="dor"><div class="pl bz dop" style="width:35.7%"></div><div class="pl bz" style="width:17.9%"></div><span class="zn" style="left:35.7%">250–500</span></div></div>
-<div class="gs"><span class="im"><span class="tsv ks"></span>Керосин</span><div class="dor"><div class="pl ks dop" style="width:85.7%"></div><div class="pl ks" style="width:42.9%"></div><span class="zn" style="left:85.7%">600–1 200</span></div></div>
+<div class="gs"><span class="im"><span class="tsv bz"></span>Бензин</span><div class="dor"><div class="pl bz dop" style="width:35.7%"></div><div class="pl bz" style="width:27.1%"></div><span class="zn" style="left:35.7%">380–500 <small>с СЭВ</small></span></div></div>
+<div class="gs"><span class="im"><span class="tsv ks"></span>Керосин</span><div class="dor"><div class="pl ks dop" style="width:50%"></div><div class="pl ks" style="width:32.1%"></div><span class="zn" style="left:50%">450–700 <small>с СЭВ</small></span></div></div>
 <div class="gs"><span class="im"><span class="tsv rd"></span>Реактив</span><div class="dor"><div class="pl rd dop" style="width:50%"></div><div class="pl rd" style="width:21.4%"></div><span class="zn" style="left:50%">300–700 <small>+ новое крыло</small></span></div></div>
-<p class="pomet">Шкала до 1 400 тыс. ₽. Светлая часть — разброс цен между поставщиками.</p>
+<p class="pomet">Шкала до 1 400 тыс. ₽. Светлая часть — разброс цен между поставщиками. Керосиновый ДВС с импортным впрыском — 600–1 200.</p>
 </div>
 <div class="grafik">
 <h4>Час полёта: топливо + износ <small>— ₽</small></h4>
 <div class="gs"><span class="im"><span class="tsv el"></span>Электро</span><div class="dor"><div class="pl el dop" style="width:3.6%"></div><div class="pl el" style="width:2.4%"></div><span class="zn" style="left:3.6%">100–150</span></div></div>
-<div class="gs"><span class="im"><span class="tsv bz"></span>Бензин</span><div class="dor"><div class="pl bz dop" style="width:22.6%"></div><div class="pl bz" style="width:15.5%"></div><span class="zn" style="left:22.6%">650–950</span></div></div>
-<div class="gs"><span class="im"><span class="tsv ks"></span>Керосин</span><div class="dor"><div class="pl ks dop" style="width:59.5%"></div><div class="pl ks" style="width:35.7%"></div><span class="zn" style="left:59.5%">1 500–2 500</span></div></div>
+<div class="gs"><span class="im"><span class="tsv bz"></span>Бензин</span><div class="dor"><div class="pl bz dop" style="width:15.5%"></div><div class="pl bz" style="width:9.5%"></div><span class="zn" style="left:15.5%">400–650</span></div></div>
+<div class="gs"><span class="im"><span class="tsv ks"></span>Керосин</span><div class="dor"><div class="pl ks dop" style="width:26.2%"></div><div class="pl ks" style="width:16.7%"></div><span class="zn" style="left:26.2%">700–1 100</span></div></div>
 <div class="gs"><span class="im"><span class="tsv rd"></span>Реактив</span><div class="dor"><div class="pl rd dop" style="width:83.3%"></div><div class="pl rd" style="width:59.5%"></div><span class="zn" style="left:59.5%">2 500–3 500</span></div></div>
-<p class="pomet">Шкала до 4 200 ₽. Топливо в часе — копейки (бензин ≈ 15 ₽/ч), главное — износ двигателя.</p>
+<p class="pomet">Шкала до 4 200 ₽. Топливо в часе — копейки (бензин ≈ 15 ₽/ч), главное — износ двигателя; СЭВ за 300 тыс. ₽ служит дольше двигателя и делится на его ресурс.</p>
 </div>
 </div>
 <table class="sravnenie">
@@ -166,14 +213,15 @@
 <tbody>
 <tr><td>Ресурс</td><td>аккумулятор 300–500 циклов, двигатели — более 1000 ч</td><td>200–300 ч до переборки</td><td>150–300 ч до переборки</td><td>осмотр через 25–50 ч, ресурс ≈ 300 ч</td></tr>
 <tr><td>Энергия на 100 км</td><td class="z">≈ 3 ₽ <span>электричество</span></td><td class="z">≈ 15 ₽ <span>0,15 кг</span></td><td class="z">≈ 15 ₽ <span>0,19 кг</span></td><td class="z">≈ 120 ₽ <span>1,5 кг</span></td></tr>
+<tr><td>Впрыск</td><td><span>—</span></td><td>СЭВ инжектор 300 тыс. ₽, поставка 1 неделя, установка 3–5 недель</td><td>то же; импортный двигатель на тяжёлом топливе не нужен</td><td><span>—</span></td></tr>
 <tr><td>Переделка планера</td><td><span>не нужна</span></td><td>моторама, бак, виброразвязка, выхлоп</td><td>то же, плюс подогрев для запуска</td><td>новое крыло и хвост под скорость</td></tr>
 </tbody>
 </table>
-<p class="pomet">Цены — оценка по рынку 2026 года, порядок величин. Ресурс ТРД — по аналогии с заявленным UEC для малых ТРД: 100 ч между ремонтами, 300 ч всего (edrmagazine.eu).</p>
+<p class="pomet">Цены — оценка по рынку 2026 года, порядок величин; комплект ДВС = двигатель без впрыска (80–200 тыс. ₽ бензиновый, 150–400 тыс. ₽ под керосин) + СЭВ инжектор. Ресурс ТРД — по аналогии с заявленным UEC для малых ТРД: 100 ч между ремонтами, 300 ч всего (edrmagazine.eu).</p>
 </section>
 
 <section class="dv slide">
-<p class="metka">7 · Полезная нагрузка · масса и питание</p>
+<p class="metka">8 · Полезная нагрузка · масса и питание</p>
 <h2>ДВС меняет топливо на нагрузку без больших потерь</h2>
 <div class="dva-grafika">
 <div class="grafik plotno">
@@ -221,7 +269,7 @@
 </section>
 
 <section class="dv slide">
-<p class="metka">7 · Полезная нагрузка · что с чем работает</p>
+<p class="metka">8 · Полезная нагрузка · что с чем работает</p>
 <h2>Какая нагрузка на каком двигателе</h2>
 <table class="sravnenie matr plotnee">
 <thead><tr><th class="param">Нагрузка</th><th class="el">Электро</th><th class="bz">Бензин</th><th class="ks">Керосин</th><th class="rd">Реактив</th></tr></thead>
@@ -243,20 +291,21 @@
 </section>
 
 <section class="dv slide">
-<p class="metka">8 · Сводная таблица</p>
+<p class="metka">9 · Сводная таблица</p>
 <h2>Всё рядом</h2>
 <table class="sravnenie matr">
 <thead><tr><th class="param">Показатель</th><th class="el">Электро</th><th class="bz">Бензин</th><th class="ks">Керосин</th><th class="rd">Реактив на «33»</th></tr></thead>
 <tbody>
 <tr><td>Дальность, км</td><td>800 <span class="pr">(цель 1200)</span></td><td><span class="oc v2">3 850</span><span class="pr">до 7 000</span></td><td>3 200 <span class="pr">до 5 100</span></td><td>360 <span class="pr">до 710</span></td></tr>
 <tr><td>Время в воздухе, ч</td><td>9 <span class="pr">(цель 12–14)</span></td><td><span class="oc v2">40</span><span class="pr">до 73</span></td><td>34 <span class="pr">до 54</span></td><td>2,4 <span class="pr">до 4,7</span></td></tr>
-<tr><td>Наибольшая скорость, км/ч</td><td>170</td><td>≈ 175</td><td>≈ 170</td><td><span class="oc v2">≈ 200</span><span class="pr">новое крыло 350–450</span></td></tr>
-<tr><td>Потолок, м</td><td><span class="oc v2">7 500</span></td><td>5 000–6 500</td><td>5 000–6 500</td><td>6 000–7 500</td></tr>
-<tr><td>Мороз −30 °C</td><td><span class="oc v0">с подогревом</span></td><td><span class="oc v1">подогрев перед запуском</span></td><td><span class="oc v0">трудный запуск</span></td><td><span class="oc v2">штатно</span></td></tr>
+<tr><td>Наибольшая скорость, км/ч</td><td>170</td><td>≈ 180</td><td>≈ 175</td><td><span class="oc v2">≈ 200</span><span class="pr">новое крыло 350–450</span></td></tr>
+<tr><td>Потолок, м</td><td><span class="oc v2">7 500</span></td><td>5 500–7 000</td><td>5 500–7 000</td><td>6 000–7 500</td></tr>
+<tr><td>Мороз −30 °C</td><td><span class="oc v0">с подогревом</span></td><td><span class="oc v2">штатно, СЭВ</span></td><td><span class="oc v1">подогрев перед запуском</span></td><td><span class="oc v2">штатно</span></td></tr>
 <tr><td>Жара +45 °C</td><td><span class="oc v0">охлаждение</span></td><td><span class="oc v0">перегрев</span></td><td><span class="oc v2">штатно</span></td><td><span class="oc v1">тяга −10 %</span></td></tr>
 <tr><td>Нагрузка на сутки полёта</td><td><span class="oc vx">нет</span></td><td><span class="oc v2">4–5 кг</span></td><td>3–4 кг</td><td><span class="oc vx">нет</span></td></tr>
-<tr><td>Комплект, тыс. ₽</td><td>250–450</td><td>250–500</td><td>600–1 200</td><td>300–700 <span class="pr">+ крыло</span></td></tr>
-<tr><td>Час полёта, ₽</td><td><span class="oc v2">100–150</span></td><td>650–950</td><td>1 500–2 500</td><td>2 500–3 500</td></tr>
+<tr><td>Запуск</td><td><span class="oc v2">сразу</span></td><td>45 с, СЭВ</td><td>с СЭВ, подтверждён</td><td>автоматика ТРД</td></tr>
+<tr><td>Комплект, тыс. ₽</td><td>250–450</td><td>380–500</td><td>450–700</td><td>300–700 <span class="pr">+ крыло</span></td></tr>
+<tr><td>Час полёта, ₽</td><td><span class="oc v2">100–150</span></td><td>400–650</td><td>700–1 100</td><td>2 500–3 500</td></tr>
 <tr><td>Шум и заметность</td><td><span class="oc v2">тихий</span></td><td>шумный</td><td>шумный</td><td><span class="oc vx">очень шумный, горячий</span></td></tr>
 <tr><td>Подготовка к вылету</td><td>зарядка 2–4 ч</td><td>заправка, прогрев</td><td>заправка, подогрев</td><td>заправка, запуск</td></tr>
 <tr><td>Переделка планера</td><td><span class="oc v2">не нужна</span></td><td>умеренная</td><td>умеренная</td><td><span class="oc vx">новое крыло</span></td></tr>
@@ -266,18 +315,18 @@
 </section>
 
 <section class="dv slide">
-<p class="metka">9 · Главное применение</p>
+<p class="metka">10 · Главное применение</p>
 <h2>У каждого варианта — своя работа</h2>
 <div class="chetyre prim4">
 <div class="var4 el"><b class="im">Электро</b><p class="glavnoe">Регулярные работы рядом с людьми: дёшево, тихо, чисто</p>
 <ul><li>картография и кадастр</li><li>экология: газоанализ без своего выхлопа</li><li>радиационный контроль</li><li>леса — дневной патруль</li><li>скрытное наблюдение</li></ul>
 <p class="ne">Не для: суток в воздухе, северных зим без подогрева.</p></div>
-<div class="var4 bz"><b class="im">Бензин</b><p class="glavnoe">Дальние и долгие задачи коммерческих заказчиков</p>
+<div class="var4 bz"><b class="im">Бензин + СЭВ</b><p class="glavnoe">Дальние и долгие задачи коммерческих заказчиков</p>
 <ul><li>трубопроводы и ЛЭП на тысячи километров</li><li>ретранслятор связи сутками</li><li>охрана границ и периметров</li><li>SAR и лидар — тяжёлая нагрузка</li><li>Арктика: аккумулятор не мёрзнет</li></ul>
 <p class="ne">Не для: газоанализа, тихих работ, кораблей.</p></div>
-<div class="var4 ks"><b class="im">Керосин</b><p class="glavnoe">Там, где бензина нет или его нельзя держать</p>
+<div class="var4 ks"><b class="im">Керосин + СЭВ</b><p class="glavnoe">Там, где бензина нет или его нельзя держать</p>
 <ul><li>работа с кораблей: топливо не вспыхивает при обычной температуре</li><li>северные базы и аэродромы: ТС-1 есть везде</li><li>одно топливо с авиацией и флотом госзаказчика</li><li>ледовая разведка на Севморпути</li></ul>
-<p class="ne">Не для: дешёвого часа и частых морозных запусков без подогрева.</p></div>
+<p class="ne">Не для: газоанализа и тихих работ; в сильный мороз — подогрев.</p></div>
 <div class="var4 rd"><b class="im">Реактивный</b><p class="glavnoe">Скорость — но на другом крыле</p>
 <ul><li>мишени для тренировки ПВО</li><li>быстрое прибытие к месту ЧС</li><li>скоростная разведка на короткие расстояния</li></ul>
 <p class="ne">На планере «33» не оправдан: дальность и время ниже электрической версии, час — самый дорогой. Это ниша «Твин Дракена».</p></div>
@@ -285,19 +334,19 @@
 </section>
 
 <section class="dv slide">
-<p class="metka">10 · Вывод</p>
+<p class="metka">11 · Вывод</p>
 <h2>Что выбрать для «33»</h2>
 <div class="itog">
 <div class="var4 el"><span class="stup">Основная версия</span><p class="resh">Электро — как сейчас</p><p>Самый дешёвый час и самое простое обслуживание. Подтвердить на испытаниях заявленные 800 км и 9 ч.</p></div>
-<div class="var4 bz"><span class="stup">Вторая модификация</span><p class="resh">Бензин с инжектором — «дальняя» версия</p><p>Тот же планер, в 4–9 раз больше дальности, сутки в воздухе и тяжёлая нагрузка. Самый сильный ход для рынка 2027 года.</p></div>
-<div class="var4 ks"><span class="stup">Под заказ</span><p class="resh">Керосин — для флота и государства</p><p>Делать, когда заказчику нужно одно топливо с его техникой или работа с корабля. Дороже бензиновой версии в 2–3 раза.</p></div>
+<div class="var4 bz"><span class="stup">Вторая модификация</span><p class="resh">Бензин + СЭВ инжектор — «дальняя» версия</p><p>Тот же планер, в 4–9 раз больше дальности, сутки в воздухе, запуск за 45 с. Свой впрыск на своём аппарате — витрина для обоих проектов.</p></div>
+<div class="var4 ks"><span class="stup">Под заказ</span><p class="resh">Керосин + СЭВ инжектор — для флота и государства</p><p>На керосине СЭВ уже запускался. Одно топливо с техникой заказчика, работа с корабля; без импортного двигателя на тяжёлом топливе — дешевле его почти вдвое.</p></div>
 <div class="var4 rd"><span class="stup">Не на этом планере</span><p class="resh">Реактивный — отдельный проект</p><p>Требует нового крыла. Скоростные задачи закрывает «Твин Дракен».</p></div>
 </div>
 <div class="proverit"><b>Что проверить, прежде чем решать</b>
 <ol>
 <li>Лётные испытания электрической версии: реальная дальность определяет все цифры этого сравнения.</li>
 <li>Объём под бак в планере: сколько литров поместится без нарушения центровки.</li>
-<li>Выбор конкретного ДВС: масса, расход на малом газе, ресурс, поставка.</li>
+<li>Двигатель под СЭВ инжектор: масса, ресурс; настройка блока на стенде (3–5 недель) с замером расхода на малом газе — на бензине и на керосине.</li>
 <li>Вибрации и нагрузка на гондолы от ДВС: выдержит ли силовая схема.</li>
 <li>Предельная скорость планера «33» — расчёт на прочность и флаттер.</li>
 <li>Морозные испытания аккумуляторов электрической версии.</li>

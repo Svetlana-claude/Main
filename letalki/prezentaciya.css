@@ -345,3 +345,8 @@ table.matr tr.gruppa td { padding: 1.2mm 2.2mm; }
 .dv .temp .dor { height: 8mm; }
 .dv .temp .gs { margin-bottom: 2.2mm; }
 .dv table.matr thead th.param { width: 21%; }
+.dv .cifry.sev { grid-template-columns: repeat(6, 1fr); gap: 3mm; margin-bottom: 6mm; }
+.dv .cifry.sev .plitka { padding: 5mm 4mm 4mm; min-height: 30mm; }
+.dv .cifry.sev .znach { font-size: 18pt; }
+.dv .cifry.sev .chto, .dv .cifry.sev .cel-pok { font-size: 8.6pt; }
+.dv.oblozhka.odin.sinii .render { width: 108%; margin-left: 2%; }

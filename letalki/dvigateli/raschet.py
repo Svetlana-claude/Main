@@ -56,8 +56,8 @@ CX0 = Cx0PoSpravke()
 
 VARIANTY = {
     "elektro":  dict(imya="Электрический", m_du=1.0, tip="akb"),
-    "benzin":   dict(imya="ДВС с инжектором, бензин", m_du=3.2, tip="vint", ud=0.65, ud_lo=0.90, ud_hi=0.55),
-    "kerosin":  dict(imya="ДВС с инжектором, керосин", m_du=4.0, tip="vint", ud=0.80, ud_lo=1.00, ud_hi=0.70),
+    "benzin":   dict(imya="ДВС + СЭВ инжектор, бензин", m_du=3.2, tip="vint", ud=0.65, ud_lo=0.90, ud_hi=0.55),
+    "kerosin":  dict(imya="ДВС + СЭВ инжектор, керосин", m_du=4.0, tip="vint", ud=0.80, ud_lo=1.00, ud_hi=0.70),
     "reaktiv":  dict(imya="Реактивный (малый ТРД)", m_du=2.5, tip="trd", ud=0.25, ud_lo=0.35, ud_hi=0.21),
 }
 # ud — удельный расход: для ДВС кг/(кВт·ч) на валу при малой нагрузке,
