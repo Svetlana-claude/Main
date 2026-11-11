@@ -1451,7 +1451,7 @@ zapret}`. «Куда» — в градусах мира игры. На серв�
 ## Проект: `letalki` — БПЛА «33»
 
 Пока только документы, сборки нет. С 11.11.2026 здесь только «33»; «Твин Дракен» —
-отдельный проект `tvin-draken`. Исходники разложены по папкам-темам, PDF — прямо
+отдельный проект «ТВИН ДРАКЕН» в `~/projects/tvin-draken`. Исходники разложены по папкам-темам, PDF — прямо
 в `downloads/`: «Файлы проекта» нового сайта подпапок не показывают.
 
 - `spravka/spravka-33.md` — справка по «33», 9 слайдов: пять по справке заказчика от
@@ -1483,19 +1483,18 @@ zapret}`. «Куда» — в градусах мира игры. На серв�
   letalki/prezentaciya.css`. Альбомный лист работает потому, что `md2pdf.py`
   берёт размер листа из `@page` (`prefer_css_page_size`).
 
-## Проект: `tvin-draken` — БПЛА «Твин Дракен»
+## Проект «ТВИН ДРАКЕН» — БПЛА «Твин Дракен» (`~/projects/tvin-draken`)
 
-Вынесен из `letalki` 11.11.2026 по просьбе заказчика: это другой проект. На новом
-сайте (`webui2`) проекта пока нет: его заводит Светлана кнопкой «Новый проект»
-(папка `~/projects/<имя>` со своим git), после чего содержимое переезжает туда.
-Запись в базе старого сайта, сделанная по ошибке, удалена — старый сайт не работает.
+Вынесен из `letalki` 11.11.2026: другой проект. Заведён Светланой на новом сайте
+(`webui2`) кнопкой «Новый проект» — папка `~/projects/tvin-draken` со своим git, вне
+этого репозитория; устройство и история — там.
 
-- `spravka/spravka-tvin-draken.md` — справка по «Твин Дракену», 5 слайдов, с рендером.
-- `img/tvin-draken.png` — рендер с прозрачным фоном из `draken-i-33.pdf`.
-- `prezentaciya.css` — копия оформления из `letalki` (огненный цвет — «Твин Дракен»);
-  дальше правится здесь, отдельно.
-- Выдача: `python3 tools/vydacha.py tvin-draken/spravka/spravka-tvin-draken.md --css
-  tvin-draken/prezentaciya.css` → `downloads/`.
+- `spravka/spravka-tvin-draken.md` — справка, 5 слайдов, с рендером `img/tvin-draken.png`;
+  оформление — своя копия `prezentaciya.css`.
+- PDF собирается в `downloads/` проекта напрямую: `webui/.venv/bin/python tools/md2pdf.py
+  ~/projects/tvin-draken/spravka/spravka-tvin-draken.md --css
+  ~/projects/tvin-draken/prezentaciya.css --out ~/projects/tvin-draken/downloads/spravka-tvin-draken.pdf`
+  (`vydacha.py` для папок вне репозитория кладёт PDF в `downloads/` рядом с исходником).
 
 ## Проект: `3d` — картинка → 3D-модель (TRELLIS.2)
 
