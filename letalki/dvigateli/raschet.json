@@ -52,24 +52,6 @@
     "5.0": 3056
    },
    "nagr_24ch": 6.5
-  },
-  "reaktiv": {
-   "imya": "Реактивный (малый ТРД)",
-   "m_du": 2.5,
-   "m_energ": 11.5,
-   "skorost_kreys": 150,
-   "dalnost": 710,
-   "vremya": 4.7,
-   "dalnost_lo": 508,
-   "dalnost_hi": 845,
-   "vremya_lo": 3.4,
-   "vremya_hi": 5.6,
-   "po_nagruzke": {
-    "1.5": 710,
-    "3.0": 612,
-    "5.0": 484
-   },
-   "nagr_24ch": 0.0
   }
  }
 }
