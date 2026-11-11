@@ -1497,6 +1497,9 @@ zapret}`. «Куда» — в градусах мира игры. На серв�
   оформление — своя копия `prezentaciya.css`.
 - `reaktiv/zatravka-reaktiv.md` — затравка реактивной версии (малый ТРД 40–60 Н), 5 слайдов:
   оценка против электро, где пригодится, что посчитать дальше. Цифры — порядок, не расчёт.
+- В `downloads/` (не в git) — исходные материалы заказчика: справка `.txt`, версия из
+  Illustrator `draken-i-33-illustrator.pdf`, общая справка «33» и «Твин Дракен» (копия;
+  оригинал остаётся в «ЛЕТАЛКАХ»), рендер в полном размере.
 - PDF собирается в `downloads/` проекта напрямую: `webui/.venv/bin/python tools/md2pdf.py
   ~/projects/tvin-draken/spravka/spravka-tvin-draken.md --css
   ~/projects/tvin-draken/prezentaciya.css --out ~/projects/tvin-draken/downloads/spravka-tvin-draken.pdf`
