@@ -12,7 +12,8 @@
 
 Сам находит рабочий `venv` (в каталоге проекта, иначе `webui/.venv`), собирает
 только то, что устарело, и печатает по строке на документ: куда лёг PDF, его
-размер и число страниц. `--vse <каталог>` берёт все `.md` каталога.
+размер и число страниц. PDF ложится в `<проект>/downloads/<тема>/`: тема — путь
+исходника внутри проекта (`letalki/dvigateli/x.md` → `letalki/downloads/dvigateli/x.pdf`). `--vse <каталог>` берёт все `.md` каталога.
 Устаревшим считается PDF, которого нет или который старше исходника.
 
 Второй обряд того же рода — **выдача правок приложения** (долг 11):
@@ -58,10 +59,30 @@ def NaytiPython(istochnik: pathlib.Path) -> pathlib.Path | None:
 def ChisloStranic(pdf: pathlib.Path) -> int:
     """Страницы считаются по самому файлу, без сторонних библиотек."""
     telo = pdf.read_bytes()
-    po_schetu = re.search(rb"/Count\s+(\d+)", telo)
+    # Дерево страниц бывает многоуровневым (у Chromium — больше восьми страниц):
+    # «/Count» есть у каждого узла, а всё число — у корня, то есть наибольшее.
+    po_schetu = [int(n) for n in re.findall(rb"/Count\s+(\d+)", telo)]
     if po_schetu:
-        return int(po_schetu.group(1))
+        return max(po_schetu)
     return len(re.findall(rb"/Type\s*/Page[^s]", telo))
+
+
+def KudaPdf(istochnik: pathlib.Path, koren: pathlib.Path = KOREN) -> pathlib.Path:
+    """Куда ложится PDF: `<проект>/downloads/<тема>/<имя>.pdf`.
+
+    Проект — каталог первого уровня под корнем репозитория, тема — путь
+    исходника внутри проекта. «Файлы проекта» показывают только
+    `<проект>/downloads/`, поэтому `downloads/` рядом с исходником в подпапке
+    оказывалась невидимой. Исходник вне репозитория — `downloads/` рядом с ним.
+    """
+    istochnik = istochnik.resolve()
+    try:
+        chasti = istochnik.parent.relative_to(koren.resolve()).parts
+    except ValueError:
+        chasti = ()
+    if not chasti:
+        return istochnik.parent / "downloads" / (istochnik.stem + ".pdf")
+    return koren.resolve().joinpath(chasti[0], "downloads", *chasti[1:], istochnik.stem + ".pdf")
 
 
 def Ustarel(istochnik: pathlib.Path, pdf: pathlib.Path) -> bool:
@@ -69,11 +90,11 @@ def Ustarel(istochnik: pathlib.Path, pdf: pathlib.Path) -> bool:
 
 
 def Vylozhit(istochnik: pathlib.Path, css: str | None = None,
-             silom: bool = False) -> tuple[bool, str]:
+             silom: bool = False, koren: pathlib.Path = KOREN) -> tuple[bool, str]:
     """Собирает PDF, если нужно, и проверяет, что вышло. Возвращает (годно, строка)."""
     if not istochnik.is_file():
         return False, f"{istochnik}: нет такого файла"
-    pdf = istochnik.parent / "downloads" / (istochnik.stem + ".pdf")
+    pdf = KudaPdf(istochnik, koren)
     # Свежий по времени, но пустой PDF выдачей не считается: такой огрызок
     # остаётся от прерванной сборки, а в «Файлах проекта» выглядит как документ.
     svezhiy = not Ustarel(istochnik, pdf) and pdf.stat().st_size >= MIN_RAZMER
@@ -84,7 +105,7 @@ def Vylozhit(istochnik: pathlib.Path, css: str | None = None,
     if python is None:
         return False, f"{istochnik.name}: не найден venv с markdown и playwright"
 
-    argv = [str(python), str(MD2PDF), str(istochnik)]
+    argv = [str(python), str(MD2PDF), str(istochnik), "--out", str(pdf)]
     if css:
         argv += ["--css", css]
     rezultat = subprocess.run(argv, capture_output=True, text=True)
@@ -451,6 +472,32 @@ def Proverka() -> int:
             oshibki.append(f"огрызок PDF принят за выдачу: {stroka}")
         elif pdf.stat().st_size < MIN_RAZMER:
             oshibki.append("огрызок PDF не пересобран")
+
+        # Страниц больше восьми — Chromium делит дерево страниц на части, и
+        # первое попавшееся «/Count» считает только первую часть (10.11.2026:
+        # «8 с.» при 12 страницах).
+        dlinnyy = vremennyy / "dlinnyy.md"
+        dlinnyy.write_text("# Длинный\n\n" + "".join(
+            f'<div style="break-after: page">Страница {n}</div>\n\n' for n in range(12)),
+            encoding="utf-8")
+        godno, stroka = Vylozhit(dlinnyy)
+        if not godno or not stroka.endswith(", 12 с."):
+            oshibki.append(f"12 страниц посчитаны неверно: {stroka}")
+
+        # Выдача по темам: исходник в подпапке проекта ложится в
+        # `<проект>/downloads/<тема>/`, а не в `<тема>/downloads/`, которую
+        # «Файлы проекта» не показывают.
+        koren = vremennyy / "koren"
+        tema = koren / "proekt" / "tema"
+        tema.mkdir(parents=True)
+        v_teme = tema / "zapiska.md"
+        v_teme.write_text("# Записка в теме\n\nТекст.\n" * 20, encoding="utf-8")
+        ozhidaemyy = koren / "proekt" / "downloads" / "tema" / "zapiska.pdf"
+        godno, stroka = Vylozhit(v_teme, koren=koren)
+        if not godno or not ozhidaemyy.is_file():
+            oshibki.append(f"PDF темы не в <проект>/downloads/<тема>/: {stroka}")
+        if (tema / "downloads").exists():
+            oshibki.append("PDF темы лёг в <тема>/downloads/")
 
         # Отказ должен называть причину словами: «md2pdf отказал» на
         # несуществующем файле — это правильный ответ по неправильной причине.

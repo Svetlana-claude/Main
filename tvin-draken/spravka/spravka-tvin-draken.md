@@ -8,7 +8,7 @@
 <div><b>июль 2026</b><span>начало работ</span></div>
 <div><b>прототип</b><span>готов к лётным испытаниям</span></div>
 </div>
-<img class="render" src="img/tvin-draken.png" alt="Рендер БПЛА «Твин Дракен»: бесхвостая схема с вертикальным килем и двумя тянущими винтами на гондолах">
+<img class="render" src="../img/tvin-draken.png" alt="Рендер БПЛА «Твин Дракен»: бесхвостая схема с вертикальным килем и двумя тянущими винтами на гондолах">
 </section>
 
 <section class="slide">
@@ -23,7 +23,7 @@
 </ul>
 <div class="cel"><p class="metka">Основные целевые показатели</p><b>Сочетание возможности полёта в большом диапазоне скоростей и высот при высокой манёвренности</b></div>
 </div>
-<div class="foto"><img src="img/tvin-draken.png" alt="Рендер БПЛА «Твин Дракен»"><p>«Твин Дракен» · внешний облик прототипа</p></div>
+<div class="foto"><img src="../img/tvin-draken.png" alt="Рендер БПЛА «Твин Дракен»"><p>«Твин Дракен» · внешний облик прототипа</p></div>
 </div>
 </section>
 
@@ -108,7 +108,7 @@
 <p class="metka" style="color:#8fa3ba">Главная цель</p>
 <div class="cel-item">подтверждение жизнеспособности аэродинамической компоновки</div>
 <div class="cel-item">определение путей дальнейшего развития проекта</div>
-<img src="img/tvin-draken.png" alt="">
+<img src="../img/tvin-draken.png" alt="">
 </div>
 </div>
 </section>

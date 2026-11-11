@@ -10,7 +10,7 @@
 <div><b><span class="tsv ks"></span>керосин</b><span>ДВС, тяжёлое топливо</span></div>
 <div><b><span class="tsv rd"></span>реактив</b><span>малый ТРД</span></div>
 </div>
-<img class="render" src="img/proekt-33.png" alt="Рендер БПЛА «33»">
+<img class="render" src="../img/proekt-33.png" alt="Рендер БПЛА «33»">
 </section>
 
 <section class="dv slide">
@@ -57,7 +57,7 @@
 </ul>
 </div>
 </div>
-<p class="pomet">Проверка порядка цифр: Aerosonde массой 13,1 кг в 1998 году перелетел Атлантику — 3270 км за 26 ч 45 мин на ≈ 4 кг бензина (ctie.monash.edu). Расчёт — <code>dvigateli/raschet.py</code> в каталоге проекта.</p>
+<p class="pomet">Проверка порядка цифр: Aerosonde массой 13,1 кг в 1998 году перелетел Атлантику — 3270 км за 26 ч 45 мин на ≈ 4 кг бензина (ctie.monash.edu). Расчёт — <code>raschet.py</code> рядом с документом.</p>
 </section>
 
 <section class="dv slide">

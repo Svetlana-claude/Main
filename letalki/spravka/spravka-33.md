@@ -9,7 +9,7 @@
 <div><b>≥ 800 км · ≥ 9 ч</b><span>на электрической тяге</span></div>
 <div><b>прототип</b><span>готов к лётным испытаниям</span></div>
 </div>
-<img class="render" src="img/proekt-33.png" alt="Рендер БПЛА «33»: высокоплан большого удлинения, два тянущих винта на гондолах, хвостовое оперение на балке">
+<img class="render" src="../img/proekt-33.png" alt="Рендер БПЛА «33»: высокоплан большого удлинения, два тянущих винта на гондолах, хвостовое оперение на балке">
 </section>
 
 <section class="slide">
@@ -24,7 +24,7 @@
 </ul>
 <div class="cel"><p class="metka">Основные целевые показатели</p><b>Дальность и продолжительность полёта</b></div>
 </div>
-<div class="foto"><img src="img/proekt-33.png" alt="Рендер БПЛА «33»"><p>«33» · окончательный аэродинамический облик</p></div>
+<div class="foto"><img src="../img/proekt-33.png" alt="Рендер БПЛА «33»"><p>«33» · окончательный аэродинамический облик</p></div>
 </div>
 </section>
 
@@ -111,7 +111,7 @@
 <h3>Лётные испытания прототипа</h3>
 <p class="metka" style="color:#8fa3ba">Главная цель</p>
 <div class="cel-item">подтверждение расчётных аэродинамических характеристик</div>
-<img src="img/proekt-33.png" alt="">
+<img src="../img/proekt-33.png" alt="">
 </div>
 </div>
 </section>
