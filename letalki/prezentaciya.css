@@ -350,3 +350,21 @@ table.matr tr.gruppa td { padding: 1.2mm 2.2mm; }
 .dv .cifry.sev .znach { font-size: 18pt; }
 .dv .cifry.sev .chto, .dv .cifry.sev .cel-pok { font-size: 8.6pt; }
 .dv.oblozhka.odin.sinii .render { width: 108%; margin-left: 2%; }
+
+/* «33» — применение по модификациям */
+.dv .tri { display: grid; grid-template-columns: repeat(3, 1fr); gap: 4mm; }
+.dv .profil { display: grid; grid-template-columns: 0.9fr 1.35fr; gap: 6mm; flex: 1; }
+.dv .profil .kol h3 { font-size: 12pt; margin-bottom: 2mm; }
+.dv .profil .kol.bz { background: #fdf3d6; } .dv .profil .kol.bz h3 { color: #8a5d00; }
+.dv .profil .kol.ks { background: #efe8f8; } .dv .profil .kol.ks h3 { color: var(--ks); }
+.dv .profil .kol.el { background: var(--p33-svet); } .dv .profil .kol.el h3 { color: var(--el); }
+.dv .profil dl { display: grid; grid-template-columns: auto 1fr; gap: 1.2mm 3mm; font-size: 9.4pt; margin: 0 0 3mm; }
+.dv .profil dt { color: var(--seryy); } .dv .profil dd { margin: 0; font-weight: bold; color: var(--tyomnyy); }
+.dv .profil .sila, .dv .profil .slabo { font-size: 9.2pt; margin: 0 0 1.4mm; line-height: 1.35; }
+.dv .profil .sila::before { content: "+ "; font-weight: bold; color: #1d7a43; }
+.dv .profil .slabo::before { content: "− "; font-weight: bold; color: #b3261e; }
+.dv .profil .zakazchiki { margin-top: auto; font-size: 8.8pt; color: var(--seryy); border-top: 0.5pt solid var(--liniya); padding-top: 2mm; }
+.dv table.polety td { font-size: 9pt; padding: 2mm 2.6mm; }
+.dv table.polety thead th.el { background: var(--el); } .dv table.polety thead th.bz { background: var(--bz); color: var(--tyomnyy); }
+.dv table.polety thead th.ks { background: var(--ks); }
+.dv table.polety td:first-child { font-weight: bold; color: var(--tyomnyy); width: 30%; }
