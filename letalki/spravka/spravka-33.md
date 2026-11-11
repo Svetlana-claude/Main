@@ -54,7 +54,7 @@
 <table class="sravnenie odin">
 <thead><tr><th class="param">Параметр</th><th class="p33">Значение</th></tr></thead>
 <tbody>
-<tr class="gruppa"><td colspan="2">Габариты*</td></tr>
+<tr class="gruppa"><td colspan="2">Габариты, мм</td></tr>
 <tr><td>Габаритные размеры</td><td class="z">1600 × 3200 × 480</td></tr>
 <tr><td>В транспортном положении</td><td class="z">1000 × 600 × 500</td></tr>
 <tr class="gruppa"><td colspan="2">Масса</td></tr>
@@ -87,7 +87,6 @@
 </tbody>
 </table>
 </div>
-<p class="snoska">* Единицы габаритов в справке не указаны.</p>
 </section>
 
 <section class="slide">

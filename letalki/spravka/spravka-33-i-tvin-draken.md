@@ -54,7 +54,7 @@
 <table class="sravnenie">
 <thead><tr><th class="param">Параметр</th><th class="p33">«33»</th><th class="drk">«Твин Дракен»</th></tr></thead>
 <tbody>
-<tr class="gruppa"><td colspan="3">Габариты*</td></tr>
+<tr class="gruppa"><td colspan="3">Габариты, мм</td></tr>
 <tr><td>Габаритные размеры</td><td class="z">1600 × 3200 × 480</td><td class="z">650 × 740 × 220</td></tr>
 <tr><td>Габариты в транспортном положении</td><td class="z">1000 × 600 × 500</td><td class="z drk">650 × 250 × 450 <span>— при отделении элевонов</span><br>650 × 740 × 100 <span>— в пусковом слоте при сложенном вертикальном оперении</span></td></tr>
 <tr class="gruppa"><td colspan="3">Масса</td></tr>
@@ -70,7 +70,7 @@
 <tr><td>Скорость сваливания</td><td class="z">59 км/ч <span>— без обдува крыла винтами</span></td><td class="z">нет <span>— может переходить в режим висения на винтах</span></td></tr>
 </tbody>
 </table>
-<p class="snoska">* Единицы габаритов в справке не указаны. &nbsp; ** В зависимости от массы и применяемых винтов.</p>
+<p class="snoska">** В зависимости от массы и применяемых винтов.</p>
 </section>
 
 <section class="slide">

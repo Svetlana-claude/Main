@@ -12,8 +12,8 @@
 
 Сам находит рабочий `venv` (в каталоге проекта, иначе `webui/.venv`), собирает
 только то, что устарело, и печатает по строке на документ: куда лёг PDF, его
-размер и число страниц. PDF ложится в `<проект>/downloads/<тема>/`: тема — путь
-исходника внутри проекта (`letalki/dvigateli/x.md` → `letalki/downloads/dvigateli/x.pdf`). `--vse <каталог>` берёт все `.md` каталога.
+размер и число страниц. PDF ложится прямо в `<проект>/downloads/`, даже если
+исходник в папке-теме (`letalki/dvigateli/x.md` → `letalki/downloads/x.pdf`). `--vse <каталог>` берёт все `.md` каталога.
 Устаревшим считается PDF, которого нет или который старше исходника.
 
 Второй обряд того же рода — **выдача правок приложения** (долг 11):
@@ -68,12 +68,13 @@ def ChisloStranic(pdf: pathlib.Path) -> int:
 
 
 def KudaPdf(istochnik: pathlib.Path, koren: pathlib.Path = KOREN) -> pathlib.Path:
-    """Куда ложится PDF: `<проект>/downloads/<тема>/<имя>.pdf`.
+    """Куда ложится PDF: `<проект>/downloads/<имя>.pdf`.
 
-    Проект — каталог первого уровня под корнем репозитория, тема — путь
-    исходника внутри проекта. «Файлы проекта» показывают только
-    `<проект>/downloads/`, поэтому `downloads/` рядом с исходником в подпапке
-    оказывалась невидимой. Исходник вне репозитория — `downloads/` рядом с ним.
+    Проект — каталог первого уровня под корнем репозитория. Исходник может
+    лежать в папке-теме проекта, но PDF кладётся прямо в `<проект>/downloads/`:
+    «Файлы проекта» нового сайта показывают только эту папку и без подпапок,
+    а `downloads/` рядом с исходником в подпапке не видна вовсе (11.11.2026).
+    Исходник вне репозитория — `downloads/` рядом с ним.
     """
     istochnik = istochnik.resolve()
     try:
@@ -82,7 +83,7 @@ def KudaPdf(istochnik: pathlib.Path, koren: pathlib.Path = KOREN) -> pathlib.Pat
         chasti = ()
     if not chasti:
         return istochnik.parent / "downloads" / (istochnik.stem + ".pdf")
-    return koren.resolve().joinpath(chasti[0], "downloads", *chasti[1:], istochnik.stem + ".pdf")
+    return koren.resolve() / chasti[0] / "downloads" / (istochnik.stem + ".pdf")
 
 
 def Ustarel(istochnik: pathlib.Path, pdf: pathlib.Path) -> bool:
@@ -484,18 +485,17 @@ def Proverka() -> int:
         if not godno or not stroka.endswith(", 12 с."):
             oshibki.append(f"12 страниц посчитаны неверно: {stroka}")
 
-        # Выдача по темам: исходник в подпапке проекта ложится в
-        # `<проект>/downloads/<тема>/`, а не в `<тема>/downloads/`, которую
-        # «Файлы проекта» не показывают.
+        # Исходник в папке-теме проекта: PDF — прямо в `<проект>/downloads/`,
+        # а не в `<тема>/downloads/`, которую «Файлы проекта» не показывают.
         koren = vremennyy / "koren"
         tema = koren / "proekt" / "tema"
         tema.mkdir(parents=True)
         v_teme = tema / "zapiska.md"
         v_teme.write_text("# Записка в теме\n\nТекст.\n" * 20, encoding="utf-8")
-        ozhidaemyy = koren / "proekt" / "downloads" / "tema" / "zapiska.pdf"
+        ozhidaemyy = koren / "proekt" / "downloads" / "zapiska.pdf"
         godno, stroka = Vylozhit(v_teme, koren=koren)
         if not godno or not ozhidaemyy.is_file():
-            oshibki.append(f"PDF темы не в <проект>/downloads/<тема>/: {stroka}")
+            oshibki.append(f"PDF темы не в <проект>/downloads/: {stroka}")
         if (tema / "downloads").exists():
             oshibki.append("PDF темы лёг в <тема>/downloads/")
 

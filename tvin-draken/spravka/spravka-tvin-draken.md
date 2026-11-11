@@ -53,7 +53,7 @@
 <table class="sravnenie odin">
 <thead><tr><th class="param">Параметр</th><th class="drk">Значение</th></tr></thead>
 <tbody>
-<tr class="gruppa"><td colspan="2">Габариты*</td></tr>
+<tr class="gruppa"><td colspan="2">Габариты, мм</td></tr>
 <tr><td>Габаритные размеры</td><td class="z">650 × 740 × 220</td></tr>
 <tr><td>В транспортном положении</td><td class="z">650 × 250 × 450 <span>— при отделении элевонов</span><br>650 × 740 × 100 <span>— в пусковом слоте при сложенном вертикальном оперении</span></td></tr>
 <tr class="gruppa"><td colspan="2">Масса</td></tr>
@@ -87,7 +87,6 @@
 </tbody>
 </table>
 </div>
-<p class="snoska">* Единицы габаритов в справке не указаны.</p>
 </section>
 
 <section class="slide">
